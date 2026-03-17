@@ -8,7 +8,7 @@ export const routes: Routes = [
     component: Login,
   },
   {
-    path: 'cadastros',
+    path: 'cadastro',
     component: Cadastro,
   },
 ];

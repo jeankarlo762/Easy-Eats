@@ -1,83 +1,113 @@
 
-h1 {
-  background-color: red !important;
-  color: white !important;
-  border: 5px solid black !important;
+
+/* 1. Reset e Centralização do Body */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
 }
 
-.container {
-  min-height: 100vh;
+body {
+  background-image: url('/assets/images/background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+}
+
+/* 2. Ajuste do Container e da Box */
+.container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .cadastro-box {
   width: 100%;
-  max-width: 350px;
+  max-width: 420px; /* Um pouco mais largo para respiro */
+  background: white; 
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  box-sizing: border-box;
 }
 
-.header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.logo {
-  width: 80px;
-  height: 80px;
-  background: #ff6b00;
-  color: white;
+/* 3. Estilização dos Inputs (O "Pulo do Gato") */
+.form-group, .password-field, .file-group {
+  margin-bottom: 20px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 15px auto;
-  border-radius: 15px;
-  font-size: 32px;
+  flex-direction: column;
 }
 
-h1 span {
-  color: #ff6b00;
-}
-
-.form-group {
-  margin-bottom: 15px;
+label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+  text-align: left; /* Garante que o label fique à esquerda */
 }
 
 input {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  padding: 12px 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-sizing: border-box; /* Essencial para o padding não quebrar a largura */
+  background-color: #f9f9f9;
 }
 
-.password-field {
-  position: relative;
+input:focus {
+  outline: none;
+  border-color: #ff6b00;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
 }
 
-.toggle-password {
-  position: absolute;
-  right: 5px;
-  top: 5px;
-  background: none;
-  border: none;
-  cursor: pointer;
+/* 4. Ajuste da Logo e Header */
+.header {
+  text-align: center;
+  margin-bottom: 25px;
 }
 
+.logo {
+  width: 100px; /* Tamanho fixo para o container da logo */
+  margin: 0 auto 10px auto;
+  background: transparent; /* Removido o fundo laranja que cobria a imagem */
+}
+
+.logo img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.cadastro {
+  font-size: 24px;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+/* 5. Botão */
 .cadastro-button {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   background: #ff6b00;
   border: none;
   color: white;
+  font-size: 16px;
   font-weight: bold;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
+  transition: background 0.3s;
+  margin-top: 15px;
 }
 
-.footer {
-  margin-top: 20px;
-  text-align: center;
-  font-size: 12px;
-  color: #777;
+.cadastro-button:hover {
+  background: #e65a00;
 }
