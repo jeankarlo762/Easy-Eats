@@ -1,0 +1,51 @@
+<div class="container">
+  <h1>Fila de Pedidos</h1>
+
+  <!-- vazio -->
+  <div *ngIf="activeOrders.length === 0 && readyOrders.length === 0">
+    <p>Nenhum pedido na fila</p>
+  </div>
+
+  <!-- ATIVOS -->
+  <div *ngFor="let order of activeOrders" class="card">
+
+    <div class="header">
+      <div>
+        <strong>#{{order.id}}</strong>
+        <span>{{order.customerName || 'Sem nome'}}</span>
+      </div>
+
+      <span class="status">{{ getStatus(order).label }}</span>
+    </div>
+
+    <div class="items">
+      <div *ngFor="let item of order.items">
+        {{item.product.name}} x{{item.quantity}}
+        <span class="price">
+          R$ {{ item.product.price * item.quantity | number:'1.2-2' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <strong>R$ {{ order.total | number:'1.2-2' }}</strong>
+
+      <button
+        *ngIf="getStatus(order).next"
+        (click)="updateOrderStatus(order.id, getStatus(order).next)">
+        {{ getStatus(order).btnLabel }}
+      </button>
+    </div>
+
+  </div>
+
+  <!-- PRONTOS -->
+  <div *ngIf="readyOrders.length > 0">
+    <h2>Pedidos Prontos</h2>
+
+    <div *ngFor="let order of readyOrders" class="card ready">
+      <span>#{{order.id}} - {{order.customerName || 'Sem nome'}}</span>
+      <strong>R$ {{ order.total | number:'1.2-2' }}</strong>
+    </div>
+  </div>
+</div>
