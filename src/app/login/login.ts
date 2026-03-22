@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -7,10 +7,9 @@ import { Router } from '@angular/router';
   templateUrl: './login.html',
   styleUrls: ['./login.scss'],
   imports: [FormsModule],
-  standalone: true
+  standalone: true,
 })
-export class Login {
-
+export class Login implements OnInit {
   email: string = '';
   password: string = '';
   showPassword: boolean = false;
@@ -26,5 +25,5 @@ export class Login {
     event.preventDefault();
     this.router.navigate(['/novo-pedido']);
   }
-
+  ngOnInit(): void {}
 }

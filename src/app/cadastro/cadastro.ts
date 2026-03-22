@@ -1,19 +1,22 @@
 import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { FormatarCPFUtil } from '../utils/formatarCpfUtil';
+import { FormatarTelefoneUtil } from '../utils/formatarTelefoneUtil';
+import { FormsModule, NgModel } from '@angular/forms';
 
 @Component({
   selector: 'app-cadastro',
   standalone: true,
-  imports: [],
+  imports: [FormsModule],
   templateUrl: './cadastro.html',
-  styleUrls: ['./cadastro.scss']
+  styleUrls: ['./cadastro.scss'],
 })
 export class Cadastro {
-
   email: string = '';
   password: string = '';
   showPassword: boolean = false;
+  telefone: string = '';
+  cpf: string = '';
 
   constructor(private router: Router) {}
 
@@ -21,4 +24,11 @@ export class Cadastro {
     this.showPassword = !this.showPassword;
   }
 
+  formatarCpf() {
+    this.cpf = FormatarCPFUtil.formatar(this.cpf);
+  }
+
+  formatarTelefone() {
+    this.telefone = FormatarTelefoneUtil.formatar(this.telefone);
+  }
 }
