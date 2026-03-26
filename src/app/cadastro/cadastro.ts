@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormatarCPFUtil } from '../utils/formatarCpfUtil';
 import { FormatarTelefoneUtil } from '../utils/formatarTelefoneUtil';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-cadastro',
@@ -13,7 +14,7 @@ import { FormatarTelefoneUtil } from '../utils/formatarTelefoneUtil';
 })
 export class Cadastro implements OnInit {
   showPassword: boolean = false;
-  showPasswordDown: boolean = false
+  showPasswordDown: boolean = false;
 
   private fb = inject(FormBuilder);
 
@@ -69,6 +70,8 @@ export class Cadastro implements OnInit {
     });
   }
 
+  constructor(private router: Router) {}
+
   salvar() {
     if (this.form.invalid) return;
 
@@ -79,5 +82,9 @@ export class Cadastro implements OnInit {
   }
   togglePasswordDown() {
     this.showPasswordDown = !this.showPasswordDown;
+  }
+
+  protected acessarRota(rota: string) {
+    this.router.navigate([rota]);
   }
 }

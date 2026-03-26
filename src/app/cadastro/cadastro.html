@@ -5,7 +5,8 @@
         <div class="logo">
           <img src="/assets/images/logo-easyeats-carrinho2.png" />
         </div>
-        <h1 class="cadastro">Cadastro Garçom</h1>
+        <h1>Easy<span>Eats</span></h1>
+        <p class="cadastro">Cadastro Garçom</p>
       </div>
 
       <form [formGroup]="form" (ngSubmit)="salvar()">
@@ -83,7 +84,9 @@
           <input type="file" />
         </div>
 
-        <button type="submit" class="cadastro-button">Cadastrar</button>
+        <button type="submit" (click)="acessarRota('/login')" class="cadastro-button">
+          Cadastrar
+        </button>
         <p class="login-link">
           <a href="/login">Já tem uma conta? Faça login</a>
         </p>

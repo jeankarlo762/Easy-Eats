@@ -25,5 +25,10 @@ export class Login implements OnInit {
     event.preventDefault();
     this.router.navigate(['/novo-pedido']);
   }
+
+  protected acessarRota(rota: string) {
+    this.router.navigate([rota]);
+  }
+
   ngOnInit(): void {}
 }
