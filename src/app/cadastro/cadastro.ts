@@ -12,6 +12,9 @@ import { FormatarTelefoneUtil } from '../utils/formatarTelefoneUtil';
   styleUrls: ['./cadastro.scss'],
 })
 export class Cadastro implements OnInit {
+  showPassword: boolean = false;
+  showPasswordDown: boolean = false
+
   private fb = inject(FormBuilder);
 
   form = this.fb.group({
@@ -70,5 +73,11 @@ export class Cadastro implements OnInit {
     if (this.form.invalid) return;
 
     console.log(this.form.value);
+  }
+  togglePassword() {
+    this.showPassword = !this.showPassword;
+  }
+  togglePasswordDown() {
+    this.showPasswordDown = !this.showPasswordDown;
   }
 }

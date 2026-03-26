@@ -104,6 +104,32 @@ input:focus {
   margin-top: 15px;
 }
 
+.toggle-password {
+  position: absolute;
+  right: 35%;
+  top: 93%;
+  background: none;
+  border: none;
+  color: #ff6b00;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+}
+
+.toggle-password-2 {
+  position: absolute;
+  right: 35%;
+  top: 106.5%;
+  background: none;
+  border: none;
+  color: #ff6b00;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+}
+
 .cadastro-button:hover {
   background: #e65a00;
 }
