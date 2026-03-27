@@ -53,7 +53,7 @@
 
   /* Container centralizado */
 .container {
-    max-width: 900px;      /* largura máxima */
+    max-width: 700px;      /* largura máxima */
     margin: 0 auto;        /* centralizar horizontalmente */
     background: white;     /* fundo branco do conteúdo */
     padding: 20px;
@@ -87,7 +87,7 @@ h1 {
     margin-top: 20px;
     width: 100%;
     padding: 15px;
-    background: orange;
+    background: #ff6b00;
     border: none;
     border-radius: 10px;
     color: white;
@@ -113,4 +113,11 @@ h1 {
     border-radius: 10px;
     color: orange;
   }
+
+  .paragrafo {
+  margin-top: 5px;
+  text-align: left;
+  font-size: 14px;
+  color: #777;
+}
   
