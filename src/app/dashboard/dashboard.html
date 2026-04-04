@@ -10,22 +10,21 @@
 
     <div class="card">
       <div class="valor">3</div>
-       <div class="paragrafo">Pedidos Hoje</div>
+      <div class="paragrafo">Pedidos Hoje</div>
     </div>
 
     <div class="card">
       <div class="valor">2</div>
-       <div class="paragrafo">Em Preparo</div>
+      <div class="paragrafo">Em Preparo</div>
     </div>
 
     <div class="card">
       <div class="valor">R$ 59.33</div>
-       <div class="paragrafo">Ticket Médio</div>
+      <div class="paragrafo">Ticket Médio</div>
     </div>
   </div>
 
   <button class="btn">+ Novo Pedido</button>
-
 
   <div class="lista">
     <h3>Últimos Pedidos</h3>
@@ -63,7 +62,7 @@
       <span>Pedido</span>
     </button>
 
-    <button type="button">
+    <button (click)="acessarRota('/fila')" type="button">
       <i class="bi bi-list-task"></i>
       <span>Fila</span>
     </button>
@@ -77,6 +76,5 @@
       <i class="bi bi-person-circle"></i>
       <span>Perfil</span>
     </button>
-    
   </div>
 </div>

@@ -1,10 +1,8 @@
 <div class="container">
   <div class="orders-box">
-
     <h1 class="titulo">Fila de Pedidos</h1>
 
     <div class="fila-container">
-      
       <div class="card-pedido preparando">
         <div class="card-topo">
           <span class="id-cliente">#001 <strong>João</strong></span>
@@ -47,16 +45,13 @@
           <strong>R$ 66.00</strong>
         </div>
       </div>
-
     </div>
-
   </div>
 </div>
 
 <!-- NAVBAR (DO DASHBOARD) -->
 <div class="bottom-nav">
-  
-  <button type="button" routerLink="/dashboard">
+  <button type="button" (click)="acessarRota('/dashboard')">
     <i class="bi bi-house-door"></i>
     <span>Painel</span>
   </button>
@@ -66,7 +61,7 @@
     <span>Pedido</span>
   </button>
 
-  <button type="button" routerLink="/fila">
+  <button type="button" (click)="acessarRota('/fila')">
     <i class="bi bi-list-task"></i>
     <span>Fila</span>
   </button>
@@ -76,9 +71,8 @@
     <span>Histórico</span>
   </button>
 
-  <button type="button" routerLink="/perfil-admin">
+  <button type="button" (click)="acessarRota('/perfil-admin')">
     <i class="bi bi-person-circle"></i>
     <span>Perfil</span>
   </button>
-
 </div>
