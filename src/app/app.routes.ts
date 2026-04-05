@@ -42,3 +42,4 @@ export const routes: Routes = [
   // Rota de fallback para 404 ou redirecionamento caso a rota não exista
   { path: '**', redirectTo: '/login' }
 ];
+
