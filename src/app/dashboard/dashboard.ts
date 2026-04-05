@@ -7,5 +7,5 @@ import { RouterLink, RouterLinkActive } from "@angular/router";
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss']
 })
-export class DashboardComponent {
+export class Dashboard {
 }

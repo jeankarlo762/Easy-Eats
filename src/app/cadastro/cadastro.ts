@@ -1,8 +1,8 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { FormatarCPFUtil } from '../utils/formatarCpfUtil';
-import { FormatarTelefoneUtil } from '../utils/formatarTelefoneUtil';
+import { FormatarCPFUtil } from '../../utils/formatarCpfUtil';
+import { FormatarTelefoneUtil } from '../../utils/formatarTelefoneUtil';
 import { Router } from '@angular/router';
 
 @Component({

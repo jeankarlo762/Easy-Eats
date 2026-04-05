@@ -1,56 +1,74 @@
 import { Component } from '@angular/core';
-import { NgFor } from '@angular/common';
+import { CommonModule } from '@angular/common';
+
+interface Produto {
+  id: number;
+  nome: string;
+  preco: number;
+  categoria: string;
+  icone: string;
+  quantidade?: number;
+}
 
 @Component({
   selector: 'app-tela-pedido',
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './telaPedido.html',
-  styleUrls: ['./telaPedido.scss'],
-  imports: [NgFor]
+  styleUrl: './telaPedido.scss'
 })
 export class TelaPedido {
+  categorias = ['Todos', 'Lanches', 'Acompanhamentos', 'Bebidas'];
+  categoriaSelecionada = 'Todos';
 
-  produtos = [
-    { nome: 'Hambúrguer Clássico', preco: 22, emoji: '🍔' },
-    { nome: 'X-Bacon', preco: 28, emoji: '🥓' },
-    { nome: 'X-Salada', preco: 25, emoji: '🥗' },
-    { nome: 'Hot Dog', preco: 15, emoji: '🌭' },
-    { nome: 'Batata Frita', preco: 12, emoji: '🍟' },
-    { nome: 'Onion Rings', preco: 14, emoji: '🧅' },
-    { nome: 'Nuggets', preco: 16, emoji: '🍗' },
-    { nome: 'Coca-Cola', preco: 7, emoji: '🥤' },
-    { nome: 'Guaraná', preco: 7, emoji: '🧃' },
-    { nome: 'Água', preco: 4, emoji: '💧' },
-    { nome: 'Suco Natural', preco: 10, emoji: '🍊' },
-    { nome: 'Milk Shake', preco: 18, emoji: '🥛' }
+  produtos: Produto[] = [
+    { id: 1, nome: 'Hambúrguer Clássico', preco: 22.00, categoria: 'Lanches', icone: '🍔' },
+    { id: 2, nome: 'X-Bacon', preco: 28.00, categoria: 'Lanches', icone: '🥓' },
+    { id: 3, nome: 'X-Salada', preco: 25.00, categoria: 'Lanches', icone: '🥗' },
+    { id: 4, nome: 'Hot Dog', preco: 15.00, categoria: 'Lanches', icone: '🌭' },
+    { id: 5, nome: 'Batata Frita', preco: 12.00, categoria: 'Acompanhamentos', icone: '🍟' },
+    { id: 6, nome: 'Onion Rings', preco: 14.00, categoria: 'Acompanhamentos', icone: '🧅' },
+    { id: 7, nome: 'Nuggets', preco: 16.00, categoria: 'Acompanhamentos', icone: '🍗' },
+    { id: 8, nome: 'Coca-Cola', preco: 7.00, categoria: 'Bebidas', icone: '🥤' },
+    { id: 9, nome: 'Guaraná', preco: 7.00, categoria: 'Bebidas', icone: '🧃' },
+    { id: 10, nome: 'Água', preco: 4.00, categoria: 'Bebidas', icone: '💧' },
+    { id: 11, nome: 'Suco Natural', preco: 10.00, categoria: 'Bebidas', icone: '🍊' },
+    { id: 12, nome: 'Milk Shake', preco: 18.00, categoria: 'Bebidas', icone: '🥛' },
   ];
 
-  carrinho: any[] = [];
+  carrinho: Produto[] = [];
 
-  adicionar(produto: any) {
-    const item = this.carrinho.find(p => p.nome === produto.nome);
+  get produtosFiltrados() {
+    if (this.categoriaSelecionada === 'Todos') return this.produtos;
+    return this.produtos.filter(p => p.categoria === this.categoriaSelecionada);
+  }
 
+  adicionarAoCarrinho(produto: Produto) {
+    const item = this.carrinho.find(p => p.id === produto.id);
     if (item) {
-      item.qtd++;
+      item.quantidade!++;
     } else {
-      this.carrinho.push({ ...produto, qtd: 1 });
+      this.carrinho.push({ ...produto, quantidade: 1 });
     }
   }
 
-  aumentar(item: any) {
-    item.qtd++;
-  }
-
-  diminuir(item: any) {
-    item.qtd--;
-
-    if (item.qtd <= 0) {
-      this.carrinho = this.carrinho.filter(p => p !== item);
+  removerDoCarrinho(index: number) {
+    if (this.carrinho[index].quantidade! > 1) {
+      this.carrinho[index].quantidade!--;
+    } else {
+      this.carrinho.splice(index, 1);
     }
   }
 
-  total() {
-    return this.carrinho.reduce((acc, item) => {
-      return acc + (item.preco * item.qtd);
-    }, 0);
+  get totalPedido() {
+    return this.carrinho.reduce((acc, item) => acc + (item.preco * item.quantidade!), 0);
+  }
+
+  get totalItens() {
+    return this.carrinho.reduce((acc, item) => acc + item.quantidade!, 0);
+  }
+
+  getQuantidadeNoCarrinho(id: number): number {
+    return this.carrinho.find(p => p.id === id)?.quantidade || 0;
   }
 }

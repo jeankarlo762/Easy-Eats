@@ -1,55 +1,62 @@
 <div class="container">
+  <header>
+    <h1>Novo Pedido</h1>
+    <input type="text" placeholder="Nome do cliente (opcional)" class="input-cliente">
+  </header>
 
-  <h2>Novo Pedido</h2>
+  <nav class="filtros">
+    @for (cat of categorias; track cat) {
+      <button 
+        [class.active]="categoriaSelecionada === cat"
+        (click)="categoriaSelecionada = cat">
+        {{ cat }}
+      </button>
+    }
+  </nav>
 
-  <!-- Input cliente -->
-  <input class="input-cliente" placeholder="Nome do cliente (opcional)" />
+  <main class="grid-produtos">
+    @for (produto of produtosFiltrados; track produto.id) {
+      <div class="card-produto" 
+           [class.selected]="getQuantidadeNoCarrinho(produto.id) > 0"
+           (click)="adicionarAoCarrinho(produto)">
+        
+        @if (getQuantidadeNoCarrinho(produto.id) > 0) {
+          <span class="badge">{{ getQuantidadeNoCarrinho(produto.id) }}</span>
+        }
 
-  <!-- Categorias -->
-  <div class="categorias">
-    <button class="active">Todos</button>
-    <button>Lanches</button>
-    <button>Acompanhamentos</button>
-    <button>Bebidas</button>
-  </div>
-
-  <!-- Produtos -->
-  <div class="produtos">
-    <div 
-      class="card" 
-      *ngFor="let produto of produtos"
-      (click)="adicionar(produto)"
-    >
-      <div class="emoji">{{ produto.emoji }}</div>
-      <div class="nome">{{ produto.nome }}</div>
-      <div class="preco">R$ {{ produto.preco.toFixed(2) }}</div>
-    </div>
-  </div>
-
-  <!-- Carrinho -->
-  <div class="carrinho">
-    <h3>Carrinho ({{ carrinho.length }})</h3>
-
-    <div *ngFor="let item of carrinho" class="item">
-      <span>{{ item.nome }}</span>
-
-      <div class="acoes">
-        <button (click)="diminuir(item)">-</button>
-        <span>{{ item.qtd }}</span>
-        <button (click)="aumentar(item)">+</button>
+        <div class="icone">{{ produto.icone }}</div>
+        <div class="info">
+          <p class="nome">{{ produto.nome }}</p>
+          <p class="preco">{{ produto.preco | currency:'BRL':'symbol':'1.2-2' }}</p>
+        </div>
+        <button class="btn-info">ⓘ</button>
       </div>
+    }
+  </main>
 
-      <span class="preco">R$ {{ (item.preco * item.qtd).toFixed(2) }}</span>
+  <section class="carrinho-secao">
+    <h3>🛒 Carrinho ({{ totalItens }})</h3>
+    
+    <div class="lista-itens">
+      @for (item of carrinho; track item.id; let i = $index) {
+        <div class="item-carrinho">
+          <span class="item-info">{{ item.icone }} {{ item.nome }}</span>
+          <div class="controles">
+            <button class="btn-remove" (click)="removerDoCarrinho(i)">🗑️</button>
+            <span>{{ item.quantidade }}</span>
+            <button class="btn-add" (click)="adicionarAoCarrinho(item)">+</button>
+            <span class="item-subtotal">{{ (item.preco * item.quantidade!) | currency:'BRL' }}</span>
+          </div>
+        </div>
+      }
     </div>
 
-    <div class="total">
-      <strong>Total</strong>
-      <span>R$ {{ total().toFixed(2) }}</span>
+    <div class="footer-pedido">
+      <div class="total-row">
+        <span>Total</span>
+        <span class="total-valor">{{ totalPedido | currency:'BRL' }}</span>
+      </div>
+      <button class="btn-revisar">Revisar Pedido</button>
     </div>
-
-    <button class="btn-finalizar">
-      Revisar Pedido
-    </button>
-  </div>
-
+  </section>
 </div>
