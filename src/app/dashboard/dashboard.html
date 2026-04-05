@@ -31,12 +31,16 @@
 
     <div class="item">
       <span>#001 João</span>
-      @if (StatusPedidoEnum.PREPARANDO) {
+      @if (statusPedido === statusEnum.PREPARANDO) {
         <span>R$ 70.00 <span class="status">preparando</span></span>
       }
 
-      @if (StatusPedidoEnum.PRONTO) {
+      @if (statusPedido === statusEnum.PRONTO) {
         <span>R$ 70.00 <span class="status">pronto</span></span>
+      }
+
+      @if (statusPedido === statusEnum.ENTREGUE) {
+        <span>R$ 70.00 <span class="status">entregue</span></span>
       }
     </div>
 

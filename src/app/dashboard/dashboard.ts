@@ -10,6 +10,8 @@ import { StatusPedidoEnum } from '../enum/pedidosEnum';
 })
 export class DashboardComponent {
   private router = inject(Router);
+
+  public readonly statusEnum = StatusPedidoEnum;
   public statusPedido: StatusPedidoEnum = StatusPedidoEnum.PREPARANDO;
 
   protected acessarRota(rota: string) {
