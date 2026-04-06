@@ -2,9 +2,12 @@ import { Routes } from '@angular/router';
 import { Login } from './login/login';
 import { Cadastro } from './cadastro/cadastro';
 import { DashboardComponent } from './dashboard/dashboard';
+import { ComponentFila } from './Fila/component.fila';
 import { PerfilAdmin } from './perfilAdmin/perfilAdmin';
 import { PerfilGarcom } from './perfilGarcom/perfilGarcom';
-import { ComponentFila } from './Fila/component.fila';
+import { ConfirmarPedComponent } from './confirmar-ped/confirmar-ped';
+import { ControleEstoque } from './controle-estoque/controle-estoque';
+
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -32,4 +35,11 @@ export const routes: Routes = [
     path: 'perfil-garcom',
     component: PerfilGarcom,
   },
-];
+  {
+    path:'confirmar-ped',
+    component:ConfirmarPedComponent,
+  },
+{
+  path: 'controle-estoque',
+  component: ControleEstoque,
+}]
