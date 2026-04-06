@@ -7,6 +7,7 @@ import { PerfilAdmin } from './perfilAdmin/perfilAdmin';
 import { PerfilGarcom } from './perfilGarcom/perfilGarcom';
 import { ConfirmarPedComponent } from './confirmar-ped/confirmar-ped';
 import { ControleEstoque } from './controle-estoque/controle-estoque';
+import { HistoricoVendasComponent } from './historico-vendas/historico-vendas';
 
 
 export const routes: Routes = [
@@ -42,4 +43,9 @@ export const routes: Routes = [
 {
   path: 'controle-estoque',
   component: ControleEstoque,
-}]
+},
+{
+  path: 'historico-vendas',
+  component: HistoricoVendasComponent,
+}];
+
