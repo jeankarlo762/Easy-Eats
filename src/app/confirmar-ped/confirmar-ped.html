@@ -1,0 +1,96 @@
+<div class="confirmar-pedido">  
+  <!-- Botão de voltar moderno -->
+  <button class="btn-voltar" type="button">
+    <i class="bi bi-arrow-left"></i> Voltar
+  </button>
+
+  <!-- Resumo do pedido -->
+  <section class="resumo">
+    <div class="titulo">RESUMO DO PEDIDO</div>
+    <div class="item-resumo">
+      <span>🥤 Coca-Cola x1</span>
+      <span>R$ 7,00</span>
+    </div>
+    <div class="total">
+      <strong>Total</strong>
+      <strong>R$ 7,00</strong>
+    </div>
+  </section>
+
+  <!-- Tipo do pedido -->
+  <section class="tipo-pedido">
+    <div class="titulo">TIPO DO PEDIDO</div>
+    <div class="opcoes">
+      <button
+        type="button"
+        [class.selected]="tipoPedido === 'local'"
+        (click)="selecionarTipoPedido('local')"
+      >
+        <i class="bi bi-egg-fried"></i>
+        Comer no Local
+        <small>O cliente vai consumir aqui</small>
+      </button>
+
+      <button
+        type="button"
+        [class.selected]="tipoPedido === 'levar'"
+        (click)="selecionarTipoPedido('levar')"
+      >
+        <i class="bi bi-geo-alt"></i>
+        Para Levar
+        <small>O cliente vai levar o pedido</small>
+      </button>
+    </div>
+  </section>
+
+  <!-- Pagamento -->
+  <section class="pagamento">
+    <div class="titulo">PAGAMENTO</div>
+
+    <label class="switch">
+      <input type="checkbox" [checked]="pagarDepois" (change)="togglePagarDepois()" />
+      <span class="slider"></span>
+      <span class="label-text">Pagar depois</span>
+    </label>
+
+    <div class="formas-pagamento">
+      <button
+        type="button"
+        [class.selected]="formaPagamento === 'dinheiro'"
+        (click)="selecionarFormaPagamento('dinheiro')"
+      >
+        <i class="bi bi-cash"></i> Dinheiro
+      </button>
+
+      <button
+        type="button"
+        [class.selected]="formaPagamento === 'pix'"
+        (click)="selecionarFormaPagamento('pix')"
+      >
+        <i class="bi bi-qr-code"></i> PIX
+      </button>
+
+      <button
+        type="button"
+        [class.selected]="formaPagamento === 'credito'"
+        (click)="selecionarFormaPagamento('credito')"
+      >
+        <i class="bi bi-credit-card"></i> Crédito
+      </button>
+
+      <button
+        type="button"
+        [class.selected]="formaPagamento === 'debito'"
+        (click)="selecionarFormaPagamento('debito')"
+      >
+        <i class="bi bi-bank"></i> Débito
+      </button>
+    </div>
+  </section>
+
+  <button class="btn-enviar" type="button" (click)="enviarPedido()">
+    Enviar Pedido — R$ 7,00
+  </button>
+
+</div>
+    

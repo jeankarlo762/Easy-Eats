@@ -7,6 +7,9 @@ import { Dashboard } from './dashboard/dashboard';
 import { ComponentFila } from './Fila/component.fila'; // Note o "F" maiúsculo da pasta Fila
 import { PerfilAdmin } from './perfilAdmin/perfilAdmin';
 import { PerfilGarcom } from './perfilGarcom/perfilGarcom';
+import { ConfirmarPedComponent } from './confirmar-ped/confirmar-ped';
+import { ControleEstoque } from './controle-estoque/controle-estoque';
+
 import { TelaPedido } from './telaPedido/telaPedido';
 
 export const routes: Routes = [
@@ -35,6 +38,14 @@ export const routes: Routes = [
     path: 'perfil-garcom',
     component: PerfilGarcom,
   },
+  {
+    path:'confirmar-ped',
+    component:ConfirmarPedComponent,
+  },
+{
+  path: 'controle-estoque',
+  component: ControleEstoque,
+}]
   {
     path: 'tela-pedido',
     component: TelaPedido,
