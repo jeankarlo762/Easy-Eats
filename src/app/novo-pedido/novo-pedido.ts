@@ -1,16 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-novo-pedido',
-  standalone:true,
-  imports:[CommonModule,FormsModule],
+  standalone: true,
+  imports: [CommonModule, FormsModule],
   templateUrl: './novo-pedido.html',
-  styleUrls: ['./novo-pedido.scss']
+  styleUrls: ['./novo-pedido.scss'],
 })
 export class NovoPedido {
   cliente = '';
+  private router = inject(Router);
 
   categorias = ['Todos', 'Lanches', 'Acompanhamentos', 'Bebidas'];
   categoriaSelecionada = 'Todos';
@@ -27,10 +29,14 @@ export class NovoPedido {
     { nome: 'Guaraná', preco: 7, categoria: 'Bebidas', emoji: '🧃' },
     { nome: 'Água', preco: 4, categoria: 'Bebidas', emoji: '💧' },
     { nome: 'Suco Natural', preco: 10, categoria: 'Bebidas', emoji: '🍊' },
-    { nome: 'Milk Shake', preco: 18, categoria: 'Bebidas', emoji: '🥛' }
+    { nome: 'Milk Shake', preco: 18, categoria: 'Bebidas', emoji: '🥛' },
   ];
 
   carrinho: any[] = [];
+
+  protected acessarRota(rota: string) {
+    this.router.navigate([rota]);
+  }
 
   selecionarCategoria(cat: string) {
     this.categoriaSelecionada = cat;
@@ -38,43 +44,40 @@ export class NovoPedido {
 
   produtosFiltrados() {
     if (this.categoriaSelecionada === 'Todos') return this.produtos;
-    return this.produtos.filter(p => p.categoria === this.categoriaSelecionada);
+    return this.produtos.filter((p) => p.categoria === this.categoriaSelecionada);
   }
 
- adicionarAoCarrinho(produto: any) {
-  const itemExistente = this.carrinho.find(p => p.nome === produto.nome);
+  adicionarAoCarrinho(produto: any) {
+    const itemExistente = this.carrinho.find((p) => p.nome === produto.nome);
 
-  if (itemExistente) {
-    itemExistente.qtd++;
-  } else {
-    this.carrinho.push({ ...produto, qtd: 1 });
+    if (itemExistente) {
+      itemExistente.qtd++;
+    } else {
+      this.carrinho.push({ ...produto, qtd: 1 });
+    }
   }
-}
 
-aumentarQtd(index: number) {
-  this.carrinho[index].qtd++;
-}
-
-diminuirQtd(index: number) {
-  if (this.carrinho[index].qtd > 1) {
-    this.carrinho[index].qtd--;
-  } else {
-    this.carrinho.splice(index, 1);
+  aumentarQtd(index: number) {
+    this.carrinho[index].qtd++;
   }
-}
 
-total() {
-  return this.carrinho.reduce((sum, item) => sum + item.preco * item.qtd, 0);
-}
+  diminuirQtd(index: number) {
+    if (this.carrinho[index].qtd > 1) {
+      this.carrinho[index].qtd--;
+    } else {
+      this.carrinho.splice(index, 1);
+    }
+  }
+
+  total() {
+    return this.carrinho.reduce((sum, item) => sum + item.preco * item.qtd, 0);
+  }
+
   confirmarPedido() {
-  console.log('Pedido:', this.carrinho);
+    console.log('Pedido:', this.carrinho);
+  }
 
-  // aqui você pode:
-  // - navegar pra outra tela
-  // - mandar pro backend
-  // - abrir modal
-}
-abrirDetalhes(produto: any) {
-  alert(`Detalhes do produto:\n\n${produto.nome}\nPreço: R$ ${produto.preco.toFixed(2)}`);
-}
+  abrirDetalhes(produto: any) {
+    alert(`Detalhes do produto:\n\n${produto.nome}\nPreço: R$ ${produto.preco.toFixed(2)}`);
+  }
 }

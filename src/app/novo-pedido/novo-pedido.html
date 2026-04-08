@@ -1,6 +1,5 @@
 <div class="page">
   <div class="wrapper">
-
     <!-- ESQUERDA -->
     <div class="conteudo">
       <h2>Novo Pedido</h2>
@@ -36,81 +35,72 @@
             <h4>{{ produto.nome }}</h4>
             <span>R$ {{ produto.preco.toFixed(2) }}</span>
           </div>
-           <button
-        class="info-btn"
-        (click)="abrirDetalhes(produto); $event.stopPropagation()"
-        aria-label="Detalhes do produto">
-        i
-            </button>
+          <button
+            class="info-btn"
+            (click)="abrirDetalhes(produto); $event.stopPropagation()"
+            aria-label="Detalhes do produto"
+          >
+            i
+          </button>
         </div>
       </div>
     </div>
 
     <!-- DIREITA (Carrinho) -->
-<div class="carrinho" *ngIf="carrinho.length > 0">
-  <h3>🛒 Carrinho ({{ carrinho.length }})</h3>
+    <div class="carrinho" *ngIf="carrinho.length > 0">
+      <h3>🛒 Carrinho ({{ carrinho.length }})</h3>
 
-  <div *ngFor="let item of carrinho; let i = index" class="item">
-    
-    <div class="left">
-      <span class="emoji">{{ item.emoji }}</span>
-      <span class="nome">{{ item.nome }}</span>
-    </div>
+      <div *ngFor="let item of carrinho; let i = index" class="item">
+        <div class="left">
+          <span class="emoji">{{ item.emoji }}</span>
+          <span class="nome">{{ item.nome }}</span>
+        </div>
 
-    <div class="right">
-      <div class="qtd">
-        <button (click)="diminuirQtd(i)">−</button>
-        <span>{{ item.qtd }}</span>
-        <button (click)="aumentarQtd(i)">+</button>
+        <div class="right">
+          <div class="qtd">
+            <button (click)="diminuirQtd(i)">−</button>
+            <span>{{ item.qtd }}</span>
+            <button (click)="aumentarQtd(i)">+</button>
+          </div>
+
+          <span class="preco"> R$ {{ (item.preco * item.qtd).toFixed(2) }} </span>
+        </div>
       </div>
 
-      <span class="preco">
-        R$ {{ (item.preco * item.qtd).toFixed(2) }}
-      </span>
+      <hr />
+
+      <div class="total">
+        <span>Total</span>
+        <strong>R$ {{ total().toFixed(2) }}</strong>
+      </div>
+
+      <button class="finalizar" (click)="confirmarPedido()">Finalizar Pedido</button>
     </div>
-
-  </div>
-
-  <hr />
-
-  <div class="total">
-    <span>Total</span>
-    <strong>R$ {{ total().toFixed(2) }}</strong>
-  </div>
-
-  <button class="finalizar" (click)="confirmarPedido()">
-    Finalizar Pedido
-  </button>
-</div>
     <div class="bottom-nav">
-    <button type="button" routerLink="/dashboard" routerLinkActive="active">
+      <button type="button" (click)="acessarRota('/dashboard')">
         <i class="bi bi-house-door"></i>
         <span>Painel</span>
-    </button>
+      </button>
 
-    <button type="button">
+      <button type="button" (click)="acessarRota('/novo-pedido')">
         <i class="bi bi-cart"></i>
         <span>Pedido</span>
-    </button>
+      </button>
 
-    <button type="button">
+      <button type="button" (click)="acessarRota('/fila')">
         <i class="bi bi-list-task"></i>
         <span>Fila</span>
-    </button>
+      </button>
 
-    <button type="button">
+      <button type="button" (click)="acessarRota('/historico')">
         <i class="bi bi-clock-history"></i>
         <span>Histórico</span>
-    </button>
+      </button>
 
-    <button type="button" routerLink="/perfil-admin" routerLinkActive="active">
+      <button type="button" (click)="acessarRota('/perfil-admin')">
         <i class="bi bi-person-circle"></i>
         <span>Perfil</span>
-    </button>
-
-
-</div>
-
-
+      </button>
+    </div>
   </div>
 </div>

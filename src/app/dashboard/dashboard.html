@@ -5,78 +5,76 @@
   <div class="grid">
     <div class="card">
       <div class="valor">R$ 178.00</div>
-      <div>Faturamento</div>
+      <div class="paragrafo">Faturamento</div>
     </div>
 
     <div class="card">
       <div class="valor">3</div>
-      <div>Pedidos Hoje</div>
+      <div class="paragrafo">Pedidos Hoje</div>
     </div>
 
     <div class="card">
       <div class="valor">2</div>
-      <div>Em Preparo</div>
+      <div class="paragrafo">Em Preparo</div>
     </div>
 
     <div class="card">
       <div class="valor">R$ 59.33</div>
-      <div>Ticket Médio</div>
+      <div class="paragrafo">Ticket Médio</div>
     </div>
   </div>
 
-  <button class="btn">+ Novo Pedido</button>
-
+  <button class="btn" (click)="acessarRota('/novo-pedido')">+ Novo Pedido</button>
 
   <div class="lista">
     <h3>Últimos Pedidos</h3>
 
     <div class="item">
       <span>#001 João</span>
-      <span>R$ 70.00 <span class="status">preparando</span></span>
+      @if (statusPedido === statusEnum.PREPARANDO) {
+        <span>R$ 70.00 <span class="status">preparando</span></span>
+      }
+
+      @if (statusPedido === statusEnum.PRONTO) {
+        <span>R$ 70.00 <span class="status">pronto</span></span>
+      }
+
+      @if (statusPedido === statusEnum.ENTREGUE) {
+        <span>R$ 70.00 <span class="status">entregue</span></span>
+      }
     </div>
 
     <div class="item">
-      <span>#002 Isaque</span>
-      <span>R$ 29.00 <span class="status">preparando</span></span>
+      <span>#002 Maria</span>
+      <span>R$ 42.00 <span class="status">preparando</span></span>
     </div>
 
-    <div class="item">
-      <span>#003 Douglas</span>
-      <span>R$ 124.90 <span class="status">pronto</span></span>
+    <!-- Menu inferior com ícones -->
+    <div class="bottom-nav">
+      <button type="button" routerLink="/dashboard" routerLinkActive="active">
+        <i class="bi bi-house-door"></i>
+        <span>Painel</span>
+      </button>
+
+      <button type="button" (click)="acessarRota('/novo-pedido')">
+        <i class="bi bi-cart"></i>
+        <span>Pedido</span>
+      </button>
+
+      <button (click)="acessarRota('/fila')" type="button">
+        <i class="bi bi-list-task"></i>
+        <span>Fila</span>
+      </button>
+
+      <button type="button">
+        <i class="bi bi-clock-history"></i>
+        <span>Histórico</span>
+      </button>
+
+      <button type="button" routerLink="/perfil-admin" routerLinkActive="active">
+        <i class="bi bi-person-circle"></i>
+        <span>Perfil</span>
+      </button>
     </div>
-
-    <div class="item">
-      <span>#004 Jean</span>
-      <span>R$ 150.00 <span class="status">pronto</span></span>
-    </div>
-  </div>
-
-  <!-- Menu inferior com ícones -->
-  <div class="bottom-nav">
-    <button type="button" routerLink="/dashboard" routerLinkActive="active">
-      <i class="bi bi-house-door"></i>
-      <span>Painel</span>
-    </button>
-
-    <button type="button">
-      <i class="bi bi-cart"></i>
-      <span>Pedido</span>
-    </button>
-
-    <button type="button">
-      <i class="bi bi-list-task"></i>
-      <span>Fila</span>
-    </button>
-
-    <button type="button">
-      <i class="bi bi-clock-history"></i>
-      <span>Histórico</span>
-    </button>
-
-    <button type="button" routerLink="/perfil-admin" routerLinkActive="active">
-      <i class="bi bi-person-circle"></i>
-      <span>Perfil</span>
-    </button>
-    
   </div>
 </div>
