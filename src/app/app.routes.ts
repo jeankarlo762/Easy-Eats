@@ -12,7 +12,6 @@ import { PerfilAdmin } from './perfil-admin/perfilAdmin';
 import { PerfilGarcom } from './perfil-garcom/perfilGarcom';
 import { CadastroProdutoComponent } from './cadastroProduto/cadastroProduto';
 
-
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   {
@@ -43,30 +42,16 @@ export const routes: Routes = [
     path: 'confirmar-ped',
     component: ConfirmarPedComponent,
   },
-{
-  path: 'controle-estoque',
-  component: ControleEstoque,
-},
-{
-  path: 'historico-vendas',
-  component: HistoricoVendasComponent,
-},
-{
-  path: 'financeiro',
-  component: Financeiro,
-}];
-
-
   {
     path: 'controle-estoque',
     component: ControleEstoque,
   },
   {
-    path: 'novo-pedido',
-    component: NovoPedido,
+    path: 'historico-vendas',
+    component: HistoricoVendasComponent,
   },
   {
-    path: 'cadastro-produto',
-    component: CadastroProdutoComponent,
+    path: 'financeiro',
+    component: Financeiro,
   },
 ];
