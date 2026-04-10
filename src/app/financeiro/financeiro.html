@@ -1,0 +1,174 @@
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h2>Financeiro</h2>
+
+    <!-- Botão dinâmico -->
+    <button 
+      class="btn-padrao"
+      *ngIf="abaSelecionada === 'produtos'"
+      (click)="novoProduto()">
+      + Novo
+    </button>
+
+    <button 
+      class="btn-padrao"
+      *ngIf="abaSelecionada !== 'produtos'">
+      + Nova Despesa
+    </button>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filtros">
+    <button 
+      [class.ativo]="filtroSelecionado === 'hoje'" 
+      (click)="selecionarFiltro('hoje')">
+      Hoje
+    </button>
+
+    <button 
+      [class.ativo]="filtroSelecionado === 'semana'" 
+      (click)="selecionarFiltro('semana')">
+      Semana
+    </button>
+
+    <button 
+      [class.ativo]="filtroSelecionado === 'periodo'" 
+      (click)="selecionarFiltro('periodo')">
+      Período
+    </button>
+  </div>
+
+  <!-- CARDS -->
+  <div class="cards">
+    <div class="card">
+      <span class="valor positivo">R$ {{ vendas.toString() }}</span>
+      <small>Vendas</small>
+    </div>
+
+    <div class="card">
+      <span class="valor negativo">R$ {{ despesas.toString() }}</span>
+      <small>Despesas</small>
+    </div>
+
+    <div class="card">
+      <span class="valor negativo">R$ {{ lucro.toString() }}</span>
+      <small>Lucro</small>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <span 
+      [class.ativo]="abaSelecionada==='resumo'" 
+      (click)="selecionarAba('resumo')">
+      Resumo
+    </span>
+
+    <span (click)="selecionarAba('vendas')">
+      Vendas
+    </span>
+
+    <span (click)="selecionarAba('despesas')">
+      Despesas
+    </span>
+
+    <span 
+      [class.ativo]="abaSelecionada==='produtos'" 
+      (click)="selecionarAba('produtos')">
+      Produtos
+    </span>
+  </div>
+
+  <!-- ===================== -->
+  <!-- RESUMO -->
+  <!-- ===================== -->
+  <div *ngIf="abaSelecionada === 'resumo'" class="box">
+
+    <h4>Resumo do Período</h4>
+
+    <div class="linha">
+      <span>Pedidos realizados</span>
+      <strong>{{ resumo.pedidos }}</strong>
+    </div>
+
+    <div class="linha">
+      <span>Ticket médio</span>
+      <strong>R$ {{ resumo.ticketMedio }}</strong>
+    </div>
+
+    <div class="linha">
+      <span>Despesas registradas</span>
+      <strong>{{ resumo.despesasRegistradas }}</strong>
+    </div>
+
+    <hr>
+
+    <div class="linha">
+      <strong>Resultado</strong>
+      <strong class="negativo">R$ {{ resumo.resultado }}</strong>
+    </div>
+
+  </div>
+
+  <!-- ===================== -->
+  <!-- PRODUTOS -->
+  <!-- ===================== -->
+  <div *ngIf="abaSelecionada === 'produtos'">
+
+    <!-- BUSCA -->
+    <input 
+      type="text"
+      placeholder="Buscar produto..."
+                ="busca"
+      class="input-busca"
+    />
+
+    <!-- LISTA -->
+    <div *ngIf="produtosFiltrados.length > 0; else vazio" class="grid">
+
+      <div 
+        class="produto"
+        *ngFor="let p of produtosFiltrados"
+        [class.alerta]="isEstoqueBaixo(p)"
+      >
+
+        <!-- TOPO -->
+        <div class="top">
+          <span>{{ p.emoji }}</span>
+
+          <div>
+            <span (click)="editar(p)">✏️</span>
+            <span (click)="excluir(p)">🗑️</span>
+          </div>
+        </div>
+
+        <!-- INFO -->
+        <h3>{{ p.nome }}</h3>
+
+        <small>
+          {{ p.categoria }} • {{ p.unidade }}
+        </small>
+
+        <div class="preco">
+          R$ {{ p.preco.toFixed(2) }}
+        </div>
+
+        <div class="estoque">
+          Estoque: {{ p.estoque }}
+          <span *ngIf="isEstoqueBaixo(p)">⚠️</span>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- SEM RESULTADO -->
+    <ng-template #vazio>
+      <p class="vazio">Nenhum resultado encontrado</p>
+    </ng-template>
+
+  </div>
+
+</div>

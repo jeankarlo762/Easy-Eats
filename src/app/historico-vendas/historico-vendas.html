@@ -1,0 +1,91 @@
+<div class="container">
+
+  <h2>Histórico de Vendas</h2>
+
+  <!-- KPIs -->
+  <div class="cards">
+
+    <div class="card kpi">
+      <div class="icon">$</div>
+      <div>
+        <span class="valor">R$ 178.00</span>
+        <small>Total filtrado</small>
+      </div>
+    </div>
+
+    <div class="card kpi">
+      <div class="icon">🧾</div>
+      <div>
+        <span class="valor">3</span>
+        <small>Pedidos</small>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BUSCA -->
+  <input 
+    type="text" 
+    placeholder="🔍 Buscar por nome ou #pedido"
+    class="input-busca"
+  />
+
+  <!-- FILTROS -->
+  <div class="filtros">
+    <button [class.ativo]="filtroSelecionado === 'todos'" 
+      (click)="selecionarFiltro('todos')">Todos</button>
+    <button [class.ativo]="filtroSelecionado === 'aguardando'" 
+      (click)="selecionarFiltro('aguardando')">Aguardando</button>
+    <button [class.ativo]="filtroSelecionado === 'preparando'" 
+      (click)="selecionarFiltro('preparando')">Preparando</button>
+    <button [class.ativo]="filtroSelecionado === 'pronto'" 
+      (click)="selecionarFiltro('pronto')">Pronto</button>
+  </div>
+
+  <!-- LISTA -->
+  <div class="lista">
+
+    <!-- Pedido 1 -->
+    <div class="card pedido">
+
+      <div class="top">
+        <strong>#001 João</strong>
+        <span class="status preparando">Preparando</span>
+      </div>
+
+      <div class="itens">
+        <p>🍔 Hambúrguer Clássico x2</p>
+        <p>🍟 Batata Frita x1</p>
+        <p>🥤 Coca-Cola x2</p>
+      </div>
+
+      <div class="footer">
+        <span>02:21</span>
+        <strong class="valor">R$ 70.00</strong>
+      </div>
+
+    </div>
+
+    <!-- Pedido 2 -->
+    <div class="card pedido">
+
+      <div class="top">
+        <strong>#002 Maria</strong>
+        <span class="status aguardando">Aguardando</span>
+      </div>
+
+      <div class="itens">
+        <p>🍔 X-Bacon x1</p>
+        <p>🧅 Onion Rings x1</p>
+      </div>
+
+      <div class="footer">
+        <span>02:21</span>
+        <strong class="valor">R$ 42.00</strong>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

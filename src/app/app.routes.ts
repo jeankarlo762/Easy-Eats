@@ -5,6 +5,8 @@ import { DashboardComponent } from './dashboard/dashboard';
 import { ComponentFila } from './Fila/component.fila';
 import { ConfirmarPedComponent } from './confirmar-ped/confirmar-ped';
 import { ControleEstoque } from './controle-estoque/controle-estoque';
+import { HistoricoVendasComponent } from './historico-vendas/historico-vendas';
+import { Financeiro } from './financeiro/financeiro';
 import { NovoPedido } from './novo-pedido/novo-pedido';
 import { PerfilAdmin } from './perfil-admin/perfilAdmin';
 import { PerfilGarcom } from './perfil-garcom/perfilGarcom';
@@ -41,6 +43,20 @@ export const routes: Routes = [
     path: 'confirmar-ped',
     component: ConfirmarPedComponent,
   },
+{
+  path: 'controle-estoque',
+  component: ControleEstoque,
+},
+{
+  path: 'historico-vendas',
+  component: HistoricoVendasComponent,
+},
+{
+  path: 'financeiro',
+  component: Financeiro,
+}];
+
+
   {
     path: 'controle-estoque',
     component: ControleEstoque,
