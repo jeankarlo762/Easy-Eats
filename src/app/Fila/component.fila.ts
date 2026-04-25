@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { StatusPedidoEnum } from '../enum/pedidosEnum';
-import { Navbar } from '../components/navbar';
+import { Navbar } from '../../components/navbar';
 
 interface Pedido {
   id: string;
