@@ -73,31 +73,31 @@ $danger-red: #ef4444;
   .description { font-size: 13px; color: $text-muted; margin-top: 8px; }
 }
 
-// Lista de Informações
+// Lista de Informações - PADRÃO BALÃO
 .info-section {
   h3 { font-size: 15px; margin-bottom: 20px; color: $text-dark; }
   
   .info-item {
     display: flex;
-    flex-direction: column; // Faz o conteúdo empilhar verticalmente
-    gap: 1px;              // Espaço entre o título e o valor
-    padding: 12px 0;
-    border-bottom: 1px solid #dee3e9;
+    flex-direction: column; 
+    gap: 6px;               // Espaço entre o label e o balão
+    padding: 10px 0;
+    border-bottom: none;    // REMOVIDO A LINHA para virar balão
     
     .label-title { 
-      font-size: 12px;      // Um pouco menor para dar hierarquia
-      color: $text-muted; 
-      font-weight: 500; 
-      text-transform: uppercase; // Opcional: estilo comum para rótulos superiores
-      letter-spacing: 0.5px;
+      font-size: 14px;      // Tamanho igual ao cadastro
+      color: $text-dark;    // Label mais escuro igual ao cadastro
+      font-weight: 600; 
+      text-transform: none; 
+      letter-spacing: normal;
     }
     
     .value { 
       font-size: 15px; 
-      color: $text-dark; 
-      font-weight: 600; 
+      color: $text-muted; 
+      font-weight: 500;
+      padding: 12px 15px;   // Alinhado com o padding do input
     }
-
   }
 }
 
@@ -168,3 +168,30 @@ $danger-red: #ef4444;
     margin-bottom: 2px;
   }
 
+  .input-edicao-discreto {
+  width: 100%;
+  padding: 12px 15px;       // Espaçamento interno do balão
+  background-color: #f8fafc; // Fundo cinza clarinho igual ao seu print
+  border: 1px solid #e2e8f0; // Borda completa do balão
+  border-radius: 10px;      // Arredondamento do balão
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-dark;
+  outline: none;
+  transition: all 0.2s ease;
+
+  &:focus {
+    border-color: #ff6b00;  // Laranja no foco
+    background-color: #ffffff;
+    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.1);
+  }
+}
+
+// Pequeno ajuste para a canetinha não ficar desalinhada com os balões
+.btn-canetinha-corpo {
+  color: #ff6b00;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
