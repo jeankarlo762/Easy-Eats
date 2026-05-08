@@ -21,64 +21,72 @@
         <div class="info-item">
           <div class="label-group">
             <span class="label-title">Nome: </span>
+            @if (!modoEdicao) {
+            <div class="value">{{ usuario.nome }}</div>
+            }
+            @else {
+            <input [(ngModel)]="usuario.nome" class="input-edicao">
+            }
           </div>
-          <div class="value">João Silva</div>
-        </div>
 
-        <div class="info-item">
-          <div class="label-group">
-            <span class="label-title">Email: </span>
+          <div class="info-item">
+            <div class="label-group">
+              <span class="label-title">Email: </span>
+              @if (!modoEdicao) {
+              <div class="value">{{ usuario.email }}</div>
+              } @else {
+              <input [(ngModel)]="usuario.email" class="input-edicao">
+              }
+            </div>
+
+            <div class="info-item">
+              <div class="label-group">
+                <span class="label-title">Telefone: </span>
+                @if (!modoEdicao) {
+                <div class="value">{{ usuario.telefone }}</div>
+                } @else {
+                <input [(ngModel)]="usuario.telefone" class="input-edicao">
+                }
+              </div>
+
+              <div class="info-item">
+                <div class="label-group">
+                  <span class="label-title">CPF: </span>
+                  @if (!modoEdicao) {
+                  <div class="value">{{ usuario.cpf }}</div>
+                  } @else {
+                  <input [(ngModel)]="usuario.cpf" class="input-edicao">
+                  }
+                  
+                </div>
+              </div>
+              <div class="admin-actions">
+                <div class="button-row">
+                  <button type="button" class="btn-padrao" (click)="acessarRota('/financeiro')">
+                    Financeiro
+                  </button>
+                  <button type="button" class="btn-padrao" (click)="acessarRota('/controle-estoque')">
+                    Gerenciar Estoque
+                  </button>
+                </div>
+
+                <div class="button-row">
+                  <button type="button" class="btn-padrao" (click)="acessarRota('/cadastro-produto')">
+                    Produtos
+                  </button>
+                  <button type="button" class="btn-padrao" (click)="acessarRota('/cadastro')">
+                    Cadastrar Garçom
+                  </button>
+                </div>
+
+                <div class="button-row footer-actions">
+                  <button type="button" class="btn-padrao">Editar Perfil</button>
+                  <button type="button" class="btn-red-outline" routerLink="/login" routerLinkActive="active">
+                    Sair da Conta
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="value">JoãoSilva@gmail.com</div>
         </div>
-
-        <div class="info-item">
-          <div class="label-group">
-            <span class="label-title">Telefone: </span>
-          </div>
-          <div class="value">(00) 00000-0000</div>
-        </div>
-
-        <div class="info-item">
-          <div class="label-group">
-            <span class="label-title">CPF: </span>
-          </div>
-          <div class="value">000.000.000-00</div>
-        </div>
-      </div>
-
-      <div class="admin-actions">
-        <div class="button-row">
-          <button type="button" class="btn-padrao" (click)="acessarRota('/financeiro')">
-            Financeiro
-          </button>
-          <button type="button" class="btn-padrao" (click)="acessarRota('/controle-estoque')">
-            Gerenciar Estoque
-          </button>
-        </div>
-
-        <div class="button-row">
-          <button type="button" class="btn-padrao" (click)="acessarRota('/cadastro-produto')">
-            Produtos
-          </button>
-          <button type="button" class="btn-padrao" (click)="acessarRota('/cadastro')">
-            Cadastrar Garçom
-          </button>
-        </div>
-
-        <div class="button-row footer-actions">
-          <button type="button" class="btn-padrao">Editar Perfil</button>
-          <button
-            type="button"
-            class="btn-red-outline"
-            routerLink="/login"
-            routerLinkActive="active"
-          >
-            Sair da Conta
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<app-navbar></app-navbar>
+        <app-navbar></app-navbar>
