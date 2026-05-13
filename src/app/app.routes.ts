@@ -11,9 +11,14 @@ import { NovoPedido } from './novo-pedido/novo-pedido';
 import { PerfilAdmin } from './perfil-admin/perfilAdmin';
 import { PerfilGarcom } from './perfil-garcom/perfilGarcom';
 import { CadastroProdutoComponent } from './cadastroProduto/cadastroProduto';
+import { LandingPage } from './landingPage/landingPage';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/login', pathMatch: 'full' },
+  { path: '', redirectTo: '/landing-page', pathMatch: 'full' },
+  {
+    path: 'landing',
+    component: LandingPage,
+  },
   {
     path: 'login',
     component: Login,
@@ -62,4 +67,8 @@ export const routes: Routes = [
     path: 'cadastro-produto',
     component: CadastroProdutoComponent,
   },
+  {
+    path: 'landing-page',
+    component: LandingPage,
+  }
 ];
