@@ -147,6 +147,64 @@
   margin: 0;
 }
 
+.vazio.erro-form {
+  color: #dc2626;
+  padding: 8px 0;
+}
+
+.btn-icone {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+
+  &:hover {
+    color: #dc2626;
+  }
+}
+
+.form-insumo {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  flex-wrap: wrap;
+
+  select,
+  input {
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    font-size: 13px;
+  }
+
+  select {
+    flex: 2;
+    min-width: 160px;
+  }
+
+  input {
+    flex: 1;
+    min-width: 100px;
+  }
+}
+
+.btn-adicionar {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  background: #ea580c;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: #c2410c;
+  }
+}
+
 @media (max-width: 680px) {
   .pagina {
     padding: 20px 16px 60px;

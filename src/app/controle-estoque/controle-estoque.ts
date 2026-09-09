@@ -1,22 +1,10 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-interface Produto {
-  id: string;
-  nome: string;
-  categoria: string;
-  quantidade: number;
-  quantidadeMinima: number;
-  unidade: string;
-}
-
-interface Movimentacao {
-  id: string;
-  nomeProduto: string;
-  tipo: 'entrada' | 'saida';
-  quantidade: number;
-  data: Date;
-}
+import { Component, OnInit, inject } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { Produto, ProdutoService } from '../cadastro-produto/produto.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
+import { Estoque, EstoqueService, MovimentacaoEstoque, TipoMovimentacaoEstoque } from './estoque.service';
 
 const ICONE_POR_CATEGORIA: Record<string, string> = {
   Pães: 'bi-basket3',
@@ -30,34 +18,134 @@ const ICONE_POR_CATEGORIA: Record<string, string> = {
 @Component({
   selector: 'app-controle-estoque',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ReactiveFormsModule, CarregandoComponent],
   templateUrl: './controle-estoque.html',
   styleUrls: ['./controle-estoque.scss'],
 })
 export class ControleEstoque implements OnInit {
-  produtos: Produto[] = [
-    { id: '1', nome: 'Pão de Hambúrguer', categoria: 'Pães', quantidade: 15, quantidadeMinima: 30, unidade: 'un' },
-    { id: '2', nome: 'Carne Bovina', categoria: 'Carnes', quantidade: 8, quantidadeMinima: 20, unidade: 'kg' },
-    { id: '3', nome: 'Queijo Cheddar', categoria: 'Laticínios', quantidade: 12, quantidadeMinima: 15, unidade: 'kg' },
-    { id: '4', nome: 'Alface', categoria: 'Vegetais', quantidade: 25, quantidadeMinima: 20, unidade: 'un' },
-    { id: '5', nome: 'Tomate', categoria: 'Vegetais', quantidade: 30, quantidadeMinima: 25, unidade: 'kg' },
-    { id: '6', nome: 'Batata Congelada', categoria: 'Congelados', quantidade: 5, quantidadeMinima: 15, unidade: 'kg' },
-    { id: '7', nome: 'Refrigerante', categoria: 'Bebidas', quantidade: 40, quantidadeMinima: 30, unidade: 'un' },
-  ];
+  private fb = inject(FormBuilder);
+  private estoqueService = inject(EstoqueService);
+  private produtoService = inject(ProdutoService);
 
-  movimentacoes: Movimentacao[] = [
-    { id: '1', nomeProduto: 'Pão de Hambúrguer', tipo: 'saida', quantidade: 10, data: new Date(2026, 4, 20, 19, 30) },
-    { id: '2', nomeProduto: 'Carne Bovina', tipo: 'entrada', quantidade: 20, data: new Date(2026, 4, 19, 14, 15) },
-    { id: '3', nomeProduto: 'Refrigerante', tipo: 'saida', quantidade: 15, data: new Date(2026, 4, 18, 20, 0) },
-  ];
+  estoques: Estoque[] = [];
+  movimentacoes: MovimentacaoEstoque[] = [];
+  produtosSemEstoque: Produto[] = [];
 
-  estoqueBaixo: Produto[] = [];
+  carregando = true;
+  enviandoCadastro = false;
+  enviandoMovimentacao = false;
+  erro: string | null = null;
+  sucesso = false;
 
-  ngOnInit(): void {
-    this.estoqueBaixo = this.produtos.filter((p) => p.quantidade < p.quantidadeMinima);
+  formCadastro = this.fb.group({
+    produtoId: [null as number | null, Validators.required],
+    quantidadeAtual: [0, [Validators.required, Validators.min(0)]],
+    estoqueMinimo: [0, [Validators.required, Validators.min(0)]],
+  });
+
+  formMovimentacao = this.fb.group({
+    produtoId: [null as number | null, Validators.required],
+    tipo: ['ENTRADA' as TipoMovimentacaoEstoque, Validators.required],
+    quantidade: [null as number | null, [Validators.required, Validators.min(1)]],
+    observacao: [''],
+  });
+
+  ngOnInit() {
+    this.carregar();
   }
 
-  iconeCategoria(categoria: string): string {
-    return ICONE_POR_CATEGORIA[categoria] ?? 'bi-box-seam';
+  private carregar() {
+    this.carregando = true;
+    this.erro = null;
+
+    this.estoqueService.listar().subscribe({
+      next: (estoques) => {
+        this.estoques = estoques;
+        this.carregando = false;
+        this.calcularProdutosSemEstoque();
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o estoque.');
+        this.carregando = false;
+      },
+    });
+
+    this.estoqueService.listarMovimentacoes().subscribe({
+      next: (movimentacoes) => (this.movimentacoes = movimentacoes),
+      error: () => {},
+    });
+
+    this.produtoService.listar().subscribe({
+      next: (produtos) => {
+        this.todosProdutos = produtos;
+        this.calcularProdutosSemEstoque();
+      },
+      error: () => {},
+    });
+  }
+
+  private todosProdutos: Produto[] = [];
+
+  private calcularProdutosSemEstoque() {
+    const idsComEstoque = new Set(this.estoques.map((e) => e.produto.id));
+    this.produtosSemEstoque = this.todosProdutos.filter((p) => !idsComEstoque.has(p.id));
+  }
+
+  get estoqueBaixo(): Estoque[] {
+    return this.estoques.filter((e) => e.quantidadeAtual < e.estoqueMinimo);
+  }
+
+  iconeCategoria(categoriaNome?: string | null): string {
+    return (categoriaNome && ICONE_POR_CATEGORIA[categoriaNome]) || 'bi-box-seam';
+  }
+
+  cadastrarNoEstoque() {
+    if (this.formCadastro.invalid || this.enviandoCadastro) {
+      this.formCadastro.markAllAsTouched();
+      return;
+    }
+
+    const { produtoId, quantidadeAtual, estoqueMinimo } = this.formCadastro.getRawValue();
+    this.enviandoCadastro = true;
+    this.erro = null;
+
+    this.estoqueService.criar(produtoId!, quantidadeAtual!, estoqueMinimo!).subscribe({
+      next: (estoque) => {
+        this.enviandoCadastro = false;
+        this.estoques = [estoque, ...this.estoques];
+        this.calcularProdutosSemEstoque();
+        this.formCadastro.reset({ produtoId: null, quantidadeAtual: 0, estoqueMinimo: 0 });
+      },
+      error: (erro) => {
+        this.enviandoCadastro = false;
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível cadastrar o produto no estoque.');
+      },
+    });
+  }
+
+  registrarMovimentacao() {
+    if (this.formMovimentacao.invalid || this.enviandoMovimentacao) {
+      this.formMovimentacao.markAllAsTouched();
+      return;
+    }
+
+    const { produtoId, tipo, quantidade, observacao } = this.formMovimentacao.getRawValue();
+    this.enviandoMovimentacao = true;
+    this.erro = null;
+
+    this.estoqueService.registrarMovimentacao(produtoId!, tipo!, quantidade!, observacao || undefined).subscribe({
+      next: (movimentacao) => {
+        this.enviandoMovimentacao = false;
+        this.sucesso = true;
+        setTimeout(() => (this.sucesso = false), 4000);
+        this.movimentacoes = [movimentacao, ...this.movimentacoes];
+        this.formMovimentacao.reset({ produtoId: null, tipo: 'ENTRADA', quantidade: null, observacao: '' });
+        this.carregar();
+      },
+      error: (erro) => {
+        this.enviandoMovimentacao = false;
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível registrar a movimentação.');
+      },
+    });
   }
 }

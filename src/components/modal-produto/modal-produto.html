@@ -17,11 +17,11 @@
           {{ produto.descricao }}
         </p>
 
-        @if (ehPreparado) {
+        @if (permiteCustomizacao) {
           @if (carregandoDetalhes) {
             <p class="carregando-detalhes">Carregando composição...</p>
           } @else {
-            @if (composicao.length > 0) {
+            @if (ehPreparado && composicao.length > 0) {
               <div class="secao">
                 <h4>Composição</h4>
                 <p class="ajuda">Desative o que não quiser no seu pedido.</p>

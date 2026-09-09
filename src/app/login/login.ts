@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { CampoSenhaComponent } from '../../components/campo-senha/campo-senha';
 import { CampoTextoComponent } from '../../components/campo-texto/campo-texto';
 import { AuthService } from '../auth/auth.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-login',
@@ -66,9 +67,18 @@ export class Login {
         }
         this.router.navigate([rota]);
       },
-      error: () => {
+      error: (erro) => {
         this.enviando = false;
-        this.erro = 'E-mail ou senha inválidos.';
+        // Antes qualquer falha virava "e-mail ou senha inválidos" — inclusive
+        // API fora do ar ou erro 500, o que mandava o usuário conferir a senha
+        // sem motivo. A mensagem do backend só é usada quando ele de fato
+        // responde (401 traz "E-mail ou senha inválidos").
+        this.erro = MensagemErroApiUtil.extrair(
+          erro,
+          erro?.status === 0
+            ? 'Não foi possível conectar ao servidor. Verifique se a API está no ar.'
+            : 'Não foi possível entrar. Tente novamente.',
+        );
       },
     });
   }

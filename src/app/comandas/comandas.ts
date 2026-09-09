@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Comanda, ComandaService } from './comanda.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-comandas',
@@ -71,9 +72,12 @@ export class Comandas implements OnInit {
         this.fechando = null;
         this.carregar();
       },
-      error: () => {
+      error: (erro) => {
         this.fechando = null;
-        this.erro = 'Não foi possível fechar a comanda. Verifique se ela possui itens lançados.';
+        this.erro = MensagemErroApiUtil.extrair(
+          erro,
+          'Não foi possível fechar a comanda. Verifique se ela possui itens lançados.',
+        );
       },
     });
   }

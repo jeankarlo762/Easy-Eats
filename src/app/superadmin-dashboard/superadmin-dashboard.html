@@ -4,112 +4,114 @@
     <p>Visão geral de todos os clientes Easy Eats</p>
   </header>
 
-  <div class="grid-stats">
-    <div class="stat-card">
-      <div class="stat-top">
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
+
+  @if (carregando) {
+    <app-carregando texto="Carregando painel..."></app-carregando>
+  } @else {
+    <div class="grid-stats">
+      <div class="stat-card">
         <div class="stat-label">Total de Clientes</div>
-        <span class="variacao">{{ variacaoClientes }}</span>
+        <div class="stat-valor">{{ totalClientes }}</div>
       </div>
-      <div class="stat-valor">{{ totalClientes }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-top">
+      <div class="stat-card">
         <div class="stat-label">Usuários na Plataforma</div>
-        <span class="variacao">{{ variacaoUsuarios }}</span>
+        <div class="stat-valor">{{ usuariosTotais }}</div>
       </div>
-      <div class="stat-valor">{{ usuariosTotais }}</div>
+      <div class="stat-card">
+        <div class="stat-label">Empresas Ativas</div>
+        <div class="stat-valor sucesso">{{ empresasAtivas }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Empresas Inativas</div>
+        <div class="stat-valor" [class.alerta]="empresasInativas > 0">{{ empresasInativas }}</div>
+      </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-top">
-        <div class="stat-label">MRR</div>
-        <span class="variacao">{{ variacaoMrr }}</span>
-      </div>
-      <div class="stat-valor sucesso">R$ {{ mrr.toFixed(2) }}</div>
+
+    <div class="grid-duas-colunas">
+      <section class="painel">
+        <h3>Novos Clientes por Mês</h3>
+
+        <div class="barras-dia">
+          @for (linha of novosClientesPorMes; track linha.mes) {
+            <div class="barra-item">
+              <div class="barra" [style.height.%]="(linha.quantidade / maiorQuantidadeMes) * 100"></div>
+              <span>{{ linha.mes.slice(0, 3) }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="painel">
+        <h3>Distribuição por Segmento</h3>
+
+        @if (distribuicaoSegmentos.length === 0) {
+          <p class="vazio">Nenhuma empresa cadastrada.</p>
+        } @else {
+          <div class="barra-distribuicao">
+            @for (d of distribuicaoSegmentos; track d.segmento) {
+              <span [style.background]="d.cor" [style.width.%]="d.percentual"></span>
+            }
+          </div>
+
+          <div class="legenda-distribuicao">
+            @for (d of distribuicaoSegmentos; track d.segmento) {
+              <div class="legenda-item">
+                <span class="ponto" [style.background]="d.cor"></span>
+                <span class="nome">{{ d.segmento }}</span>
+                <span class="valor">{{ d.empresas }} ({{ d.percentual }}%)</span>
+              </div>
+            }
+          </div>
+        }
+      </section>
     </div>
-    <div class="stat-card">
-      <div class="stat-top">
-        <div class="stat-label">Taxa de Inadimplência</div>
-        <span class="variacao negativa">{{ variacaoInadimplencia }}</span>
-      </div>
-      <div class="stat-valor" [class.alerta]="taxaInadimplencia > 5">{{ taxaInadimplencia }}%</div>
+
+    <div class="grid-duas-colunas">
+      <section class="painel">
+        <h3>Últimos Clientes Cadastrados</h3>
+
+        <div class="lista">
+          @for (cliente of ultimosClientes; track cliente.id) {
+            <div class="linha">
+              <div class="info">
+                <strong>{{ cliente.nome }}</strong>
+                <span>Cadastrado em {{ cliente.dtCriacao | date: 'dd/MM/yyyy' }}</span>
+              </div>
+
+              <div class="direita">
+                <span class="badge" [ngClass]="cliente.flAtivo ? 'sucesso' : 'erro'">
+                  {{ cliente.flAtivo ? 'Ativa' : 'Inativa' }}
+                </span>
+              </div>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhum cliente cadastrado.</p>
+          }
+        </div>
+      </section>
+
+      <section class="painel">
+        <h3>Alertas da Plataforma</h3>
+
+        <div class="lista-alertas">
+          @for (a of alertas; track a.titulo) {
+            <div class="alerta-item">
+              <div class="alerta-icone" [ngClass]="a.cor">
+                <i class="bi" [ngClass]="a.icone"></i>
+              </div>
+              <div class="alerta-texto">
+                <strong>{{ a.titulo }}</strong>
+                <span>{{ a.descricao }}</span>
+              </div>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhum alerta no momento.</p>
+          }
+        </div>
+      </section>
     </div>
-  </div>
-
-  <div class="grid-duas-colunas">
-    <section class="painel">
-      <h3>Novos Clientes por Mês</h3>
-
-      <div class="barras-dia">
-        @for (linha of novosClientesPorMes; track linha.mes) {
-          <div class="barra-item">
-            <div class="barra" [style.height.%]="(linha.quantidade / maiorQuantidadeMes) * 100"></div>
-            <span>{{ linha.mes.slice(0, 3) }}</span>
-          </div>
-        }
-      </div>
-    </section>
-
-    <section class="painel">
-      <h3>Distribuição por Plano</h3>
-
-      <div class="barra-distribuicao">
-        @for (d of distribuicaoPlanos; track d.plano) {
-          <span [style.background]="d.cor" [style.width.%]="d.percentual"></span>
-        }
-      </div>
-
-      <div class="legenda-distribuicao">
-        @for (d of distribuicaoPlanos; track d.plano) {
-          <div class="legenda-item">
-            <span class="ponto" [style.background]="d.cor"></span>
-            <span class="nome">{{ d.plano }}</span>
-            <span class="valor">{{ d.empresas }} ({{ d.percentual }}%)</span>
-          </div>
-        }
-      </div>
-    </section>
-  </div>
-
-  <div class="grid-duas-colunas">
-    <section class="painel">
-      <h3>Últimos Clientes Cadastrados</h3>
-
-      <div class="lista">
-        @for (cliente of ultimosClientes; track cliente.empresa) {
-          <div class="linha">
-            <div class="info">
-              <strong>{{ cliente.empresa }}</strong>
-              <span>Cadastrado em {{ cliente.dataCadastro }}</span>
-            </div>
-
-            <div class="direita">
-              <span class="badge" [ngClass]="badgePlano[cliente.plano]">{{ cliente.plano }}</span>
-            </div>
-          </div>
-        } @empty {
-          <p class="vazio">Nenhum cliente cadastrado.</p>
-        }
-      </div>
-    </section>
-
-    <section class="painel">
-      <h3>Alertas da Plataforma</h3>
-
-      <div class="lista-alertas">
-        @for (a of alertas; track a.titulo) {
-          <div class="alerta-item">
-            <div class="alerta-icone" [ngClass]="a.cor">
-              <i class="bi" [ngClass]="a.icone"></i>
-            </div>
-            <div class="alerta-texto">
-              <strong>{{ a.titulo }}</strong>
-              <span>{{ a.descricao }}</span>
-            </div>
-          </div>
-        } @empty {
-          <p class="vazio">Nenhum alerta no momento.</p>
-        }
-      </div>
-    </section>
-  </div>
+  }
 </div>

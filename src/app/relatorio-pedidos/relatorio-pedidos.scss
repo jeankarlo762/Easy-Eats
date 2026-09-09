@@ -103,6 +103,15 @@
 .ponto.laranja { background: #ea580c; }
 .ponto.azul { background: #2563eb; }
 .ponto.vermelho { background: #dc2626; }
+.ponto.roxo { background: #7c3aed; }
+
+.vazio {
+  margin: 0;
+  padding: 20px 0;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
 
 .nome {
   flex: 1;

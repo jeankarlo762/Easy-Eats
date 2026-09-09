@@ -1,55 +1,61 @@
 <div class="pagina">
   <header class="topo">
     <h1>Relatório de Pedidos</h1>
-    <p>Visão consolidada dos pedidos do período</p>
+    <p>Visão consolidada de todos os pedidos registrados</p>
   </header>
 
-  <div class="grid-stats">
-    <div class="stat-card">
-      <div class="stat-label">Total de Pedidos</div>
-      <div class="stat-valor">{{ totalPedidos }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Valor Total</div>
-      <div class="stat-valor">R$ {{ valorTotal.toFixed(2) }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Ticket Médio</div>
-      <div class="stat-valor">R$ {{ ticketMedio.toFixed(2) }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Cancelamento</div>
-      <div class="stat-valor alerta">{{ taxaCancelamento }}%</div>
-    </div>
-  </div>
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
 
-  <div class="grid-duas-colunas">
-    <section class="painel">
-      <h3>Pedidos por Status</h3>
-
-      <div class="lista-status">
-        @for (linha of porStatus; track linha.status) {
-          <div class="linha-status">
-            <span class="ponto" [ngClass]="linha.cor"></span>
-            <span class="nome">{{ linha.status }}</span>
-            <span class="qtd">{{ linha.quantidade }}</span>
-            <span class="valor">R$ {{ linha.valor.toFixed(2) }}</span>
-          </div>
-        }
+  @if (carregando) {
+    <app-carregando texto="Carregando relatório..."></app-carregando>
+  } @else {
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">Total de Pedidos</div>
+        <div class="stat-valor">{{ totalPedidos }}</div>
       </div>
-    </section>
-
-    <section class="painel">
-      <h3>Pedidos por Dia da Semana</h3>
-
-      <div class="barras-dia">
-        @for (linha of porDia; track linha.dia) {
-          <div class="barra-item">
-            <div class="barra" [style.height.%]="(linha.valor / maiorValorDia) * 100"></div>
-            <span>{{ linha.dia.slice(0, 3) }}</span>
-          </div>
-        }
+      <div class="stat-card">
+        <div class="stat-label">Valor Total</div>
+        <div class="stat-valor">{{ valorTotal | currency: 'BRL' }}</div>
       </div>
-    </section>
-  </div>
+      <div class="stat-card">
+        <div class="stat-label">Ticket Médio</div>
+        <div class="stat-valor">{{ ticketMedio | currency: 'BRL' }}</div>
+      </div>
+    </div>
+
+    <div class="grid-duas-colunas">
+      <section class="painel">
+        <h3>Pedidos por Status</h3>
+
+        <div class="lista-status">
+          @for (linha of porStatus; track linha.status) {
+            <div class="linha-status">
+              <span class="ponto" [ngClass]="linha.cor"></span>
+              <span class="nome">{{ linha.status }}</span>
+              <span class="qtd">{{ linha.quantidade }}</span>
+              <span class="valor">{{ linha.valor | currency: 'BRL' }}</span>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhum pedido registrado ainda.</p>
+          }
+        </div>
+      </section>
+
+      <section class="painel">
+        <h3>Pedidos por Dia da Semana</h3>
+
+        <div class="barras-dia">
+          @for (linha of porDia; track linha.dia) {
+            <div class="barra-item">
+              <div class="barra" [style.height.%]="(linha.valor / maiorValorDia) * 100"></div>
+              <span>{{ linha.dia.slice(0, 3) }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
 </div>

@@ -1,12 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { DashboardResumo, DashboardService, PontoVendaDia } from './dashboard.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 interface StatCard {
   icon: string;
   cor: string;
   valor: string;
   label: string;
-  variacao: string;
+  variacao: number | null;
 }
 
 interface StatusOperacional {
@@ -16,104 +19,114 @@ interface StatusOperacional {
   label: string;
 }
 
-interface FormaPagamento {
-  nome: string;
-  cor: string;
-  valor: number;
-}
+const CORES_FORMA_PAGAMENTO: Record<string, string> = {
+  PIX: '#22c55e',
+  Cartão: '#f97316',
+  Dinheiro: '#3b82f6',
+  Vale: '#f59e0b',
+};
 
-interface ProdutoRanking {
-  nome: string;
-  quantidade: number;
-}
-
-interface PontoSemana {
-  dia: string;
-  valor: number;
-}
-
-interface PontoHorario {
-  hora: string;
-  pedidos: number;
-}
+const CORES_FALLBACK = ['#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CarregandoComponent],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss'],
 })
-export class DashboardComponent {
-  readonly statsPrincipais: StatCard[] = [
-    { icon: 'bi-cash-stack', cor: 'verde', valor: 'R$ 614,50', label: 'Vendas do Dia', variacao: '+12%' },
-    { icon: 'bi-cart-check', cor: 'azul', valor: '18', label: 'Pedidos Realizados', variacao: '+8%' },
-    { icon: 'bi-graph-up-arrow', cor: 'roxo', valor: 'R$ 34,14', label: 'Ticket Médio', variacao: '+5%' },
-    { icon: 'bi-fire', cor: 'laranja', valor: 'R$ 268,90', label: 'Lucro do Dia', variacao: '+15%' },
-  ];
+export class DashboardComponent implements OnInit {
+  private dashboardService = inject(DashboardService);
 
-  readonly statsOperacionais: StatusOperacional[] = [
-    { icon: 'bi-egg-fried', cor: 'laranja', valor: 3, label: 'Em Preparo' },
-    { icon: 'bi-check-circle', cor: 'verde', valor: 2, label: 'Prontos' },
-    { icon: 'bi-box-seam', cor: 'azul', valor: 13, label: 'Entregues' },
-    { icon: 'bi-exclamation-triangle', cor: 'vermelho', valor: 2, label: 'Estoque Crítico' },
-  ];
+  carregando = true;
+  erro: string | null = null;
+  resumo: DashboardResumo | null = null;
 
-  readonly vendasSemana: PontoSemana[] = [
-    { dia: 'ter', valor: 950 },
-    { dia: 'qua', valor: 980 },
-    { dia: 'qui', valor: 860 },
-    { dia: 'sex', valor: 840 },
-    { dia: 'sab', valor: 430 },
-    { dia: 'dom', valor: 650 },
-    { dia: 'seg', valor: 900 },
-  ];
+  ngOnInit() {
+    this.carregando = true;
 
-  readonly formasPagamento: FormaPagamento[] = [
-    { nome: 'PIX', cor: '#22c55e', valor: 310.0 },
-    { nome: 'Cartão', cor: '#f97316', valor: 220.5 },
-    { nome: 'Dinheiro', cor: '#3b82f6', valor: 74.0 },
-    { nome: 'Vale', cor: '#f59e0b', valor: 10.0 },
-  ];
+    this.dashboardService.resumo().subscribe({
+      next: (resumo) => {
+        this.resumo = resumo;
+        this.carregando = false;
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o dashboard.');
+        this.carregando = false;
+      },
+    });
+  }
 
-  readonly produtosMaisVendidos: ProdutoRanking[] = [
-    { nome: 'Hambúrguer Clássico', quantidade: 24 },
-    { nome: 'X-Bacon', quantidade: 19 },
-    { nome: 'Coca-Cola', quantidade: 17 },
-    { nome: 'Batata Frita', quantidade: 15 },
-    { nome: 'Milk Shake', quantidade: 9 },
-  ];
+  get statsPrincipais(): StatCard[] {
+    if (!this.resumo) return [];
+    const r = this.resumo;
+    return [
+      { icon: 'bi-cash-stack', cor: 'verde', valor: this.formatarMoeda(r.vendasHoje), label: 'Vendas do Dia', variacao: r.variacaoVendas },
+      { icon: 'bi-cart-check', cor: 'azul', valor: String(r.pedidosHoje), label: 'Pedidos Realizados', variacao: r.variacaoPedidos },
+      { icon: 'bi-graph-up-arrow', cor: 'roxo', valor: this.formatarMoeda(r.ticketMedioHoje), label: 'Ticket Médio', variacao: r.variacaoTicketMedio },
+      { icon: 'bi-fire', cor: 'laranja', valor: this.formatarMoeda(r.lucroHoje), label: 'Lucro do Dia', variacao: r.variacaoLucro },
+    ];
+  }
 
-  readonly horarioMovimento: PontoHorario[] = [
-    { hora: '11h', pedidos: 4 },
-    { hora: '12h', pedidos: 9 },
-    { hora: '13h', pedidos: 7 },
-    { hora: '18h', pedidos: 8 },
-    { hora: '19h', pedidos: 14 },
-    { hora: '20h', pedidos: 11 },
-    { hora: '21h', pedidos: 5 },
-  ];
+  get statsOperacionais(): StatusOperacional[] {
+    if (!this.resumo) return [];
+    const r = this.resumo;
+    return [
+      { icon: 'bi-egg-fried', cor: 'laranja', valor: r.emPreparo, label: 'Em Preparo' },
+      { icon: 'bi-check-circle', cor: 'verde', valor: r.prontos, label: 'Prontos' },
+      { icon: 'bi-box-seam', cor: 'azul', valor: r.entreguesHoje, label: 'Entregues' },
+      { icon: 'bi-exclamation-triangle', cor: 'vermelho', valor: r.estoqueCritico, label: 'Estoque Crítico' },
+    ];
+  }
+
+  get vendasSemana(): PontoVendaDia[] {
+    return this.resumo?.vendasSemana ?? [];
+  }
+
+  get formasPagamento(): { nome: string; cor: string; valor: number }[] {
+    if (!this.resumo) return [];
+    return this.resumo.formasPagamento.map((forma, i) => ({
+      nome: forma.metodo,
+      valor: forma.valor,
+      cor: CORES_FORMA_PAGAMENTO[forma.metodo] ?? CORES_FALLBACK[i % CORES_FALLBACK.length],
+    }));
+  }
+
+  get produtosMaisVendidos(): { nome: string; quantidade: number }[] {
+    return (this.resumo?.produtosMaisVendidos ?? []).map((p) => ({
+      nome: p.nomeProduto,
+      quantidade: p.quantidadeVendida,
+    }));
+  }
+
+  get horarioMovimento() {
+    return this.resumo?.horarioMovimento ?? [];
+  }
 
   get totalFormasPagamento(): number {
-    return this.formasPagamento.reduce((soma, f) => soma + f.valor, 0);
+    return this.formasPagamento.reduce((soma, f) => soma + f.valor, 0) || 1;
   }
 
   get maiorValorSemana(): number {
-    return Math.max(...this.vendasSemana.map((p) => p.valor));
+    const valores = this.vendasSemana.map((p) => p.valor);
+    return valores.length ? Math.max(...valores, 1) : 1;
   }
 
   get maiorPedidosHorario(): number {
-    return Math.max(...this.horarioMovimento.map((p) => p.pedidos));
+    const valores = this.horarioMovimento.map((p) => p.pedidos);
+    return valores.length ? Math.max(...valores, 1) : 1;
   }
 
   /** Gera o "d" de um path SVG de área suavizada para o gráfico semanal. */
   get areaPath(): string {
     const largura = 700;
     const altura = 180;
-    const passo = largura / (this.vendasSemana.length - 1);
+    const pontos_ = this.vendasSemana;
+    if (pontos_.length < 2) return '';
+    const passo = largura / (pontos_.length - 1);
     const max = this.maiorValorSemana * 1.15;
 
-    const pontos = this.vendasSemana.map((p, i) => ({
+    const pontos = pontos_.map((p, i) => ({
       x: i * passo,
       y: altura - (p.valor / max) * altura,
     }));
@@ -130,11 +143,12 @@ export class DashboardComponent {
   }
 
   get areaFillPath(): string {
-    return `${this.areaPath} L 700 180 L 0 180 Z`;
+    return this.areaPath ? `${this.areaPath} L 700 180 L 0 180 Z` : '';
   }
 
   pontoX(i: number): number {
-    return i * (700 / (this.vendasSemana.length - 1));
+    const total = this.vendasSemana.length;
+    return total > 1 ? i * (700 / (total - 1)) : 0;
   }
 
   pontoY(valor: number): number {
@@ -142,4 +156,7 @@ export class DashboardComponent {
     return 180 - (valor / max) * 180;
   }
 
+  formatarMoeda(valor: number): string {
+    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
 }

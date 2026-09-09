@@ -91,6 +91,19 @@
   border-radius: 999px;
 }
 
+.variacao.negativa {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.vazio {
+  margin: 0;
+  padding: 20px 0;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
 .stat-valor {
   font-size: 24px;
   font-weight: 800;

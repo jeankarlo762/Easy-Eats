@@ -107,6 +107,19 @@ export class AuthService {
 
   private recuperarUsuario(): UsuarioLogado | null {
     const bruto = sessionStorage.getItem(CHAVE_USUARIO);
-    return bruto ? JSON.parse(bruto) : null;
+    if (!bruto) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(bruto) as UsuarioLogado;
+    } catch {
+      // Valor corrompido ou de um schema incompatível de uma versão anterior:
+      // sem o try/catch, esse JSON.parse inválido estourava na inicialização
+      // do AuthService (providedIn: 'root', instanciado bem cedo) e derrubava
+      // o app inteiro com tela branca, sem nenhuma forma de recuperação pela UI.
+      sessionStorage.removeItem(CHAVE_USUARIO);
+      return null;
+    }
   }
 }

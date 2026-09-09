@@ -10,7 +10,10 @@ export interface Empresa {
   cnpj: string;
   email: string;
   telefone: string | null;
+  endereco: string | null;
+  horarioFuncionamento: string | null;
   flAtivo: boolean;
+  dtCriacao: string | null;
   segmento: Segmento | null;
 }
 
@@ -21,6 +24,13 @@ export interface EmpresaPayload {
   telefone: string | null;
   flAtivo: boolean;
   segmento: { id: number } | null;
+}
+
+export interface MinhaEmpresaPayload {
+  nome: string;
+  telefone: string | null;
+  endereco: string | null;
+  horarioFuncionamento: string | null;
 }
 
 const API_URL = `${environment.apiUrl}/empresa`;
@@ -47,5 +57,13 @@ export class EmpresaService {
 
   excluir(id: number): Observable<void> {
     return this.http.delete<void>(`${API_URL}/${id}`);
+  }
+
+  buscarMinhaEmpresa(): Observable<Empresa> {
+    return this.http.get<Empresa>(`${API_URL}/minha-empresa`);
+  }
+
+  atualizarMinhaEmpresa(payload: MinhaEmpresaPayload): Observable<Empresa> {
+    return this.http.put<Empresa>(`${API_URL}/minha-empresa`, payload);
   }
 }

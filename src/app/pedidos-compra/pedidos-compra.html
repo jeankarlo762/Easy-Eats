@@ -4,68 +4,87 @@
     <p>Acompanhe e crie pedidos de compra para fornecedores</p>
   </header>
 
-  <div class="grid-stats">
-    <div class="stat-card">
-      <div class="stat-label">Pedidos Aguardando</div>
-      <div class="stat-valor alerta">{{ pedidosAguardando }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Valor em Pedidos Abertos</div>
-      <div class="stat-valor">R$ {{ valorTotalAberto | number: '1.2-2' }}</div>
-    </div>
-  </div>
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
 
-  <div class="grid-duas-colunas">
-    <section class="painel">
-      <h3>Novo Pedido</h3>
-
-      <form [formGroup]="form" (ngSubmit)="criarPedido()">
-        <div class="campo">
-          <label>Fornecedor</label>
-          <select formControlName="fornecedor">
-            <option value="" disabled selected>Selecione um fornecedor</option>
-            @for (fornecedor of fornecedores; track fornecedor) {
-              <option [value]="fornecedor">{{ fornecedor }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="campo">
-          <label>Itens</label>
-          <input type="text" placeholder="Ex: 50kg Carne Bovina, 20kg Batata" formControlName="itens" />
-        </div>
-
-        <div class="campo">
-          <label>Valor Estimado</label>
-          <input type="number" step="0.01" placeholder="0,00" formControlName="valorTotal" />
-        </div>
-
-        <div class="acoes-form">
-          <button type="submit" class="btn-salvar">Criar Pedido</button>
-        </div>
-      </form>
-    </section>
-
-    <section class="painel">
-      <h3>Pedidos Realizados</h3>
-
-      <div class="lista">
-        @for (pedido of pedidos; track pedido.id) {
-          <div class="linha">
-            <div class="info">
-              <strong>{{ pedido.fornecedor }}</strong>
-              <span>{{ pedido.itens }}</span>
-            </div>
-
-            <div class="direita">
-              <span>R$ {{ pedido.valorTotal | number: '1.2-2' }}</span>
-              <span class="badge" [ngClass]="badgeClasse(pedido.status)">{{ pedido.status }}</span>
-            </div>
-          </div>
-        } @empty {
-          <p class="vazio">Nenhum pedido de compra cadastrado.</p>
-        }
+  @if (carregando) {
+    <app-carregando texto="Carregando pedidos de compra..."></app-carregando>
+  } @else {
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">Pedidos Aguardando</div>
+        <div class="stat-valor alerta">{{ pedidosAguardando }}</div>
       </div>
-    </section>
-  </div>
+      <div class="stat-card">
+        <div class="stat-label">Valor em Pedidos Abertos</div>
+        <div class="stat-valor">{{ valorTotalAberto | currency: 'BRL' }}</div>
+      </div>
+    </div>
+
+    <div class="grid-duas-colunas">
+      <section class="painel">
+        <h3>Novo Pedido</h3>
+
+        @if (erroFormulario) {
+          <p class="vazio">{{ erroFormulario }}</p>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="criarPedido()">
+          <div class="campo">
+            <label>Fornecedor</label>
+            <select formControlName="fornecedorId">
+              <option [ngValue]="null" disabled selected>Selecione um fornecedor</option>
+              @for (fornecedor of fornecedores; track fornecedor.id) {
+                <option [ngValue]="fornecedor.id">{{ fornecedor.nome }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="campo">
+            <label>Itens</label>
+            <input type="text" placeholder="Ex: 50kg Carne Bovina, 20kg Batata" formControlName="itens" />
+          </div>
+
+          <div class="campo">
+            <label>Valor Estimado</label>
+            <input type="number" step="0.01" placeholder="0,00" formControlName="valorTotal" />
+          </div>
+
+          <div class="acoes-form">
+            <button type="submit" class="btn-salvar" [disabled]="enviando">
+              {{ enviando ? 'Criando...' : 'Criar Pedido' }}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="painel">
+        <h3>Pedidos Realizados</h3>
+
+        <div class="lista">
+          @for (pedido of pedidos; track pedido.id) {
+            <div class="linha">
+              <div class="info">
+                <strong>{{ pedido.fornecedor.nome }}</strong>
+                <span>{{ pedido.itens }}</span>
+              </div>
+
+              <div class="direita">
+                <span>{{ pedido.valorTotal | currency: 'BRL' }}</span>
+                <span class="badge" [ngClass]="badgeClasse(pedido.status)">{{ labelStatus(pedido.status) }}</span>
+                @if (pedido.status !== 'RECEBIDO') {
+                  <button type="button" class="btn-icone" (click)="avancarStatus(pedido)" title="Avançar status">
+                    <i class="bi bi-arrow-right-circle"></i>
+                  </button>
+                }
+              </div>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhum pedido de compra cadastrado.</p>
+          }
+        </div>
+      </section>
+    </div>
+  }
 </div>

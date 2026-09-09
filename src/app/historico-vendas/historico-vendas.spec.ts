@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { providersTeste } from '../testing/providers-teste';
 
 import { HistoricoVendasComponent } from './historico-vendas';
 
@@ -8,7 +9,8 @@ describe('HistoricoVendas', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [HistoricoVendasComponent]
+      imports: [HistoricoVendasComponent],
+      providers: [providersTeste],
     })
     .compileComponents();
 

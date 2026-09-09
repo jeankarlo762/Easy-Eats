@@ -1,10 +1,8 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-interface ItemConsumido {
-  nome: string;
-  quantidade: number;
-}
+import { Component, OnInit, inject } from '@angular/core';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { Estoque, EstoqueService, ItemMaisConsumido } from '../controle-estoque/estoque.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 interface CategoriaEstoque {
   categoria: string;
@@ -14,28 +12,58 @@ interface CategoriaEstoque {
 @Component({
   selector: 'app-relatorio-estoque',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CarregandoComponent],
   templateUrl: './relatorio-estoque.html',
   styleUrl: './relatorio-estoque.scss',
 })
-export class RelatorioEstoque {
-  totalItens = 186;
-  valorTotalEstoque = 24350.75;
-  itensCriticos = 7;
+export class RelatorioEstoque implements OnInit {
+  private estoqueService = inject(EstoqueService);
 
-  itensMaisConsumidos: ItemConsumido[] = [
-    { nome: 'Pão de Hambúrguer', quantidade: 420 },
-    { nome: 'Carne Bovina (kg)', quantidade: 310 },
-    { nome: 'Refrigerante Lata', quantidade: 275 },
-    { nome: 'Queijo Mussarela (kg)', quantidade: 198 },
-    { nome: 'Batata Congelada (kg)', quantidade: 162 },
-  ];
+  estoques: Estoque[] = [];
+  itensMaisConsumidos: ItemMaisConsumido[] = [];
+  carregando = true;
+  erro: string | null = null;
 
-  estoquePorCategoria: CategoriaEstoque[] = [
-    { categoria: 'Carnes', quantidadeItens: 42 },
-    { categoria: 'Bebidas', quantidadeItens: 58 },
-    { categoria: 'Embalagens', quantidadeItens: 34 },
-    { categoria: 'Hortifruti', quantidadeItens: 29 },
-    { categoria: 'Congelados', quantidadeItens: 23 },
-  ];
+  ngOnInit() {
+    this.carregando = true;
+
+    this.estoqueService.listar().subscribe({
+      next: (estoques) => {
+        this.estoques = estoques;
+        this.carregando = false;
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o relatório de estoque.');
+        this.carregando = false;
+      },
+    });
+
+    this.estoqueService.listarMaisConsumidos().subscribe({
+      next: (itens) => (this.itensMaisConsumidos = itens),
+      error: () => {},
+    });
+  }
+
+  get totalItens(): number {
+    return this.estoques.length;
+  }
+
+  get itensCriticos(): number {
+    return this.estoques.filter((e) => e.quantidadeAtual < e.estoqueMinimo).length;
+  }
+
+  get valorTotalEstoque(): number {
+    return this.estoques.reduce((soma, e) => soma + e.quantidadeAtual * e.produto.preco, 0);
+  }
+
+  get estoquePorCategoria(): CategoriaEstoque[] {
+    const contagem = new Map<string, number>();
+    for (const estoque of this.estoques) {
+      const nome = estoque.produto.categoria?.nome ?? 'Sem categoria';
+      contagem.set(nome, (contagem.get(nome) ?? 0) + 1);
+    }
+    return Array.from(contagem.entries())
+      .map(([categoria, quantidadeItens]) => ({ categoria, quantidadeItens }))
+      .sort((a, b) => b.quantidadeItens - a.quantidadeItens);
+  }
 }

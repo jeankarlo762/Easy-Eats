@@ -1,85 +1,134 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-
-interface Fornecedor {
-  id: number;
-  nome: string;
-  contato: string;
-  categoria: string;
-}
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
+import { Fornecedor, FornecedorService } from './fornecedor.service';
 
 @Component({
   selector: 'app-fornecedores',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, CarregandoComponent],
   templateUrl: './fornecedores.html',
   styleUrl: './fornecedores.scss',
 })
-export class Fornecedores {
-  private fb = new FormBuilder();
-  private proximoId = 5;
+export class Fornecedores implements OnInit {
+  private fb = inject(FormBuilder);
+  private fornecedorService = inject(FornecedorService);
 
   editandoId: number | null = null;
 
-  fornecedores: Fornecedor[] = [
-    { id: 1, nome: 'Frigorífico Boa Carne', contato: '(11) 98765-4321', categoria: 'Carnes' },
-    { id: 2, nome: 'Distribuidora Águas Claras', contato: '(11) 91234-5678', categoria: 'Bebidas' },
-    { id: 3, nome: 'Embalagens Rápidas Ltda', contato: '(11) 99887-6655', categoria: 'Embalagens' },
-    { id: 4, nome: 'Hortifruti Sabor da Terra', contato: '(11) 93344-2211', categoria: 'Hortifruti' },
-  ];
+  fornecedores: Fornecedor[] = [];
+  carregando = true;
+  enviando = false;
+  erro: string | null = null;
+  sucesso = false;
 
   form = this.fb.group({
     nome: ['', Validators.required],
-    contato: ['', Validators.required],
-    categoria: ['', Validators.required],
+    cnpj: ['', Validators.required],
+    telefone: [''],
+    email: ['', Validators.email],
   });
 
+  ngOnInit() {
+    this.carregar();
+  }
+
+  private carregar() {
+    this.carregando = true;
+    this.fornecedorService.listar().subscribe({
+      next: (fornecedores) => {
+        this.fornecedores = fornecedores;
+        this.carregando = false;
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar os fornecedores.');
+        this.carregando = false;
+      },
+    });
+  }
+
   salvar() {
-    if (this.form.invalid) {
+    if (this.form.invalid || this.enviando) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const { nome, contato, categoria } = this.form.value;
+    const { nome, cnpj, telefone, email } = this.form.getRawValue();
+    const payload = {
+      nome: nome!.trim(),
+      cnpj: cnpj!.trim(),
+      telefone: telefone?.trim() || null,
+      email: email?.trim() || null,
+      flAtivo: true,
+    };
 
-    if (this.editandoId !== null) {
-      const fornecedor = this.fornecedores.find((f) => f.id === this.editandoId);
-      if (fornecedor) {
-        fornecedor.nome = nome!;
-        fornecedor.contato = contato!;
-        fornecedor.categoria = categoria!;
-      }
-      this.editandoId = null;
-    } else {
-      this.fornecedores.push({
-        id: this.proximoId++,
-        nome: nome!,
-        contato: contato!,
-        categoria: categoria!,
-      });
-    }
+    this.enviando = true;
+    this.erro = null;
 
-    this.form.reset();
+    const operacao =
+      this.editandoId !== null
+        ? this.fornecedorService.atualizar(this.editandoId, payload)
+        : this.fornecedorService.criar(payload);
+
+    operacao.subscribe({
+      next: (fornecedor) => {
+        this.enviando = false;
+        this.sucesso = true;
+        setTimeout(() => (this.sucesso = false), 4000);
+
+        if (this.editandoId !== null) {
+          const indice = this.fornecedores.findIndex((f) => f.id === fornecedor.id);
+          if (indice !== -1) this.fornecedores[indice] = fornecedor;
+        } else {
+          this.fornecedores = [fornecedor, ...this.fornecedores];
+        }
+
+        this.cancelarEdicao();
+      },
+      error: (erro) => {
+        this.enviando = false;
+        this.erro = MensagemErroApiUtil.extrair(
+          erro,
+          'Não foi possível salvar o fornecedor. Verifique os dados e tente novamente.',
+        );
+      },
+    });
   }
 
   editar(fornecedor: Fornecedor) {
     this.editandoId = fornecedor.id;
+    this.erro = null;
     this.form.setValue({
       nome: fornecedor.nome,
-      contato: fornecedor.contato,
-      categoria: fornecedor.categoria,
+      cnpj: fornecedor.cnpj,
+      telefone: fornecedor.telefone ?? '',
+      email: fornecedor.email ?? '',
     });
   }
 
   cancelarEdicao() {
     this.editandoId = null;
-    this.form.reset();
+    this.form.reset({ nome: '', cnpj: '', telefone: '', email: '' });
   }
 
   excluir(fornecedor: Fornecedor) {
-    if (confirm(`Excluir o fornecedor "${fornecedor.nome}"?`)) {
-      this.fornecedores = this.fornecedores.filter((f) => f.id !== fornecedor.id);
+    if (!confirm(`Excluir o fornecedor "${fornecedor.nome}"?`)) {
+      return;
     }
+
+    this.erro = null;
+    this.fornecedorService.excluir(fornecedor.id).subscribe({
+      next: () => {
+        this.fornecedores = this.fornecedores.filter((f) => f.id !== fornecedor.id);
+        if (this.editandoId === fornecedor.id) {
+          this.cancelarEdicao();
+        }
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível excluir o fornecedor.');
+      },
+    });
   }
 }

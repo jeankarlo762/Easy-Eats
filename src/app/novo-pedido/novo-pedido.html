@@ -109,8 +109,10 @@
             <strong>R$ {{ total().toFixed(2) }}</strong>
           </div>
 
-          @if (usaMesa && !podeFinalizar()) {
-            <small class="aviso-finalizar">Selecione a mesa ou informe o nome do cliente.</small>
+          @if (carrinho.length > 0 && !podeFinalizar()) {
+            <small class="aviso-finalizar">
+              {{ usaMesa ? 'Selecione a mesa ou informe o nome do cliente.' : 'Informe o nome do cliente.' }}
+            </small>
           }
 
           <button class="finalizar" [disabled]="!podeFinalizar() || enviando" (click)="confirmarPedido()">

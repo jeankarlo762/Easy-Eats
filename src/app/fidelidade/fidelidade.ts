@@ -1,30 +1,56 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-interface ClienteRanking {
-  nome: string;
-  pontos: number;
-}
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { CashbackConfig, CashbackService } from '../cupons-cashback/cashback.service';
+import { Cliente, ClienteService } from '../clientes/cliente.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-fidelidade',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CarregandoComponent],
   templateUrl: './fidelidade.html',
   styleUrl: './fidelidade.scss',
 })
-export class Fidelidade {
-  clientesParticipantes = 128;
-  pontosDistribuidosNoMes = 940;
-  descontosResgatadosNoMes = 37;
+export class Fidelidade implements OnInit {
+  private clienteService = inject(ClienteService);
+  private cashbackService = inject(CashbackService);
 
-  rankingClientes: ClienteRanking[] = [
-    { nome: 'Ana Paula Ferreira', pontos: 86 },
-    { nome: 'Carlos Eduardo Lima', pontos: 74 },
-    { nome: 'Marina Souza Costa', pontos: 61 },
-    { nome: 'Ricardo Alves Nunes', pontos: 52 },
-    { nome: 'Juliana Martins Rocha', pontos: 45 },
-    { nome: 'Fábio Henrique Dias', pontos: 38 },
-    { nome: 'Patrícia Gomes Silva', pontos: 29 },
-  ].sort((a, b) => b.pontos - a.pontos);
+  carregando = true;
+  erro: string | null = null;
+
+  clientes: Cliente[] = [];
+  cashbackConfig: CashbackConfig | null = null;
+
+  ngOnInit() {
+    this.carregando = true;
+
+    Promise.all([
+      new Promise<Cliente[]>((resolve, reject) => this.clienteService.listar().subscribe({ next: resolve, error: reject })),
+      new Promise<CashbackConfig>((resolve, reject) => this.cashbackService.buscar().subscribe({ next: resolve, error: reject })),
+    ])
+      .then(([clientes, cashbackConfig]) => {
+        this.clientes = clientes;
+        this.cashbackConfig = cashbackConfig;
+        this.carregando = false;
+      })
+      .catch((erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o programa de fidelidade.');
+        this.carregando = false;
+      });
+  }
+
+  get clientesParticipantes(): number {
+    return this.clientes.filter((c) => (c.saldoCashback ?? 0) > 0).length;
+  }
+
+  get saldoTotalDistribuido(): number {
+    return this.clientes.reduce((soma, c) => soma + (c.saldoCashback ?? 0), 0);
+  }
+
+  get rankingClientes(): Cliente[] {
+    return [...this.clientes]
+      .filter((c) => (c.saldoCashback ?? 0) > 0)
+      .sort((a, b) => (b.saldoCashback ?? 0) - (a.saldoCashback ?? 0));
+  }
 }

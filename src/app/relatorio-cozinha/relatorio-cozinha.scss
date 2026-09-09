@@ -145,6 +145,14 @@
   color: #111827;
 }
 
+.vazio {
+  margin: 0;
+  padding: 20px 0;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
 @media (max-width: 900px) {
   .grid-duas-colunas {
     grid-template-columns: 1fr;

@@ -4,53 +4,96 @@
     <p>Acompanhamento em tempo real das entregas em andamento</p>
   </header>
 
-  <div class="grid-stats">
-    <div class="stat-card">
-      <div class="stat-label">Pedidos em Rota</div>
-      <div class="stat-valor">{{ pedidosEmRota }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Tempo Médio de Entrega</div>
-      <div class="stat-valor">{{ tempoMedioEntrega }} min</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Entregadores Ativos</div>
-      <div class="stat-valor">{{ entregadoresAtivos }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Entrega no Prazo</div>
-      <div class="stat-valor">{{ taxaNoPrazo }}%</div>
-    </div>
-  </div>
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
 
-  <section class="painel">
-    <h3>Pedidos em Entrega</h3>
+  @if (carregando) {
+    <app-carregando texto="Carregando entregas..."></app-carregando>
+  } @else {
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">Pedidos em Rota</div>
+        <div class="stat-valor">{{ pedidosEmRota }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tempo Médio de Entrega</div>
+        <div class="stat-valor">{{ tempoMedioEntrega }} min</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Entregadores Ativos</div>
+        <div class="stat-valor">{{ entregadoresAtivos }}</div>
+      </div>
+    </div>
 
-    @if (pedidos.length) {
-      <div class="lista">
-        @for (pedido of pedidos; track pedido.cliente) {
-          <div class="linha">
-            <div class="dados-pedido">
-              <div class="cliente">
-                <i class="bi bi-person"></i>
-                {{ pedido.cliente }}
+    <section class="painel form-panel">
+      <h3>Novo Pedido de Entrega</h3>
+
+      @if (erroFormulario) {
+        <p class="vazio">{{ erroFormulario }}</p>
+      }
+
+      @if (entregadores.length === 0) {
+        <p class="vazio">Cadastre um entregador antes de criar pedidos de entrega.</p>
+      } @else {
+        <form [formGroup]="form" (ngSubmit)="criarEntrega()" class="form-linha">
+          <input type="text" placeholder="Nome do cliente" formControlName="nomeCliente" />
+          <input type="text" placeholder="Endereço de entrega" formControlName="endereco" />
+          <select formControlName="entregadorId">
+            <option [ngValue]="null" disabled selected>Entregador</option>
+            @for (entregador of entregadores; track entregador.id) {
+              <option [ngValue]="entregador.id">{{ entregador.nome }}</option>
+            }
+          </select>
+          <button type="submit" class="btn-salvar" [disabled]="enviando">
+            {{ enviando ? 'Criando...' : 'Criar' }}
+          </button>
+        </form>
+      }
+
+      <form [formGroup]="formEntregador" (ngSubmit)="criarEntregador()" class="form-linha form-entregador">
+        <input type="text" placeholder="Nome do entregador" formControlName="nome" />
+        <input type="text" placeholder="Telefone (opcional)" formControlName="telefone" />
+        <button type="submit" class="btn-salvar btn-secundario" [disabled]="enviandoEntregador">
+          {{ enviandoEntregador ? 'Cadastrando...' : '+ Entregador' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="painel">
+      <h3>Pedidos em Entrega</h3>
+
+      @if (pedidosEmAndamento.length) {
+        <div class="lista">
+          @for (pedido of pedidosEmAndamento; track pedido.id) {
+            <div class="linha">
+              <div class="dados-pedido">
+                <div class="cliente">
+                  <i class="bi bi-person"></i>
+                  {{ pedido.nomeCliente }}
+                </div>
+                <div class="endereco">
+                  <i class="bi bi-geo-alt"></i>
+                  {{ pedido.endereco }}
+                </div>
+                <div class="entregador">
+                  <i class="bi bi-bicycle"></i>
+                  {{ pedido.entregador?.nome || 'Sem entregador' }}
+                </div>
               </div>
-              <div class="endereco">
-                <i class="bi bi-geo-alt"></i>
-                {{ pedido.endereco }}
-              </div>
-              <div class="entregador">
-                <i class="bi bi-bicycle"></i>
-                {{ pedido.entregador }}
+
+              <div class="direita">
+                <span class="badge" [ngClass]="classeBadge(pedido.status)">{{ labelStatus(pedido.status) }}</span>
+                <button type="button" class="btn-icone" (click)="avancarStatus(pedido)" title="Avançar status">
+                  <i class="bi bi-arrow-right-circle"></i>
+                </button>
               </div>
             </div>
-
-            <span class="badge" [ngClass]="classeBadge(pedido.status)">{{ pedido.status }}</span>
-          </div>
-        }
-      </div>
-    } @else {
-      <p class="vazio">Nenhum pedido em entrega no momento.</p>
-    }
-  </section>
+          }
+        </div>
+      } @else {
+        <p class="vazio">Nenhum pedido em entrega no momento.</p>
+      }
+    </section>
+  }
 </div>

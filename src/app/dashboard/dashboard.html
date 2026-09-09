@@ -4,6 +4,13 @@
     <p>Visão geral em tempo real da sua operação</p>
   </header>
 
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
+
+  @if (carregando) {
+    <app-carregando texto="Carregando dashboard..."></app-carregando>
+  } @else if (resumo) {
     <!-- CARDS PRINCIPAIS -->
     <div class="grid-stats">
       @for (stat of statsPrincipais; track stat.label) {
@@ -12,9 +19,12 @@
             <div class="stat-icon" [ngClass]="stat.cor">
               <i class="bi" [ngClass]="stat.icon"></i>
             </div>
-            <span class="variacao">
-              <i class="bi bi-arrow-up-short"></i>{{ stat.variacao }}
-            </span>
+            @if (stat.variacao !== null) {
+              <span class="variacao" [class.negativa]="stat.variacao < 0">
+                <i class="bi" [ngClass]="stat.variacao < 0 ? 'bi-arrow-down-short' : 'bi-arrow-up-short'"></i
+                >{{ stat.variacao > 0 ? '+' : '' }}{{ stat.variacao }}%
+              </span>
+            }
           </div>
           <div class="stat-valor">{{ stat.valor }}</div>
           <div class="stat-label">{{ stat.label }}</div>
@@ -42,62 +52,70 @@
       <section class="painel">
         <h3>Vendas da Semana</h3>
 
-        <svg class="grafico" viewBox="0 0 700 210" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="gradienteArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#f97316" stop-opacity="0.28" />
-              <stop offset="100%" stop-color="#f97316" stop-opacity="0" />
-            </linearGradient>
-          </defs>
+        @if (vendasSemana.length < 2) {
+          <p class="vazio">Ainda não há vendas suficientes para exibir o gráfico.</p>
+        } @else {
+          <svg class="grafico" viewBox="0 0 700 210" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="gradienteArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#f97316" stop-opacity="0.28" />
+                <stop offset="100%" stop-color="#f97316" stop-opacity="0" />
+              </linearGradient>
+            </defs>
 
-          <!-- linhas de grade -->
-          @for (linha of [0, 1, 2, 3]; track linha) {
-            <line
-              x1="0"
-              [attr.y1]="linha * 45"
-              x2="700"
-              [attr.y2]="linha * 45"
-              stroke="#eef0f2"
-              stroke-width="1"
-            />
-          }
+            <!-- linhas de grade -->
+            @for (linha of [0, 1, 2, 3]; track linha) {
+              <line
+                x1="0"
+                [attr.y1]="linha * 45"
+                x2="700"
+                [attr.y2]="linha * 45"
+                stroke="#eef0f2"
+                stroke-width="1"
+              />
+            }
 
-          <path [attr.d]="areaFillPath" fill="url(#gradienteArea)" />
-          <path [attr.d]="areaPath" fill="none" stroke="#f97316" stroke-width="3" stroke-linecap="round" />
+            <path [attr.d]="areaFillPath" fill="url(#gradienteArea)" />
+            <path [attr.d]="areaPath" fill="none" stroke="#f97316" stroke-width="3" stroke-linecap="round" />
 
-          @for (ponto of vendasSemana; track ponto.dia; let i = $index) {
-            <circle [attr.cx]="pontoX(i)" [attr.cy]="pontoY(ponto.valor)" r="4" fill="#f97316" />
-          }
-        </svg>
+            @for (ponto of vendasSemana; track ponto.dia; let i = $index) {
+              <circle [attr.cx]="pontoX(i)" [attr.cy]="pontoY(ponto.valor)" r="4" fill="#f97316" />
+            }
+          </svg>
 
-        <div class="eixo-x">
-          @for (ponto of vendasSemana; track ponto.dia) {
-            <span>{{ ponto.dia }}</span>
-          }
-        </div>
+          <div class="eixo-x">
+            @for (ponto of vendasSemana; track ponto.dia) {
+              <span>{{ ponto.dia }}</span>
+            }
+          </div>
+        }
       </section>
 
       <section class="painel">
         <h3>Formas de Pagamento</h3>
 
-        <ul class="lista-pagamentos">
-          @for (forma of formasPagamento; track forma.nome) {
-            <li>
-              <span class="ponto" [style.background]="forma.cor"></span>
-              <span class="nome">{{ forma.nome }}</span>
-              <span class="valor">R$ {{ forma.valor.toFixed(2) }}</span>
-            </li>
-          }
-        </ul>
+        @if (formasPagamento.length === 0) {
+          <p class="vazio">Nenhum pagamento registrado hoje.</p>
+        } @else {
+          <ul class="lista-pagamentos">
+            @for (forma of formasPagamento; track forma.nome) {
+              <li>
+                <span class="ponto" [style.background]="forma.cor"></span>
+                <span class="nome">{{ forma.nome }}</span>
+                <span class="valor">{{ formatarMoeda(forma.valor) }}</span>
+              </li>
+            }
+          </ul>
 
-        <div class="barra-proporcao">
-          @for (forma of formasPagamento; track forma.nome) {
-            <span
-              [style.background]="forma.cor"
-              [style.width.%]="(forma.valor / totalFormasPagamento) * 100"
-            ></span>
-          }
-        </div>
+          <div class="barra-proporcao">
+            @for (forma of formasPagamento; track forma.nome) {
+              <span
+                [style.background]="forma.cor"
+                [style.width.%]="(forma.valor / totalFormasPagamento) * 100"
+              ></span>
+            }
+          </div>
+        }
       </section>
     </div>
 
@@ -106,31 +124,40 @@
       <section class="painel">
         <h3>Produtos Mais Vendidos</h3>
 
-        <ul class="lista-ranking">
-          @for (produto of produtosMaisVendidos; track produto.nome; let i = $index) {
-            <li>
-              <span class="posicao">{{ i + 1 }}º</span>
-              <span class="nome">{{ produto.nome }}</span>
-              <span class="qtd">{{ produto.quantidade }} un.</span>
-            </li>
-          }
-        </ul>
+        @if (produtosMaisVendidos.length === 0) {
+          <p class="vazio">Nenhuma venda registrada ainda.</p>
+        } @else {
+          <ul class="lista-ranking">
+            @for (produto of produtosMaisVendidos; track produto.nome; let i = $index) {
+              <li>
+                <span class="posicao">{{ i + 1 }}º</span>
+                <span class="nome">{{ produto.nome }}</span>
+                <span class="qtd">{{ produto.quantidade }} un.</span>
+              </li>
+            }
+          </ul>
+        }
       </section>
 
       <section class="painel">
-        <h3>Horário de Maior Movimento</h3>
+        <h3>Horário de Maior Movimento (hoje)</h3>
 
-        <div class="barras-horario">
-          @for (ponto of horarioMovimento; track ponto.hora) {
-            <div class="barra-item">
-              <div
-                class="barra"
-                [style.height.%]="(ponto.pedidos / maiorPedidosHorario) * 100"
-              ></div>
-              <span>{{ ponto.hora }}</span>
-            </div>
-          }
-        </div>
+        @if (horarioMovimento.length === 0) {
+          <p class="vazio">Nenhum pedido registrado hoje.</p>
+        } @else {
+          <div class="barras-horario">
+            @for (ponto of horarioMovimento; track ponto.hora) {
+              <div class="barra-item">
+                <div
+                  class="barra"
+                  [style.height.%]="(ponto.pedidos / maiorPedidosHorario) * 100"
+                ></div>
+                <span>{{ ponto.hora }}</span>
+              </div>
+            }
+          </div>
+        }
       </section>
     </div>
+  }
 </div>

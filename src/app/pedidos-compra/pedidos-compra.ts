@@ -1,75 +1,61 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-
-type StatusPedido = 'Aguardando' | 'Enviado' | 'Recebido';
-
-interface PedidoCompra {
-  id: number;
-  fornecedor: string;
-  itens: string;
-  valorTotal: number;
-  status: StatusPedido;
-}
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { Fornecedor, FornecedorService } from '../fornecedores/fornecedor.service';
+import { PedidoCompra, PedidoCompraService, StatusPedidoCompra } from './pedido-compra.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-pedidos-compra',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, CarregandoComponent],
   templateUrl: './pedidos-compra.html',
   styleUrl: './pedidos-compra.scss',
 })
-export class PedidosCompra {
-  private fb = new FormBuilder();
-  private proximoId = 5;
+export class PedidosCompra implements OnInit {
+  private fb = inject(FormBuilder);
+  private fornecedorService = inject(FornecedorService);
+  private pedidoCompraService = inject(PedidoCompraService);
 
-  fornecedores = ['Distribuidora Boi Forte', 'Hortifruti São José', 'Bebidas Del Rey'];
+  carregando = true;
+  enviando = false;
+  erro: string | null = null;
+  erroFormulario: string | null = null;
 
-  pedidos: PedidoCompra[] = [
-    {
-      id: 1,
-      fornecedor: 'Distribuidora Boi Forte',
-      itens: '50kg Carne Bovina, 20kg Batata',
-      valorTotal: 1250,
-      status: 'Aguardando',
-    },
-    {
-      id: 2,
-      fornecedor: 'Hortifruti São José',
-      itens: '30kg Tomate, 15kg Alface, 10kg Cebola',
-      valorTotal: 480,
-      status: 'Enviado',
-    },
-    {
-      id: 3,
-      fornecedor: 'Bebidas Del Rey',
-      itens: '10 caixas Refrigerante, 5 caixas Água',
-      valorTotal: 620,
-      status: 'Recebido',
-    },
-    {
-      id: 4,
-      fornecedor: 'Distribuidora Boi Forte',
-      itens: '20kg Queijo Cheddar, 40un Pão Brioche',
-      valorTotal: 890,
-      status: 'Aguardando',
-    },
-  ];
+  fornecedores: Fornecedor[] = [];
+  pedidos: PedidoCompra[] = [];
 
   form = this.fb.group({
-    fornecedor: ['', Validators.required],
+    fornecedorId: [null as number | null, Validators.required],
     itens: ['', Validators.required],
     valorTotal: [null as number | null, [Validators.required, Validators.min(0.01)]],
   });
 
+  ngOnInit() {
+    this.carregando = true;
+
+    Promise.all([
+      new Promise<Fornecedor[]>((resolve, reject) => this.fornecedorService.listar().subscribe({ next: resolve, error: reject })),
+      new Promise<PedidoCompra[]>((resolve, reject) => this.pedidoCompraService.listar().subscribe({ next: resolve, error: reject })),
+    ])
+      .then(([fornecedores, pedidos]) => {
+        this.fornecedores = fornecedores;
+        this.pedidos = pedidos;
+        this.carregando = false;
+      })
+      .catch((erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar os pedidos de compra.');
+        this.carregando = false;
+      });
+  }
+
   get pedidosAguardando(): number {
-    return this.pedidos.filter((p) => p.status === 'Aguardando').length;
+    return this.pedidos.filter((p) => p.status === 'AGUARDANDO').length;
   }
 
   get valorTotalAberto(): number {
-    return this.pedidos
-      .filter((p) => p.status !== 'Recebido')
-      .reduce((soma, p) => soma + p.valorTotal, 0);
+    return this.pedidos.filter((p) => p.status !== 'RECEBIDO').reduce((soma, p) => soma + p.valorTotal, 0);
   }
 
   criarPedido() {
@@ -78,26 +64,46 @@ export class PedidosCompra {
       return;
     }
 
-    const { fornecedor, itens, valorTotal } = this.form.value;
+    const { fornecedorId, itens, valorTotal } = this.form.value;
+    this.enviando = true;
+    this.erroFormulario = null;
 
-    this.pedidos.unshift({
-      id: this.proximoId++,
-      fornecedor: fornecedor!,
-      itens: itens!,
-      valorTotal: valorTotal!,
-      status: 'Aguardando',
-    });
-
-    this.form.reset();
+    this.pedidoCompraService
+      .criar({ fornecedor: { id: fornecedorId! }, itens: itens!, valorTotal: valorTotal! })
+      .subscribe({
+        next: (pedido) => {
+          this.pedidos = [pedido, ...this.pedidos];
+          this.form.reset();
+          this.enviando = false;
+        },
+        error: (erro) => {
+          this.erroFormulario = MensagemErroApiUtil.extrair(erro, 'Não foi possível criar o pedido de compra.');
+          this.enviando = false;
+        },
+      });
   }
 
-  badgeClasse(status: StatusPedido): string {
+  avancarStatus(pedido: PedidoCompra) {
+    this.pedidoCompraService.avancarStatus(pedido.id).subscribe({
+      next: (atualizado) => {
+        const indice = this.pedidos.findIndex((p) => p.id === atualizado.id);
+        if (indice !== -1) this.pedidos[indice] = atualizado;
+      },
+      error: (erro) => (this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível atualizar o pedido.')),
+    });
+  }
+
+  labelStatus(status: StatusPedidoCompra): string {
+    return { AGUARDANDO: 'Aguardando', ENVIADO: 'Enviado', RECEBIDO: 'Recebido' }[status];
+  }
+
+  badgeClasse(status: StatusPedidoCompra): string {
     switch (status) {
-      case 'Aguardando':
+      case 'AGUARDANDO':
         return 'alerta';
-      case 'Enviado':
+      case 'ENVIADO':
         return 'neutro';
-      case 'Recebido':
+      case 'RECEBIDO':
         return 'sucesso';
     }
   }

@@ -4,53 +4,58 @@
     <p>Dados do estabelecimento exibidos em pedidos e relatórios</p>
   </header>
 
-  <section class="painel">
-    <h3>Dados do Estabelecimento</h3>
+  @if (carregando) {
+    <app-carregando texto="Carregando dados do estabelecimento..."></app-carregando>
+  } @else {
+    <section class="painel">
+      <h3>Dados do Estabelecimento</h3>
 
-    <form [formGroup]="form" (ngSubmit)="salvar()">
-      <div class="campo">
-        <label>Nome do Estabelecimento</label>
-        <input type="text" placeholder="Ex: Easy Eats Food Truck" formControlName="nomeEstabelecimento" />
-        @if (form.get('nomeEstabelecimento')?.touched && form.get('nomeEstabelecimento')?.errors?.['required']) {
-          <small class="erro">Nome do estabelecimento é obrigatório.</small>
-        }
-      </div>
+      @if (erro) {
+        <p class="alerta-erro">{{ erro }}</p>
+      }
+      @if (sucesso) {
+        <p class="alerta-sucesso">Configurações salvas com sucesso!</p>
+      }
 
-      <div class="campo">
-        <label>CNPJ</label>
-        <input type="text" placeholder="Ex: 12.345.678/0001-90" formControlName="cnpj" />
-        @if (form.get('cnpj')?.touched && form.get('cnpj')?.errors?.['required']) {
-          <small class="erro">CNPJ é obrigatório.</small>
-        }
-      </div>
+      <form [formGroup]="form" (ngSubmit)="salvar()">
+        <div class="campo">
+          <label>Nome do Estabelecimento</label>
+          <input type="text" placeholder="Ex: Easy Eats Food Truck" formControlName="nomeEstabelecimento" />
+          @if (form.get('nomeEstabelecimento')?.touched && form.get('nomeEstabelecimento')?.errors?.['required']) {
+            <small class="erro">Nome do estabelecimento é obrigatório.</small>
+          }
+        </div>
 
-      <div class="campo">
-        <label>Endereço</label>
-        <input type="text" placeholder="Ex: Av. das Palmeiras, 450 - Centro" formControlName="endereco" />
-        @if (form.get('endereco')?.touched && form.get('endereco')?.errors?.['required']) {
-          <small class="erro">Endereço é obrigatório.</small>
-        }
-      </div>
+        <div class="campo">
+          <label>CNPJ</label>
+          <input type="text" formControlName="cnpj" />
+          <small class="ajuda">O CNPJ é definido no cadastro da empresa e não pode ser alterado por aqui.</small>
+        </div>
 
-      <div class="campo">
-        <label>Telefone</label>
-        <input type="text" placeholder="Ex: (11) 98765-4321" formControlName="telefone" />
-        @if (form.get('telefone')?.touched && form.get('telefone')?.errors?.['required']) {
-          <small class="erro">Telefone é obrigatório.</small>
-        }
-      </div>
+        <div class="campo">
+          <label>Endereço</label>
+          <input type="text" placeholder="Ex: Av. das Palmeiras, 450 - Centro" formControlName="endereco" />
+        </div>
 
-      <div class="campo">
-        <label>Horário de Funcionamento</label>
-        <input type="text" placeholder="Ex: Seg a Sáb, 18h às 23h" formControlName="horarioFuncionamento" />
-        @if (form.get('horarioFuncionamento')?.touched && form.get('horarioFuncionamento')?.errors?.['required']) {
-          <small class="erro">Horário de funcionamento é obrigatório.</small>
-        }
-      </div>
+        <div class="campo">
+          <label>Telefone</label>
+          <input type="text" placeholder="Ex: (11) 98765-4321" formControlName="telefone" />
+          @if (form.get('telefone')?.touched && form.get('telefone')?.errors?.['required']) {
+            <small class="erro">Telefone é obrigatório.</small>
+          }
+        </div>
 
-      <div class="acoes-form">
-        <button type="submit" class="btn-salvar">Salvar Alterações</button>
-      </div>
-    </form>
-  </section>
+        <div class="campo">
+          <label>Horário de Funcionamento</label>
+          <input type="text" placeholder="Ex: Seg a Sáb, 18h às 23h" formControlName="horarioFuncionamento" />
+        </div>
+
+        <div class="acoes-form">
+          <button type="submit" class="btn-salvar" [disabled]="enviando">
+            {{ enviando ? 'Salvando...' : 'Salvar Alterações' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  }
 </div>

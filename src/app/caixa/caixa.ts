@@ -3,6 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../auth/auth.service';
 import { Caixa, CaixaService } from './caixa.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-caixa',
@@ -65,8 +66,8 @@ export class CaixaComponent implements OnInit {
         this.valorInicial = null;
         this.observacoesAbertura = '';
       },
-      error: () => {
-        this.erro = 'Não foi possível abrir o caixa.';
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível abrir o caixa.');
         this.processando = false;
       },
     });
@@ -86,8 +87,8 @@ export class CaixaComponent implements OnInit {
         this.valorApuradoInformado = null;
         this.observacoesFechamento = '';
       },
-      error: () => {
-        this.erro = 'Não foi possível fechar o caixa.';
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível fechar o caixa.');
         this.processando = false;
       },
     });
@@ -106,8 +107,8 @@ export class CaixaComponent implements OnInit {
         this.valorMovimentacao = null;
         this.descricaoMovimentacao = '';
       },
-      error: () => {
-        this.erro = 'Não foi possível registrar a movimentação.';
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível registrar a movimentação.');
         this.processando = false;
       },
     });

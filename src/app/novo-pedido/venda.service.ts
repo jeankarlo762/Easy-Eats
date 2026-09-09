@@ -33,6 +33,7 @@ export interface Venda {
   nomeCliente: string | null;
   usuario: { id: number; nome: string } | null;
   itens: ItemVendaResumo[] | null;
+  dt_criacao: string | null;
 }
 
 export interface VendaPayload {

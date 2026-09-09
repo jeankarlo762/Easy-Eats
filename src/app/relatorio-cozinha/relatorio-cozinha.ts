@@ -1,47 +1,53 @@
-import { Component } from '@angular/core';
-
-interface ItemPreparado {
-  nome: string;
-  quantidade: number;
-}
-
-interface TempoHorario {
-  hora: string;
-  minutos: number;
-}
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { PedidoService, RelatorioCozinha as RelatorioCozinhaDto } from '../pedido.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-relatorio-cozinha',
   standalone: true,
+  imports: [CommonModule, CarregandoComponent],
   templateUrl: './relatorio-cozinha.html',
   styleUrl: './relatorio-cozinha.scss',
 })
-export class RelatorioCozinha {
-  readonly pedidosPreparadosHoje = 42;
-  readonly tempoMedioPreparo = 14.5;
-  readonly pedidosAtrasados = 2;
+export class RelatorioCozinha implements OnInit {
+  private pedidoService = inject(PedidoService);
 
-  readonly itensMaisPreparados: ItemPreparado[] = [
-    { nome: 'Hambúrguer Clássico', quantidade: 24 },
-    { nome: 'X-Bacon', quantidade: 19 },
-    { nome: 'Batata Frita', quantidade: 15 },
-    { nome: 'Hot Dog', quantidade: 9 },
-  ];
+  carregando = true;
+  erro: string | null = null;
+  relatorio: RelatorioCozinhaDto | null = null;
 
-  readonly tempoPorHorario: TempoHorario[] = [
-    { hora: '11h', minutos: 11 },
-    { hora: '12h', minutos: 16 },
-    { hora: '13h', minutos: 18 },
-    { hora: '18h', minutos: 13 },
-    { hora: '19h', minutos: 17 },
-    { hora: '20h', minutos: 15 },
-  ];
+  ngOnInit() {
+    this.carregando = true;
+
+    this.pedidoService.relatorioCozinha().subscribe({
+      next: (relatorio) => {
+        this.relatorio = relatorio;
+        this.carregando = false;
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o relatório da cozinha.');
+        this.carregando = false;
+      },
+    });
+  }
+
+  get itensMaisPreparados() {
+    return this.relatorio?.itensMaisPreparados ?? [];
+  }
+
+  get tempoPorHorario() {
+    return this.relatorio?.tempoPorHorario ?? [];
+  }
 
   get maiorTempo(): number {
-    return Math.max(...this.tempoPorHorario.map((t) => t.minutos));
+    const valores = this.tempoPorHorario.map((t) => t.minutos);
+    return valores.length ? Math.max(...valores, 1) : 1;
   }
 
   get maiorQuantidadeItem(): number {
-    return Math.max(...this.itensMaisPreparados.map((i) => i.quantidade));
+    const valores = this.itensMaisPreparados.map((i) => i.quantidade);
+    return valores.length ? Math.max(...valores, 1) : 1;
   }
 }

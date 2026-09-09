@@ -1,6 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { IntegracaoConfigService } from './integracao.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 type ChaveIntegracao = 'mercadopago' | 'ifood' | 'whatsapp' | 'impressora';
 
@@ -20,11 +23,18 @@ interface Integracao {
 @Component({
   selector: 'app-configuracoes-integracoes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CarregandoComponent],
   templateUrl: './configuracoes-integracoes.html',
   styleUrl: './configuracoes-integracoes.scss',
 })
-export class ConfiguracoesIntegracoes {
+export class ConfiguracoesIntegracoes implements OnInit {
+  private integracaoService = inject(IntegracaoConfigService);
+
+  carregando = true;
+  enviando = false;
+  erro: string | null = null;
+  sucesso: string | null = null;
+
   abaAtiva: ChaveIntegracao = 'mercadopago';
 
   credenciais = {
@@ -53,7 +63,7 @@ export class ConfiguracoesIntegracoes {
       nome: 'iFood',
       icone: 'bi-bag-check',
       descricao: 'Recebimento automático, dentro do Easy Eats, dos pedidos feitos no app do iFood.',
-      ativo: true,
+      ativo: false,
       passos: [
         { texto: 'Cadastre-se no Portal do Parceiro iFood (developer.ifood.com.br).' },
         { texto: 'Solicite acesso à API de Pedidos — essa integração exige homologação prévia com o iFood, não é imediata.' },
@@ -66,7 +76,7 @@ export class ConfiguracoesIntegracoes {
       nome: 'WhatsApp Business',
       icone: 'bi-whatsapp',
       descricao: 'Envio automático de notificações de status do pedido para o cliente.',
-      ativo: true,
+      ativo: false,
       passos: [
         { texto: 'Crie um app em developers.facebook.com (Meta for Developers).' },
         { texto: 'Ative o produto "WhatsApp Business Platform" dentro do app.' },
@@ -88,24 +98,66 @@ export class ConfiguracoesIntegracoes {
     },
   ];
 
+  ngOnInit() {
+    this.carregando = true;
+
+    this.integracaoService.listar().subscribe({
+      next: (configs) => {
+        for (const config of configs) {
+          const chave = config.chave as ChaveIntegracao;
+          const integracao = this.integracoes.find((i) => i.chave === chave);
+          if (!integracao) continue;
+
+          integracao.ativo = config.ativo;
+          if (config.credenciaisJson) {
+            try {
+              this.credenciais[chave] = { ...this.credenciais[chave], ...JSON.parse(config.credenciaisJson) };
+            } catch {
+              // credenciaisJson corrompido ou vazio — mantém os valores padrão do formulário
+            }
+          }
+        }
+        this.carregando = false;
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar as integrações.');
+        this.carregando = false;
+      },
+    });
+  }
+
   get integracaoAtiva(): Integracao {
     return this.integracoes.find((i) => i.chave === this.abaAtiva)!;
   }
 
   selecionarAba(chave: ChaveIntegracao) {
     this.abaAtiva = chave;
-  }
-
-  alternarAtivo(integracao: Integracao) {
-    integracao.ativo = !integracao.ativo;
+    this.erro = null;
+    this.sucesso = null;
   }
 
   salvar(integracao: Integracao) {
-    console.log(`Configuração salva para ${integracao.nome}:`, this.credenciais[integracao.chave]);
-    alert(`Configurações de "${integracao.nome}" salvas com sucesso!`);
+    this.enviando = true;
+    this.erro = null;
+    this.sucesso = null;
+
+    const credenciaisJson = JSON.stringify(this.credenciais[integracao.chave]);
+
+    this.integracaoService.salvar(integracao.chave, credenciaisJson, integracao.ativo).subscribe({
+      next: (config) => {
+        integracao.ativo = config.ativo;
+        this.enviando = false;
+        this.sucesso = `Configurações de "${integracao.nome}" salvas com sucesso!`;
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, `Não foi possível salvar as configurações de "${integracao.nome}".`);
+        this.enviando = false;
+      },
+    });
   }
 
   testarConexao(integracao: Integracao) {
-    alert(`Não há credenciais reais configuradas ainda — conecte "${integracao.nome}" com uma conta de verdade para testar.`);
+    this.sucesso = null;
+    this.erro = `Não há credenciais reais configuradas ainda — conecte "${integracao.nome}" com uma conta de verdade para testar.`;
   }
 }

@@ -1,50 +1,66 @@
 <div class="pagina">
   <header class="topo">
     <h1>Relatório da Cozinha</h1>
-    <p>Desempenho de preparo dos pedidos</p>
+    <p>Desempenho de preparo dos pedidos de hoje</p>
   </header>
 
-  <div class="grid-stats">
-    <div class="stat-card">
-      <div class="stat-label">Preparados Hoje</div>
-      <div class="stat-valor">{{ pedidosPreparadosHoje }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Tempo Médio de Preparo</div>
-      <div class="stat-valor">{{ tempoMedioPreparo }} min</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Pedidos Atrasados</div>
-      <div class="stat-valor" [class.alerta]="pedidosAtrasados > 0">{{ pedidosAtrasados }}</div>
-    </div>
-  </div>
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
 
-  <div class="grid-duas-colunas">
-    <section class="painel">
-      <h3>Tempo Médio por Horário</h3>
+  @if (carregando) {
+    <app-carregando texto="Carregando relatório..."></app-carregando>
+  } @else if (relatorio) {
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">Preparados Hoje</div>
+        <div class="stat-valor">{{ relatorio.pedidosPreparadosHoje }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tempo Médio de Preparo</div>
+        <div class="stat-valor">{{ relatorio.tempoMedioPreparoMinutos | number: '1.0-1' }} min</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pedidos Atrasados</div>
+        <div class="stat-valor" [class.alerta]="relatorio.pedidosAtrasados > 0">{{ relatorio.pedidosAtrasados }}</div>
+      </div>
+    </div>
 
-      <div class="barras-dia">
-        @for (linha of tempoPorHorario; track linha.hora) {
-          <div class="barra-item">
-            <div class="barra" [style.height.%]="(linha.minutos / maiorTempo) * 100"></div>
-            <span>{{ linha.hora }}</span>
+    <div class="grid-duas-colunas">
+      <section class="painel">
+        <h3>Tempo Médio por Horário</h3>
+
+        @if (tempoPorHorario.length === 0) {
+          <p class="vazio">Nenhum pedido finalizado hoje ainda.</p>
+        } @else {
+          <div class="barras-dia">
+            @for (linha of tempoPorHorario; track linha.hora) {
+              <div class="barra-item">
+                <div class="barra" [style.height.%]="(linha.minutos / maiorTempo) * 100"></div>
+                <span>{{ linha.hora }}</span>
+              </div>
+            }
           </div>
         }
-      </div>
-    </section>
+      </section>
 
-    <section class="painel">
-      <h3>Itens Mais Preparados</h3>
+      <section class="painel">
+        <h3>Itens Mais Preparados Hoje</h3>
 
-      <div class="lista-ranking">
-        @for (item of itensMaisPreparados; track item.nome; let i = $index) {
-          <div class="linha-ranking">
-            <span class="posicao">{{ i + 1 }}º</span>
-            <span class="nome">{{ item.nome }}</span>
-            <span class="qtd">{{ item.quantidade }}</span>
+        @if (itensMaisPreparados.length === 0) {
+          <p class="vazio">Nenhum item preparado hoje ainda.</p>
+        } @else {
+          <div class="lista-ranking">
+            @for (item of itensMaisPreparados; track item.nome; let i = $index) {
+              <div class="linha-ranking">
+                <span class="posicao">{{ i + 1 }}º</span>
+                <span class="nome">{{ item.nome }}</span>
+                <span class="qtd">{{ item.quantidade }}</span>
+              </div>
+            }
           </div>
         }
-      </div>
-    </section>
-  </div>
+      </section>
+    </div>
+  }
 </div>

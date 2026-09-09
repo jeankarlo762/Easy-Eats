@@ -1,11 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { Despesa, DespesaService } from '../financeiro/despesa.service';
+import { Venda, VendaService } from '../novo-pedido/venda.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 type TipoLancamento = 'Ganho' | 'Gasto';
 type FiltroLancamento = 'Todos' | 'Ganhos' | 'Gastos';
 
 interface Lancamento {
-  id: number;
+  id: string;
   descricao: string;
   categoria: string;
   data: string;
@@ -16,23 +20,62 @@ interface Lancamento {
 @Component({
   selector: 'app-gestao-financeira',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CarregandoComponent],
   templateUrl: './gestao-financeira.html',
   styleUrl: './gestao-financeira.scss',
 })
-export class GestaoFinanceira {
+export class GestaoFinanceira implements OnInit {
+  private vendaService = inject(VendaService);
+  private despesaService = inject(DespesaService);
+
+  carregando = true;
+  erro: string | null = null;
   filtroAtivo: FiltroLancamento = 'Todos';
 
-  lancamentos: Lancamento[] = [
-    { id: 1, descricao: 'Venda no balcão', categoria: 'Vendas', data: '2026-07-28', valor: 620, tipo: 'Ganho' },
-    { id: 2, descricao: 'Compra de carne bovina', categoria: 'Insumos', data: '2026-07-27', valor: 1250, tipo: 'Gasto' },
-    { id: 3, descricao: 'Venda delivery', categoria: 'Vendas', data: '2026-07-27', valor: 340, tipo: 'Ganho' },
-    { id: 4, descricao: 'Conta de energia', categoria: 'Utilidades', data: '2026-07-26', valor: 480, tipo: 'Gasto' },
-    { id: 5, descricao: 'Venda no balcão', categoria: 'Vendas', data: '2026-07-25', valor: 510, tipo: 'Ganho' },
-    { id: 6, descricao: 'Salário funcionários', categoria: 'Folha de Pagamento', data: '2026-07-24', valor: 3200, tipo: 'Gasto' },
-    { id: 7, descricao: 'Compra de embalagens', categoria: 'Insumos', data: '2026-07-23', valor: 210, tipo: 'Gasto' },
-    { id: 8, descricao: 'Venda evento corporativo', categoria: 'Vendas', data: '2026-07-22', valor: 1800, tipo: 'Ganho' },
-  ];
+  lancamentos: Lancamento[] = [];
+
+  ngOnInit() {
+    this.carregando = true;
+
+    Promise.all([
+      new Promise<Venda[]>((resolve, reject) => this.vendaService.listar().subscribe({ next: resolve, error: reject })),
+      new Promise<Despesa[]>((resolve, reject) => this.despesaService.listar().subscribe({ next: resolve, error: reject })),
+    ])
+      .then(([vendas, despesas]) => {
+        this.lancamentos = [...this.vendasParaLancamentos(vendas), ...this.despesasParaLancamentos(despesas)].sort(
+          (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
+        );
+        this.carregando = false;
+      })
+      .catch((erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar os lançamentos financeiros.');
+        this.carregando = false;
+      });
+  }
+
+  private vendasParaLancamentos(vendas: Venda[]): Lancamento[] {
+    return vendas
+      .filter((v) => v.dt_criacao)
+      .map((v) => ({
+        id: `venda-${v.id}`,
+        descricao: v.nomeCliente || (v.mesa ? `Venda mesa ${v.mesa.numero}` : `Venda #${v.id}`),
+        categoria: 'Vendas',
+        data: v.dt_criacao as string,
+        valor: (v.itens ?? []).reduce((soma, item) => soma + (item.valor_total ?? 0), 0),
+        tipo: 'Ganho' as const,
+      }));
+  }
+
+  private despesasParaLancamentos(despesas: Despesa[]): Lancamento[] {
+    return despesas.map((d) => ({
+      id: `despesa-${d.id}`,
+      descricao: d.descricao,
+      categoria: d.categoria,
+      data: d.dtDespesa,
+      valor: d.valor,
+      tipo: 'Gasto' as const,
+    }));
+  }
 
   get lancamentosFiltrados(): Lancamento[] {
     if (this.filtroAtivo === 'Ganhos') {
@@ -45,15 +88,11 @@ export class GestaoFinanceira {
   }
 
   get totalGanhos(): number {
-    return this.lancamentos
-      .filter((l) => l.tipo === 'Ganho')
-      .reduce((soma, l) => soma + l.valor, 0);
+    return this.lancamentos.filter((l) => l.tipo === 'Ganho').reduce((soma, l) => soma + l.valor, 0);
   }
 
   get totalGastos(): number {
-    return this.lancamentos
-      .filter((l) => l.tipo === 'Gasto')
-      .reduce((soma, l) => soma + l.valor, 0);
+    return this.lancamentos.filter((l) => l.tipo === 'Gasto').reduce((soma, l) => soma + l.valor, 0);
   }
 
   get saldo(): number {

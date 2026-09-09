@@ -1,52 +1,62 @@
 <div class="pagina">
   <header class="topo">
     <h1>Relatório de Delivery</h1>
-    <p>Desempenho das entregas no período selecionado</p>
+    <p>Desempenho das entregas já concluídas</p>
   </header>
 
-  <div class="grid-stats">
-    <div class="stat-card">
-      <div class="stat-label">Total de Entregas</div>
-      <div class="stat-valor">{{ totalEntregas }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Tempo Médio de Entrega</div>
-      <div class="stat-valor">{{ tempoMedioEntrega }} min</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Taxa de Atraso</div>
-      <div class="stat-valor alerta">{{ taxaAtraso }}%</div>
-    </div>
-  </div>
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
 
-  <div class="grid-duas-colunas">
-    <section class="painel">
-      <h3>Entregas por Dia da Semana</h3>
-
-      <div class="barras-dia">
-        @for (linha of porDia; track linha.dia) {
-          <div class="barra-item">
-            <div class="barra" [style.height.%]="(linha.entregas / maiorEntregasDia) * 100"></div>
-            <span>{{ linha.dia.slice(0, 3) }}</span>
-          </div>
-        }
+  @if (carregando) {
+    <app-carregando texto="Carregando relatório..."></app-carregando>
+  } @else if (relatorio) {
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">Total de Entregas</div>
+        <div class="stat-valor">{{ relatorio.totalEntregas }}</div>
       </div>
-    </section>
-
-    <section class="painel">
-      <h3>Ranking de Entregadores</h3>
-
-      <div class="lista">
-        @for (entregador of ranking; track entregador.nome; let i = $index) {
-          <div class="linha">
-            <span class="nome">
-              <i class="bi bi-bicycle"></i>
-              {{ i + 1 }}. {{ entregador.nome }}
-            </span>
-            <span class="badge neutro">{{ entregador.entregas }} entregas</span>
-          </div>
-        }
+      <div class="stat-card">
+        <div class="stat-label">Tempo Médio de Entrega</div>
+        <div class="stat-valor">{{ relatorio.tempoMedioEntregaMinutos | number: '1.0-1' }} min</div>
       </div>
-    </section>
-  </div>
+      <div class="stat-card">
+        <div class="stat-label">Entregas Pendentes</div>
+        <div class="stat-valor" [class.alerta]="relatorio.entregasPendentes > 0">{{ relatorio.entregasPendentes }}</div>
+      </div>
+    </div>
+
+    <div class="grid-duas-colunas">
+      <section class="painel">
+        <h3>Entregas por Dia da Semana</h3>
+
+        <div class="barras-dia">
+          @for (linha of porDia; track linha.dia) {
+            <div class="barra-item">
+              <div class="barra" [style.height.%]="(linha.entregas / maiorEntregasDia) * 100"></div>
+              <span>{{ linha.dia.slice(0, 3) }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="painel">
+        <h3>Ranking de Entregadores</h3>
+
+        <div class="lista">
+          @for (entregador of ranking; track entregador.nome; let i = $index) {
+            <div class="linha">
+              <span class="nome">
+                <i class="bi bi-bicycle"></i>
+                {{ i + 1 }}. {{ entregador.nome }}
+              </span>
+              <span class="badge neutro">{{ entregador.entregas }} entregas</span>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhuma entrega concluída ainda.</p>
+          }
+        </div>
+      </section>
+    </div>
+  }
 </div>

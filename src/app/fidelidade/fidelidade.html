@@ -1,50 +1,68 @@
 <div class="pagina">
   <header class="topo">
     <h1>Fidelidade</h1>
-    <p>Acompanhe o programa de pontos e recompensas dos clientes</p>
+    <p>Acompanhe o programa de cashback dos clientes</p>
   </header>
 
-  <div class="grid-stats">
-    <div class="stat-card">
-      <div class="stat-label">Clientes Participantes</div>
-      <div class="stat-valor">{{ clientesParticipantes }}</div>
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
+
+  @if (carregando) {
+    <app-carregando texto="Carregando programa de fidelidade..."></app-carregando>
+  } @else {
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">Clientes com Cashback</div>
+        <div class="stat-valor">{{ clientesParticipantes }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Saldo Total Distribuído</div>
+        <div class="stat-valor">{{ saldoTotalDistribuido | currency: 'BRL' }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Percentual de Acúmulo</div>
+        <div class="stat-valor">{{ cashbackConfig?.percentualAcumulo ?? 0 }}%</div>
+      </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Pontos Distribuídos no Mês</div>
-      <div class="stat-valor">{{ pontosDistribuidosNoMes }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Descontos Resgatados no Mês</div>
-      <div class="stat-valor">{{ descontosResgatadosNoMes }}</div>
-    </div>
-  </div>
 
-  <section class="painel painel-regra">
-    <h3><i class="bi bi-award"></i> Regra do Programa</h3>
-    <p class="texto-regra">
-      A cada R$ 50,00 em compras, o cliente ganha 1 ponto. 10 pontos podem ser trocados por
-      R$ 10,00 de desconto.
-    </p>
-  </section>
-
-  <section class="painel">
-    <h3>Ranking de Clientes</h3>
-
-    <div class="lista">
-      @for (cliente of rankingClientes; track cliente.nome; let i = $index) {
-        <div class="linha">
-          <div class="info">
-            <span class="posicao">{{ i + 1 }}º</span>
-            <strong>{{ cliente.nome }}</strong>
-          </div>
-
-          <div class="direita">
-            <span class="badge roxo"><i class="bi bi-star-fill"></i> {{ cliente.pontos }} pts</span>
-          </div>
-        </div>
-      } @empty {
-        <p class="vazio">Nenhum cliente participante ainda.</p>
+    <section class="painel painel-regra">
+      <h3><i class="bi bi-award"></i> Regra do Programa</h3>
+      @if (cashbackConfig?.flAtivo) {
+        <p class="texto-regra">
+          A cada venda entregue com cliente identificado, {{ cashbackConfig?.percentualAcumulo }}% do valor é
+          creditado como cashback
+          @if (cashbackConfig?.valorMinimoParaAcumular) {
+            , para pedidos a partir de {{ cashbackConfig?.valorMinimoParaAcumular | currency: 'BRL' }}
+          }
+          .
+        </p>
+      } @else {
+        <p class="texto-regra">
+          O acúmulo de cashback está desativado. Ative e configure o percentual em Cupons e Cashback.
+        </p>
       }
-    </div>
-  </section>
+    </section>
+
+    <section class="painel">
+      <h3>Ranking de Clientes</h3>
+
+      <div class="lista">
+        @for (cliente of rankingClientes; track cliente.id; let i = $index) {
+          <div class="linha">
+            <div class="info">
+              <span class="posicao">{{ i + 1 }}º</span>
+              <strong>{{ cliente.nome }}</strong>
+            </div>
+
+            <div class="direita">
+              <span class="badge roxo"><i class="bi bi-star-fill"></i> {{ cliente.saldoCashback | currency: 'BRL' }}</span>
+            </div>
+          </div>
+        } @empty {
+          <p class="vazio">Nenhum cliente com cashback acumulado ainda.</p>
+        }
+      </div>
+    </section>
+  }
 </div>

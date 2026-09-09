@@ -4,92 +4,108 @@
     <p>Acompanhe o preparo dos pedidos em andamento</p>
   </header>
 
-  <div class="grid-resumo">
-    <div class="resumo-card">
-      <div class="resumo-icon aguardando"><i class="bi bi-hourglass-split"></i></div>
-      <div>
-        <div class="resumo-valor">{{ totalAguardando }}</div>
-        <div class="resumo-label">Aguardando</div>
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
+
+  @if (carregando) {
+    <app-carregando texto="Carregando fila..."></app-carregando>
+  } @else {
+    <div class="grid-resumo">
+      <div class="resumo-card">
+        <div class="resumo-icon aguardando"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+          <div class="resumo-valor">{{ totalAguardando }}</div>
+          <div class="resumo-label">Aguardando</div>
+        </div>
+      </div>
+
+      <div class="resumo-card">
+        <div class="resumo-icon preparando"><i class="bi bi-egg-fried"></i></div>
+        <div>
+          <div class="resumo-valor">{{ totalPreparando }}</div>
+          <div class="resumo-label">Em Preparo</div>
+        </div>
+      </div>
+
+      <div class="resumo-card">
+        <div class="resumo-icon pronto"><i class="bi bi-check-circle"></i></div>
+        <div>
+          <div class="resumo-valor">{{ readyOrders.length }}</div>
+          <div class="resumo-label">Prontos</div>
+        </div>
       </div>
     </div>
 
-    <div class="resumo-card">
-      <div class="resumo-icon preparando"><i class="bi bi-egg-fried"></i></div>
-      <div>
-        <div class="resumo-valor">{{ totalPreparando }}</div>
-        <div class="resumo-label">Em Preparo</div>
-      </div>
-    </div>
+    <section class="painel">
+      <h3>Pedidos em Andamento</h3>
 
-    <div class="resumo-card">
-      <div class="resumo-icon pronto"><i class="bi bi-check-circle"></i></div>
-      <div>
-        <div class="resumo-valor">{{ readyOrders.length }}</div>
-        <div class="resumo-label">Prontos</div>
-      </div>
-    </div>
-  </div>
+      <div class="lista-pedidos">
+        @for (pedido of activeOrders; track pedido.id) {
+          <div class="card-pedido">
+            <div class="card-topo">
+              <span class="id-cliente">#{{ pedido.id }} <strong>{{ pedido.nomeProduto }}</strong></span>
 
-  <section class="painel">
-    <h3>Pedidos em Andamento</h3>
+              @if (pedido.status === statusEnum.PREPARANDO) {
+                <span class="status preparando">Preparando</span>
+              }
+              @if (pedido.status === statusEnum.AGUARDANDO) {
+                <span class="status aguardando">Aguardando</span>
+              }
+            </div>
 
-    <div class="lista-pedidos">
-      @for (pedido of activeOrders; track pedido.id) {
-        <div class="card-pedido">
-          <div class="card-topo">
-            <span class="id-cliente">#{{ pedido.id }} <strong>{{ pedido.cliente }}</strong></span>
-
-            @if (pedido.status === statusEnum.PREPARANDO) {
-              <span class="status preparando">Preparando</span>
-            }
-            @if (pedido.status === statusEnum.AGUARDANDO) {
-              <span class="status aguardando">Aguardando</span>
-            }
-          </div>
-
-          <div class="itens-pedido">
-            @for (item of pedido.itens; track item.nome) {
+            <div class="itens-pedido">
               <div class="item">
-                <span>{{ item.nome }}</span>
-                <span>R$ {{ item.preco.toFixed(2) }}</span>
+                <span>Quantidade</span>
+                <span>{{ pedido.quantidadeProduto }}</span>
               </div>
-            }
+            </div>
+
+            <div class="card-acoes">
+              <span class="total">{{ pedido.dataCriacao | date: 'HH:mm' }}</span>
+
+              @if (pedido.status === statusEnum.AGUARDANDO) {
+                <button
+                  type="button"
+                  [disabled]="atualizandoId === pedido.id"
+                  (click)="iniciarPreparo(pedido)"
+                  class="btn-preparar"
+                >
+                  <i class="bi bi-play-fill"></i> Iniciar Preparo
+                </button>
+              }
+
+              @if (pedido.status === statusEnum.PREPARANDO) {
+                <button
+                  type="button"
+                  [disabled]="atualizandoId === pedido.id"
+                  (click)="marcarPronto(pedido)"
+                  class="btn-concluir"
+                >
+                  <i class="bi bi-check-lg"></i> Marcar Pronto
+                </button>
+              }
+            </div>
           </div>
+        } @empty {
+          <p class="vazio">Nenhum pedido em andamento no momento.</p>
+        }
+      </div>
+    </section>
 
-          <div class="card-acoes">
-            <span class="total">R$ {{ pedido.total.toFixed(2) }}</span>
+    <section class="painel">
+      <h3>Prontos para Entrega</h3>
 
-            @if (pedido.status === statusEnum.AGUARDANDO) {
-              <button type="button" (click)="mudarStatus(pedido.id, statusEnum.PREPARANDO)" class="btn-preparar">
-                <i class="bi bi-play-fill"></i> Iniciar Preparo
-              </button>
-            }
-
-            @if (pedido.status === statusEnum.PREPARANDO) {
-              <button type="button" (click)="mudarStatus(pedido.id, statusEnum.PRONTO)" class="btn-concluir">
-                <i class="bi bi-check-lg"></i> Marcar Pronto
-              </button>
-            }
+      <div class="lista-prontos">
+        @for (pedido of readyOrders; track pedido.id) {
+          <div class="linha-pronto">
+            <span><i class="bi bi-check-circle-fill"></i> #{{ pedido.id }} <strong>{{ pedido.nomeProduto }}</strong> ({{ pedido.quantidadeProduto }})</span>
+            <strong>{{ pedido.dtPronto | date: 'HH:mm' }}</strong>
           </div>
-        </div>
-      } @empty {
-        <p class="vazio">Nenhum pedido em andamento no momento.</p>
-      }
-    </div>
-  </section>
-
-  <section class="painel">
-    <h3>Prontos para Entrega</h3>
-
-    <div class="lista-prontos">
-      @for (pedido of readyOrders; track pedido.id) {
-        <div class="linha-pronto">
-          <span><i class="bi bi-check-circle-fill"></i> #{{ pedido.id }} <strong>{{ pedido.cliente }}</strong></span>
-          <strong>R$ {{ pedido.total.toFixed(2) }}</strong>
-        </div>
-      } @empty {
-        <p class="vazio">Nenhum pedido pronto no momento.</p>
-      }
-    </div>
-  </section>
+        } @empty {
+          <p class="vazio">Nenhum pedido pronto no momento.</p>
+        }
+      </div>
+    </section>
+  }
 </div>

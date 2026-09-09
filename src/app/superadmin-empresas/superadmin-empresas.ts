@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Empresa, EmpresaService } from './empresa.service';
 import { Segmento, SegmentoService } from '../superadmin-segmentos/segmento.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-superadmin-empresas',
@@ -92,8 +93,8 @@ export class SuperadminEmpresas implements OnInit {
         this.cancelarEdicao();
         this.carregar();
       },
-      error: () => {
-        this.erro = 'Não foi possível salvar a empresa.';
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível salvar a empresa.');
       },
     });
   }
@@ -121,8 +122,8 @@ export class SuperadminEmpresas implements OnInit {
     }
     this.empresaService.excluir(empresa.id).subscribe({
       next: () => this.carregar(),
-      error: () => {
-        this.erro = 'Não foi possível excluir a empresa.';
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível excluir a empresa.');
       },
     });
   }

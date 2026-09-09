@@ -3,6 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CashbackConfig, CashbackService } from './cashback.service';
 import { Cupom, CupomPayload, CupomService, TipoDesconto } from './cupom.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-cupons-cashback',
@@ -70,7 +71,11 @@ export class CuponsCashback implements OnInit {
         this.cupons.push(cupom);
         this.novoCupom = this.cupomVazio();
       },
-      error: () => (this.erro = 'Não foi possível criar o cupom. Verifique se o código já existe.'),
+      error: (erro) =>
+        (this.erro = MensagemErroApiUtil.extrair(
+          erro,
+          'Não foi possível criar o cupom. Verifique se o código já existe.',
+        )),
     });
   }
 
@@ -78,14 +83,14 @@ export class CuponsCashback implements OnInit {
     const { id, ...payload } = cupom;
     this.cupomService.atualizar(id, { ...payload, flAtivo: !cupom.flAtivo }).subscribe({
       next: (atualizado) => (cupom.flAtivo = atualizado.flAtivo),
-      error: () => (this.erro = 'Não foi possível atualizar o cupom.'),
+      error: (erro) => (this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível atualizar o cupom.')),
     });
   }
 
   excluirCupom(cupom: Cupom) {
     this.cupomService.excluir(cupom.id).subscribe({
       next: () => (this.cupons = this.cupons.filter((c) => c.id !== cupom.id)),
-      error: () => (this.erro = 'Não foi possível excluir o cupom.'),
+      error: (erro) => (this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível excluir o cupom.')),
     });
   }
 
@@ -109,7 +114,8 @@ export class CuponsCashback implements OnInit {
     const { id, ...payload } = this.cashback;
     this.cashbackService.atualizar(payload).subscribe({
       next: (config) => (this.cashback = config),
-      error: () => (this.erro = 'Não foi possível salvar a configuração de cashback.'),
+      error: (erro) =>
+        (this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível salvar a configuração de cashback.')),
     });
   }
 }

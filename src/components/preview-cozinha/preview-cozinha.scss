@@ -1,0 +1,115 @@
+/* Ilustração estática da Tela da Cozinha (ver preview-cozinha.ts).
+   Usa os tokens globais de styles.scss para acompanhar o tema claro/escuro. */
+
+:host {
+  display: block;
+
+  --pv-borda: var(--color-border, #e5e7eb);
+  --pv-superficie: var(--color-bg-surface, #ffffff);
+  --pv-titulo: var(--color-text, #111827);
+  --pv-corpo: var(--color-text-muted, #6b7280);
+  --pv-fundo: #fbf7f3;
+  --pv-barra: #1c2128;
+  --pv-sombra: 0 1px 2px rgba(17, 24, 39, 0.04), 0 12px 32px -16px rgba(17, 24, 39, 0.18);
+}
+
+:host-context(:root[data-theme='escuro']) {
+  --pv-borda: #2b2f38;
+  --pv-superficie: #1c1f26;
+  --pv-fundo: #191c22;
+  --pv-sombra: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -16px rgba(0, 0, 0, 0.7);
+}
+
+.janela {
+  border: 1px solid var(--pv-borda);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--pv-superficie);
+  box-shadow: var(--pv-sombra);
+}
+
+.janela-barra {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 15px;
+  background: var(--pv-barra);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.janela-barra i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.janela-barra span {
+  margin-left: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #b6bcc6;
+}
+
+.janela-corpo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+  background: var(--pv-fundo);
+}
+
+.coluna-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 9px;
+  padding-bottom: 7px;
+  border-bottom: 2px solid currentColor;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.coluna-titulo.aguardando { color: #d97706; }
+.coluna-titulo.preparando { color: #2563eb; }
+.coluna-titulo.pronto { color: #16a34a; }
+
+.cartao {
+  padding: 11px 12px;
+  margin-bottom: 9px;
+  background: var(--pv-superficie);
+  border: 1px solid var(--pv-borda);
+  border-radius: var(--radius-lg, 8px);
+}
+
+.cartao header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.cartao header strong { font-size: 13px; font-weight: 600; color: var(--pv-titulo); }
+.cartao header span { font-size: 11px; color: var(--pv-corpo); }
+
+.cartao > p { margin: 0; font-size: 12.5px; color: var(--pv-corpo); }
+.cartao > p b { color: var(--pv-titulo); }
+
+.cartao small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  font-size: 11px;
+}
+
+.cartao small.remocao { color: #dc2626; }
+.cartao small.adicao { color: #16a34a; }
+.cartao.concluido { opacity: 0.78; }
+
+@media (max-width: 980px) {
+  .janela-corpo { grid-template-columns: minmax(0, 1fr); }
+}

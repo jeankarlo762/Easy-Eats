@@ -327,6 +327,45 @@
 }
 
 /* ========================= */
+/* FORMULÁRIO DE DESPESA */
+/* ========================= */
+.form-despesa {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.btn-registrar {
+  padding: 14px;
+  border-radius: 8px;
+  border: none;
+  background: #ea580c;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+
+  &:hover {
+    background: #c2410c;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-excluir {
+  margin-left: 10px;
+  border: none;
+  background: transparent;
+  color: #c62828;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* ========================= */
 /* RESPONSIVIDADE */
 /* ========================= */
 @media (max-width: 600px) {

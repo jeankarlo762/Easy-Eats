@@ -5,125 +5,198 @@
     <p>Vendas, despesas e catálogo de produtos</p>
   </header>
 
-  <div class="filtros">
-    <button 
-      [class.ativo]="filtroSelecionado === 'hoje'" 
-      (click)="selecionarFiltro('hoje')">Hoje</button>
-    <button 
-      [class.ativo]="filtroSelecionado === 'semana'" 
-      (click)="selecionarFiltro('semana')">Semana</button>
-    <button 
-      [class.ativo]="filtroSelecionado === 'periodo'" 
-      (click)="selecionarFiltro('periodo')">Período</button>
-  </div>
-
-  <div class="summary-grid">
-    <div class="summary-card">
-      <div class="valor text-success">R$ {{ vendas.toFixed(2) }}</div>
-      <div class="paragrafo">Vendas</div>
-    </div>
-
-    <div class="summary-card">
-      <div class="valor text-error">R$ {{ despesas.toFixed(2) }}</div>
-      <div class="paragrafo">Despesas</div>
-    </div>
-
-    <div class="summary-card">
-      <div class="valor" [class.text-success]="lucro >= 0" [class.text-error]="lucro < 0">
-        R$ {{ lucro.toFixed(2) }}
-      </div>
-      <div class="paragrafo">Lucro</div>
-    </div>
-  </div>
-
-  <div class="tabs">
-    <span [class.ativo]="abaSelecionada === 'resumo'" (click)="selecionarAba('resumo')">Resumo</span>
-    <span [class.ativo]="abaSelecionada === 'vendas'" (click)="selecionarAba('vendas')">Vendas</span>
-    <span [class.ativo]="abaSelecionada === 'despesas'" (click)="selecionarAba('despesas')">Despesas</span>
-    <span [class.ativo]="abaSelecionada === 'produtos'" (click)="selecionarAba('produtos')">Produtos</span>
-  </div>
-
-  @if (abaSelecionada === 'resumo') {
-    <div class="card-form mb-25">
-      <div class="list-header">
-        <h3>Resumo do Período</h3>
-      </div>
-
-      <div class="list-container">
-        <div class="list-item">
-          <span class="item-name">Pedidos realizados</span>
-          <span class="item-info">{{ resumo.pedidos }}</span>
-        </div>
-
-        <div class="list-item">
-          <span class="item-name">Ticket médio</span>
-          <span class="item-info">R$ {{ resumo.ticketMedio.toFixed(2) }}</span>
-        </div>
-
-        <div class="list-item">
-          <span class="item-name">Despesas registradas</span>
-          <span class="item-info">{{ resumo.despesasRegistradas }}</span>
-        </div>
-
-        <div class="list-item highlight-result">
-          <span class="item-name"><strong>Resultado</strong></span>
-          <span class="item-info">
-            <span class="status-badge" [class.success]="resumo.resultado >= 0" [class.error]="resumo.resultado < 0">
-              R$ {{ resumo.resultado.toFixed(2) }}
-            </span>
-          </span>
-        </div>
-      </div>
-    </div>
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
   }
 
-  @if (abaSelecionada === 'produtos') {
-    <div class="card-form">
-      <div class="list-header">
-        <h3>Catálogo de Produtos</h3>
+  @if (carregando) {
+    <app-carregando texto="Carregando dados financeiros..."></app-carregando>
+  } @else {
+    <div class="filtros">
+      <button
+        [class.ativo]="filtroSelecionado === 'hoje'"
+        (click)="selecionarFiltro('hoje')">Hoje</button>
+      <button
+        [class.ativo]="filtroSelecionado === 'semana'"
+        (click)="selecionarFiltro('semana')">Últimos 7 dias</button>
+      <button
+        [class.ativo]="filtroSelecionado === 'periodo'"
+        (click)="selecionarFiltro('periodo')">Todo o período</button>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="valor text-success">{{ vendasTotal | currency: 'BRL' }}</div>
+        <div class="paragrafo">Vendas</div>
       </div>
 
-      <input 
-        type="text"
-        placeholder="Buscar produto..."
-        [(ngModel)]="busca"
-        (input)="filtrarProdutos()"
-        class="input-busca"
-      />
+      <div class="summary-card">
+        <div class="valor text-error">{{ despesasTotal | currency: 'BRL' }}</div>
+        <div class="paragrafo">Despesas</div>
+      </div>
 
-      <div class="grid">
-        @for (p of produtosFiltrados; track p.id) {
-          <div class="produto-card" [class.alerta]="isEstoqueBaixo(p)">
-            
-            <div class="top">
-              <span class="icone-produto"><i class="bi" [ngClass]="iconeCategoria(p.categoria)"></i></span>
-              <div class="actions">
-                <button type="button" (click)="editar(p)" title="Editar"><i class="bi bi-pencil"></i></button>
-                <button type="button" (click)="excluir(p)" title="Excluir"><i class="bi bi-trash"></i></button>
-              </div>
-            </div>
-
-            <h3>{{ p.nome }}</h3>
-            <small>{{ p.categoria }} • {{ p.unidade }}</small>
-
-            <div class="preco">
-              R$ {{ p.preco.toFixed(2) }}
-            </div>
-
-            <div class="estoque">
-              <span>Estoque: {{ p.estoque }}</span>
-              @if (isEstoqueBaixo(p)) { 
-                <span class="status-badge error">Baixo</span> 
-              } @else {
-                <span class="status-badge success">Ok</span> 
-              }
-            </div>
-          </div>
-        } @empty {
-          <p class="vazio" style="grid-column: 1 / -1;">Nenhum resultado encontrado</p>
-        }
+      <div class="summary-card">
+        <div class="valor" [class.text-success]="lucro >= 0" [class.text-error]="lucro < 0">
+          {{ lucro | currency: 'BRL' }}
+        </div>
+        <div class="paragrafo">Lucro</div>
       </div>
     </div>
+
+    <div class="tabs">
+      <span [class.ativo]="abaSelecionada === 'resumo'" (click)="selecionarAba('resumo')">Resumo</span>
+      <span [class.ativo]="abaSelecionada === 'vendas'" (click)="selecionarAba('vendas')">Vendas</span>
+      <span [class.ativo]="abaSelecionada === 'despesas'" (click)="selecionarAba('despesas')">Despesas</span>
+      <span [class.ativo]="abaSelecionada === 'produtos'" (click)="selecionarAba('produtos')">Produtos</span>
+    </div>
+
+    @if (abaSelecionada === 'resumo') {
+      <div class="card-form mb-25">
+        <div class="list-header">
+          <h3>Resumo do Período</h3>
+        </div>
+
+        <div class="list-container">
+          <div class="list-item">
+            <span class="item-name">Pedidos realizados</span>
+            <span class="item-info">{{ resumo.pedidos }}</span>
+          </div>
+
+          <div class="list-item">
+            <span class="item-name">Ticket médio</span>
+            <span class="item-info">{{ resumo.ticketMedio | currency: 'BRL' }}</span>
+          </div>
+
+          <div class="list-item">
+            <span class="item-name">Despesas registradas</span>
+            <span class="item-info">{{ resumo.despesasRegistradas }}</span>
+          </div>
+
+          <div class="list-item highlight-result">
+            <span class="item-name"><strong>Resultado</strong></span>
+            <span class="item-info">
+              <span class="status-badge" [class.success]="resumo.resultado >= 0" [class.error]="resumo.resultado < 0">
+                {{ resumo.resultado | currency: 'BRL' }}
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (abaSelecionada === 'vendas') {
+      <div class="card-form">
+        <div class="list-header">
+          <h3>Vendas do Período</h3>
+        </div>
+
+        <div class="list-container">
+          @for (venda of vendasFiltradas; track venda.id) {
+            <div class="list-item">
+              <span class="item-name">
+                {{ venda.nomeCliente || (venda.mesa ? 'Mesa ' + venda.mesa.numero : 'Venda #' + venda.id) }}
+                <small>({{ venda.status }})</small>
+              </span>
+              <span class="item-info">{{ totalVenda(venda) | currency: 'BRL' }}</span>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhuma venda no período selecionado.</p>
+          }
+        </div>
+      </div>
+    }
+
+    @if (abaSelecionada === 'despesas') {
+      <div class="card-form mb-25">
+        <div class="list-header">
+          <h3>Nova Despesa</h3>
+        </div>
+
+        @if (erroDespesa) {
+          <p class="vazio">{{ erroDespesa }}</p>
+        }
+
+        <div class="form-despesa">
+          <input type="text" placeholder="Descrição" [(ngModel)]="novaDespesa.descricao" class="input-busca" />
+          <input type="text" placeholder="Categoria (ex.: Insumos, Utilidades)" [(ngModel)]="novaDespesa.categoria" class="input-busca" />
+          <input type="number" placeholder="Valor" min="0" step="0.01" [(ngModel)]="novaDespesa.valor" class="input-busca" />
+          <input type="date" [(ngModel)]="novaDespesa.dtDespesa" class="input-busca" />
+          <button type="button" class="btn-registrar" [disabled]="enviandoDespesa" (click)="registrarDespesa()">
+            {{ enviandoDespesa ? 'Registrando...' : 'Registrar Despesa' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="card-form">
+        <div class="list-header">
+          <h3>Despesas do Período</h3>
+        </div>
+
+        <div class="list-container">
+          @for (despesa of despesasFiltradas; track despesa.id) {
+            <div class="list-item">
+              <span class="item-name">
+                {{ despesa.descricao }}
+                <small>({{ despesa.categoria }} • {{ despesa.dtDespesa | date: 'dd/MM/yyyy' }})</small>
+              </span>
+              <span class="item-info">
+                {{ despesa.valor | currency: 'BRL' }}
+                <button type="button" class="btn-excluir" (click)="excluirDespesa(despesa)" title="Excluir">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </span>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhuma despesa no período selecionado.</p>
+          }
+        </div>
+      </div>
+    }
+
+    @if (abaSelecionada === 'produtos') {
+      <div class="card-form">
+        <div class="list-header">
+          <h3>Catálogo de Produtos</h3>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Buscar produto..."
+          [(ngModel)]="busca"
+          (input)="filtrarProdutos()"
+          class="input-busca"
+        />
+
+        <div class="grid">
+          @for (p of produtosFiltrados; track p.id) {
+            <div class="produto-card" [class.alerta]="isEstoqueBaixo(p)">
+
+              <div class="top">
+                <span class="icone-produto"><i class="bi" [ngClass]="iconeCategoria(p.categoria?.nome)"></i></span>
+              </div>
+
+              <h3>{{ p.nome }}</h3>
+              <small>{{ p.categoria?.nome || 'Sem categoria' }}</small>
+
+              <div class="preco">
+                {{ p.preco | currency: 'BRL' }}
+              </div>
+
+              <div class="estoque">
+                <span>Estoque: {{ estoqueDoProduto(p.id) }}</span>
+                @if (isEstoqueBaixo(p)) {
+                  <span class="status-badge error">Baixo</span>
+                } @else {
+                  <span class="status-badge success">Ok</span>
+                }
+              </div>
+            </div>
+          } @empty {
+            <p class="vazio" style="grid-column: 1 / -1;">Nenhum resultado encontrado</p>
+          }
+        </div>
+      </div>
+    }
   }
 
 </div>

@@ -1,6 +1,5 @@
 export enum StatusPedidoEnum {
-  PREPARANDO = 'Preparando',
-  PRONTO = 'Pronto',
-  ENTREGUE = 'Entregue',
-  AGUARDANDO = 'Aguardando',
+  AGUARDANDO = 'AGUARDANDO',
+  PREPARANDO = 'PREPARANDO',
+  PRONTO = 'PRONTO',
 }

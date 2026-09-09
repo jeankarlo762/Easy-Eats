@@ -4,6 +4,10 @@
     <p>Conecte o Easy Eats a serviços externos</p>
   </header>
 
+  @if (carregando) {
+    <app-carregando texto="Carregando integrações..."></app-carregando>
+  } @else {
+
   <div class="abas-integracao">
     @for (integracao of integracoes; track integracao.chave) {
       <button
@@ -20,6 +24,13 @@
   </div>
 
   <section class="painel">
+    @if (erro) {
+      <p class="alerta-erro">{{ erro }}</p>
+    }
+    @if (sucesso) {
+      <p class="alerta-sucesso">{{ sucesso }}</p>
+    }
+
     <div class="cabecalho-integracao">
       <div class="titulo-integracao">
         <i class="bi" [ngClass]="integracaoAtiva.icone"></i>
@@ -112,8 +123,11 @@
     }
 
     <div class="acoes-integracao">
-      <button type="button" class="btn-salvar" (click)="salvar(integracaoAtiva)">Salvar Configurações</button>
+      <button type="button" class="btn-salvar" [disabled]="enviando" (click)="salvar(integracaoAtiva)">
+        {{ enviando ? 'Salvando...' : 'Salvar Configurações' }}
+      </button>
       <button type="button" class="btn-cancelar" (click)="testarConexao(integracaoAtiva)">Testar Conexão</button>
     </div>
   </section>
+  }
 </div>

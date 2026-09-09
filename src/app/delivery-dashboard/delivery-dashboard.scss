@@ -154,6 +154,79 @@
   margin: 0;
 }
 
+.direita {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btn-icone {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px;
+
+  &:hover {
+    color: #ea580c;
+  }
+}
+
+.form-panel {
+  margin-bottom: 16px;
+}
+
+.form-linha {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  input,
+  select {
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    font-size: 13.5px;
+    flex: 1;
+    min-width: 160px;
+  }
+}
+
+.btn-salvar {
+  padding: 10px 18px;
+  border-radius: 6px;
+  border: none;
+  background: #ea580c;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    background: #c2410c;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.form-entregador {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.btn-secundario {
+  background: #6b7280;
+
+  &:hover {
+    background: #4b5563;
+  }
+}
+
 @media (max-width: 680px) {
   .pagina {
     padding: 20px 16px 60px;

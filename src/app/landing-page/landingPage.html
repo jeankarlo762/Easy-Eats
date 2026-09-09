@@ -1,0 +1,239 @@
+<div class="landing">
+
+  <!-- ===================== TOPO ===================== -->
+  <header class="topo">
+    <a class="marca" routerLink="/landing-page">
+      <img src="assets/images/logo-easyeats-carrinho2.png" alt="" />
+      <span>Easy<strong>Eats</strong></span>
+    </a>
+
+    <nav class="menu">
+      <button type="button" (click)="irPara('sobre')">Sobre</button>
+      <button type="button" (click)="irPara('origem')">Origem</button>
+      <button type="button" (click)="irPara('funcionalidades')">Funcionalidades</button>
+      <button type="button" (click)="irPara('integrantes')">Integrantes</button>
+    </nav>
+
+    <div class="acoes-topo">
+      <button
+        type="button"
+        class="btn-tema"
+        (click)="themeService.alternar()"
+        [attr.aria-label]="themeService.escuro() ? 'Usar tema claro' : 'Usar tema escuro'"
+      >
+        <i class="bi" [ngClass]="themeService.escuro() ? 'bi-sun' : 'bi-moon-stars'"></i>
+      </button>
+      <a class="btn-entrar" routerLink="/login">Entrar no sistema</a>
+    </div>
+  </header>
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero">
+    <div class="hero-texto">
+      <span class="selo"><i class="bi bi-shop"></i> Gestão para restaurantes</span>
+
+      <h1>Do pedido na mesa ao fechamento do caixa,<span> em um sistema só.</span></h1>
+
+      <p>
+        O Easy Eats acompanha a operação inteira de um restaurante: o garçom abre a comanda,
+        a cozinha vê o pedido chegar na hora, o caixa fecha a conta e o gestor enxerga o
+        resultado — sem planilha no meio do caminho.
+      </p>
+
+      <div class="hero-acoes">
+        <a class="btn-principal" routerLink="/login">
+          <i class="bi bi-box-arrow-in-right"></i> Acessar o sistema
+        </a>
+        <button type="button" class="btn-secundario" (click)="irPara('funcionalidades')">
+          Ver funcionalidades
+        </button>
+      </div>
+
+      <ul class="numeros">
+        @for (numero of numeros; track numero.rotulo) {
+          <li>
+            <b>{{ numero.valor }}</b>
+            <span>{{ numero.rotulo }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <!-- Ilustração do painel mais reconhecível do sistema. Decorativa: não
+         consome a API, por isso fica fora da árvore de acessibilidade. -->
+    <div class="hero-visual" aria-hidden="true">
+      <app-preview-cozinha />
+    </div>
+  </section>
+
+  <!-- ===================== SOBRE ===================== -->
+  <section class="secao" id="sobre">
+    <div class="secao-cabecalho">
+      <span class="etiqueta">Sobre</span>
+      <h2>Um sistema que entende como um restaurante funciona</h2>
+      <p>
+        A operação de um salão não é um formulário: o cliente troca de ideia, pede mais uma
+        rodada, tira o tomate do lanche. O Easy Eats foi construído em volta desse vaivém, e
+        não de um cadastro genérico.
+      </p>
+    </div>
+
+    <div class="cartoes-sobre">
+      <article>
+        <i class="bi bi-diagram-3"></i>
+        <h3>Multiempresa de verdade</h3>
+        <p>
+          Cada restaurante tem seus próprios produtos, mesas, usuários e caixa. Os dados são
+          isolados por empresa em todas as consultas do backend — não é um filtro de tela.
+        </p>
+      </article>
+
+      <article>
+        <i class="bi bi-sliders"></i>
+        <h3>Módulos por segmento</h3>
+        <p>
+          Um food truck não precisa de mesas; um restaurante precisa. O segmento de negócio
+          define quais dos 13 módulos ficam visíveis, e o menu se adapta sozinho.
+        </p>
+      </article>
+
+      <article>
+        <i class="bi bi-people"></i>
+        <h3>Cada perfil vê o seu</h3>
+        <p>
+          O garçom abre no pedido, o cozinheiro na cozinha, o gestor no dashboard. As
+          permissões são checadas no servidor, então a tela não é a única barreira.
+        </p>
+      </article>
+
+      <article>
+        <i class="bi bi-arrow-repeat"></i>
+        <h3>Comanda como linha do tempo</h3>
+        <p>
+          Uma visita à mesa vira uma comanda que agrupa várias rodadas de pedido. Tudo é
+          cobrado junto no fim, e a mesa é liberada automaticamente.
+        </p>
+      </article>
+    </div>
+
+    <div class="tecnologias">
+      <p class="tec-titulo">Construído com</p>
+      <ul>
+        @for (tec of tecnologias; track tec.nome) {
+          <li>
+            <b>{{ tec.nome }}</b>
+            <span>{{ tec.detalhe }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== ORIGEM ===================== -->
+  <section class="secao secao-escura" id="origem">
+    <div class="secao-cabecalho">
+      <span class="etiqueta clara">Origem</span>
+      <h2>De um projeto de curso a um sistema completo</h2>
+      <p>
+        O Easy Eats começou em março de 2026 como trabalho de estudantes do SENAI e cresceu
+        ao longo de cinco meses, commit a commit, até virar um sistema com front-end,
+        API e banco de dados integrados.
+      </p>
+    </div>
+
+    <ol class="linha-tempo">
+      @for (marco of linhaDoTempo; track marco.data) {
+        <li>
+          <span class="ponto" aria-hidden="true"></span>
+          <p class="data">{{ marco.data }}</p>
+          <h3>{{ marco.titulo }}</h3>
+          <p class="descricao">{{ marco.descricao }}</p>
+        </li>
+      }
+    </ol>
+
+    <p class="nota-origem">
+      <i class="bi bi-git"></i>
+      Todo o histórico foi versionado no Git, com branches de feature e revisão por pull
+      request — 142 commits no front-end e 66 na API.
+    </p>
+  </section>
+
+  <!-- ===================== FUNCIONALIDADES ===================== -->
+  <section class="secao" id="funcionalidades">
+    <div class="secao-cabecalho">
+      <span class="etiqueta">Funcionalidades</span>
+      <h2>O que já está no ar</h2>
+      <p>
+        Oito frentes cobrindo o ciclo completo do atendimento. Cada uma pode ser ligada ou
+        desligada conforme o segmento da empresa.
+      </p>
+    </div>
+
+    <div class="grade-modulos">
+      @for (modulo of modulos; track modulo.titulo) {
+        <article class="modulo">
+          <span class="modulo-icone" [style.background]="modulo.cor + '1a'" [style.color]="modulo.cor">
+            <i class="bi" [ngClass]="modulo.icone"></i>
+          </span>
+          <h3>{{ modulo.titulo }}</h3>
+          <p>{{ modulo.descricao }}</p>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- ===================== INTEGRANTES ===================== -->
+  <section class="secao secao-alternada" id="integrantes">
+    <div class="secao-cabecalho">
+      <span class="etiqueta">Integrantes</span>
+      <h2>Quem construiu o Easy Eats</h2>
+      <p>
+        Seis estudantes dividindo front-end, back-end e banco de dados. As áreas abaixo
+        refletem o que cada um de fato entregou no histórico do projeto.
+      </p>
+    </div>
+
+    <div class="grade-integrantes">
+      @for (pessoa of integrantes; track pessoa.nome) {
+        <article class="pessoa">
+          <div class="pessoa-topo">
+            <span class="avatar">{{ pessoa.iniciais }}</span>
+            <div>
+              <h3>{{ pessoa.nome }}</h3>
+              <p class="commits">
+                <i class="bi bi-git"></i> {{ pessoa.commits }} commits
+              </p>
+            </div>
+          </div>
+
+          <p class="contribuicao">{{ pessoa.contribuicao }}</p>
+
+          <ul class="areas">
+            @for (area of pessoa.areas; track area) {
+              <li>{{ area }}</li>
+            }
+          </ul>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- ===================== CHAMADA FINAL ===================== -->
+  <section class="chamada">
+    <h2>Pronto para ver por dentro?</h2>
+    <p>Entre com um dos perfis de demonstração e percorra o fluxo completo do salão.</p>
+    <a class="btn-principal grande" routerLink="/login">
+      <i class="bi bi-box-arrow-in-right"></i> Entrar no sistema
+    </a>
+  </section>
+
+  <footer class="rodape">
+    <div class="rodape-marca">
+      <img src="assets/images/easyeats.png" alt="" />
+      <span>Easy<strong>Eats</strong></span>
+    </div>
+    <p>Projeto acadêmico desenvolvido no SENAI · {{ anoAtual }}</p>
+  </footer>
+
+</div>

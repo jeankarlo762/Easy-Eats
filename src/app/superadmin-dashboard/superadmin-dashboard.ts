@@ -1,19 +1,17 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { Empresa, EmpresaService } from '../superadmin-empresas/empresa.service';
+import { Usuario, UsuarioService } from '../usuarios/usuario.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 interface NovosClientesMes {
   mes: string;
   quantidade: number;
 }
 
-interface ClienteRecente {
-  empresa: string;
-  plano: 'Básico' | 'Pro' | 'Enterprise';
-  dataCadastro: string;
-}
-
-interface DistribuicaoPlano {
-  plano: string;
+interface DistribuicaoSegmento {
+  segmento: string;
   empresas: number;
   percentual: number;
   cor: string;
@@ -26,72 +24,142 @@ interface AlertaPlataforma {
   descricao: string;
 }
 
+const CORES_SEGMENTO = ['#2563eb', '#7c3aed', '#16a34a', '#ea580c', '#db2777', '#0891b2', '#9ca3af'];
+const MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
 @Component({
   selector: 'app-superadmin-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CarregandoComponent],
   templateUrl: './superadmin-dashboard.html',
   styleUrl: './superadmin-dashboard.scss',
 })
-export class SuperadminDashboard {
-  readonly totalClientes = 128;
-  readonly variacaoClientes = '+9%';
-  readonly usuariosTotais = 742;
-  readonly variacaoUsuarios = '+14%';
-  readonly mrr = 58640.9;
-  readonly variacaoMrr = '+6%';
-  readonly taxaInadimplencia = 6.2;
-  readonly variacaoInadimplencia = '-1.2%';
+export class SuperadminDashboard implements OnInit {
+  private empresaService = inject(EmpresaService);
+  private usuarioService = inject(UsuarioService);
 
-  readonly novosClientesPorMes: NovosClientesMes[] = [
-    { mes: 'Fevereiro', quantidade: 9 },
-    { mes: 'Março', quantidade: 12 },
-    { mes: 'Abril', quantidade: 15 },
-    { mes: 'Maio', quantidade: 11 },
-    { mes: 'Junho', quantidade: 18 },
-    { mes: 'Julho', quantidade: 21 },
-  ];
+  carregando = true;
+  erro: string | null = null;
 
-  readonly ultimosClientes: ClienteRecente[] = [
-    { empresa: 'Food Truck Sabor & Cia', plano: 'Pro', dataCadastro: '25/07/2026' },
-    { empresa: 'Burger House Ltda', plano: 'Enterprise', dataCadastro: '22/07/2026' },
-    { empresa: 'Pizzaria Bella Napoli', plano: 'Básico', dataCadastro: '19/07/2026' },
-    { empresa: 'Doceria Doce Sonho', plano: 'Básico', dataCadastro: '15/07/2026' },
-    { empresa: 'Rede Sabor Express', plano: 'Enterprise', dataCadastro: '10/07/2026' },
-  ];
+  empresas: Empresa[] = [];
+  usuarios: Usuario[] = [];
 
-  readonly distribuicaoPlanos: DistribuicaoPlano[] = [
-    { plano: 'Básico', empresas: 76, percentual: 59, cor: '#9ca3af' },
-    { plano: 'Pro', empresas: 38, percentual: 30, cor: '#2563eb' },
-    { plano: 'Enterprise', empresas: 14, percentual: 11, cor: '#7c3aed' },
-  ];
+  ngOnInit() {
+    this.carregando = true;
 
-  readonly alertas: AlertaPlataforma[] = [
-    {
-      icone: 'bi-exclamation-triangle',
-      cor: 'vermelho',
-      titulo: '3 empresas com pagamento atrasado',
-      descricao: 'Verifique a aba Financeiro para cobrar ou suspender o acesso.',
-    },
-    {
-      icone: 'bi-person-plus',
-      cor: 'azul',
-      titulo: '5 novas empresas aguardando ativação',
-      descricao: 'Cadastro concluído, mas ainda sem o primeiro login.',
-    },
-    {
-      icone: 'bi-life-preserver',
-      cor: 'laranja',
-      titulo: '2 tickets de suporte em aberto',
-      descricao: 'Aguardando retorno há mais de 24 horas.',
-    },
-  ];
-
-  get maiorQuantidadeMes(): number {
-    return Math.max(...this.novosClientesPorMes.map((m) => m.quantidade));
+    Promise.all([
+      new Promise<Empresa[]>((resolve, reject) => this.empresaService.listar().subscribe({ next: resolve, error: reject })),
+      new Promise<Usuario[]>((resolve, reject) => this.usuarioService.listar().subscribe({ next: resolve, error: reject })),
+    ])
+      .then(([empresas, usuarios]) => {
+        this.empresas = empresas;
+        this.usuarios = usuarios;
+        this.carregando = false;
+      })
+      .catch((erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o painel da plataforma.');
+        this.carregando = false;
+      });
   }
 
-  get badgePlano(): Record<ClienteRecente['plano'], string> {
-    return { Básico: 'neutro', Pro: 'azul', Enterprise: 'roxo' };
+  get totalClientes(): number {
+    return this.empresas.length;
+  }
+
+  get usuariosTotais(): number {
+    return this.usuarios.length;
+  }
+
+  get empresasAtivas(): number {
+    return this.empresas.filter((e) => e.flAtivo).length;
+  }
+
+  get empresasInativas(): number {
+    return this.empresas.filter((e) => !e.flAtivo).length;
+  }
+
+  get novosClientesPorMes(): NovosClientesMes[] {
+    const agora = new Date();
+    const meses: NovosClientesMes[] = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const referencia = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+      const quantidade = this.empresas.filter((e) => {
+        if (!e.dtCriacao) return false;
+        const data = new Date(e.dtCriacao);
+        return data.getFullYear() === referencia.getFullYear() && data.getMonth() === referencia.getMonth();
+      }).length;
+      meses.push({ mes: MESES[referencia.getMonth()], quantidade });
+    }
+
+    return meses;
+  }
+
+  get maiorQuantidadeMes(): number {
+    const valores = this.novosClientesPorMes.map((m) => m.quantidade);
+    return valores.length ? Math.max(...valores, 1) : 1;
+  }
+
+  get distribuicaoSegmentos(): DistribuicaoSegmento[] {
+    const mapa = new Map<string, number>();
+    for (const empresa of this.empresas) {
+      const nome = empresa.segmento?.nome ?? 'Sem segmento';
+      mapa.set(nome, (mapa.get(nome) ?? 0) + 1);
+    }
+
+    const total = this.empresas.length || 1;
+    return Array.from(mapa.entries())
+      .map(([segmento, empresas], i) => ({
+        segmento,
+        empresas,
+        percentual: Math.round((empresas / total) * 1000) / 10,
+        cor: CORES_SEGMENTO[i % CORES_SEGMENTO.length],
+      }))
+      .sort((a, b) => b.empresas - a.empresas);
+  }
+
+  get ultimosClientes(): Empresa[] {
+    return [...this.empresas]
+      .filter((e) => e.dtCriacao)
+      .sort((a, b) => new Date(b.dtCriacao as string).getTime() - new Date(a.dtCriacao as string).getTime())
+      .slice(0, 5);
+  }
+
+  get alertas(): AlertaPlataforma[] {
+    const alertas: AlertaPlataforma[] = [];
+
+    if (this.empresasInativas > 0) {
+      alertas.push({
+        icone: 'bi-exclamation-triangle',
+        cor: 'vermelho',
+        titulo: `${this.empresasInativas} empresa(s) inativa(s)`,
+        descricao: 'Sem acesso liberado à plataforma no momento.',
+      });
+    }
+
+    const semSegmento = this.empresas.filter((e) => !e.segmento).length;
+    if (semSegmento > 0) {
+      alertas.push({
+        icone: 'bi-diagram-3',
+        cor: 'laranja',
+        titulo: `${semSegmento} empresa(s) sem segmento definido`,
+        descricao: 'Sem segmento, a empresa não tem funcionalidades liberadas no menu.',
+      });
+    }
+
+    const usuariosInativos = this.usuarios.filter((u) => u.flAtivo === false).length;
+    if (usuariosInativos > 0) {
+      alertas.push({
+        icone: 'bi-person-x',
+        cor: 'azul',
+        titulo: `${usuariosInativos} usuário(s) inativo(s) na plataforma`,
+        descricao: 'Contas desativadas em uma ou mais empresas.',
+      });
+    }
+
+    return alertas;
   }
 }

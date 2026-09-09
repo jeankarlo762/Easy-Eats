@@ -1,87 +1,77 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { STATUS_PEDIDO, Venda, VendaService } from '../novo-pedido/venda.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
-interface Pedido {
-  id: number;
-  cliente: string;
-  itens: { nome: string; quantidade: number }[];
-  horario: string;
-  status: 'aguardando' | 'preparando' | 'pronto';
-  total: number;
-}
+const FILTROS = ['Todos', STATUS_PEDIDO.AGUARDANDO, STATUS_PEDIDO.PREPARANDO, STATUS_PEDIDO.PRONTO, STATUS_PEDIDO.ENTREGUE];
 
 @Component({
   selector: 'app-historico-vendas',
   standalone: true,
   templateUrl: './historico-vendas.html',
   styleUrls: ['./historico-vendas.scss'],
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CarregandoComponent],
 })
-export class HistoricoVendasComponent {
-  busca = '';
+export class HistoricoVendasComponent implements OnInit {
+  private vendaService = inject(VendaService);
 
-  filtros = ['Todos', 'Aguardando', 'Preparando', 'Pronto'];
+  busca = '';
+  filtros = FILTROS;
   filtroSelecionado = 'Todos';
 
-  pedidos: Pedido[] = [
-    {
-      id: 1,
-      cliente: 'João',
-      itens: [
-        { nome: 'Hambúrguer Clássico', quantidade: 2 },
-        { nome: 'Batata Frita', quantidade: 1 },
-        { nome: 'Coca-Cola', quantidade: 2 },
-      ],
-      horario: '02:21',
-      status: 'preparando',
-      total: 70,
-    },
-    {
-      id: 2,
-      cliente: 'Maria',
-      itens: [
-        { nome: 'X-Bacon', quantidade: 1 },
-        { nome: 'Onion Rings', quantidade: 1 },
-      ],
-      horario: '02:21',
-      status: 'aguardando',
-      total: 42,
-    },
-  ];
+  vendas: Venda[] = [];
+  carregando = true;
+  erro: string | null = null;
+
+  ngOnInit() {
+    this.carregar();
+  }
+
+  private carregar() {
+    this.carregando = true;
+    this.vendaService.listar().subscribe({
+      next: (vendas) => {
+        // As mais recentes primeiro — a API não garante ordenação.
+        this.vendas = [...vendas].sort((a, b) => b.id - a.id);
+        this.carregando = false;
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o histórico de vendas.');
+        this.carregando = false;
+      },
+    });
+  }
 
   selecionarFiltro(filtro: string) {
     this.filtroSelecionado = filtro;
   }
 
-  get pedidosFiltrados() {
-    return this.pedidos
-      .filter((pedido) => {
-        if (this.filtroSelecionado === 'Todos') return true;
+  identificacao(venda: Venda): string {
+    if (venda.mesa) return `Mesa ${venda.mesa.numero}`;
+    return venda.nomeCliente || 'Balcão';
+  }
 
-        return (
-          pedido.status.toLowerCase() ===
-          this.filtroSelecionado.toLowerCase()
-        );
-      })
-      .filter((pedido) => {
-        const termo = this.busca.toLowerCase();
+  totalVenda(venda: Venda): number {
+    return (venda.itens ?? []).reduce((soma, item) => soma + (item.valor_total ?? 0), 0);
+  }
 
-        return (
-          pedido.cliente.toLowerCase().includes(termo) ||
-          pedido.id.toString().includes(termo)
-        );
+  get vendasFiltradas(): Venda[] {
+    return this.vendas
+      .filter((venda) => this.filtroSelecionado === 'Todos' || venda.status === this.filtroSelecionado)
+      .filter((venda) => {
+        const termo = this.busca.toLowerCase().trim();
+        if (!termo) return true;
+        return this.identificacao(venda).toLowerCase().includes(termo) || venda.id.toString().includes(termo);
       });
   }
 
-  get totalFiltrado() {
-    return this.pedidosFiltrados.reduce(
-      (total, pedido) => total + pedido.total,
-      0
-    );
+  get totalFiltrado(): number {
+    return this.vendasFiltradas.reduce((total, venda) => total + this.totalVenda(venda), 0);
   }
 
-  get totalPedidos() {
-    return this.pedidosFiltrados.length;
+  get totalPedidos(): number {
+    return this.vendasFiltradas.length;
   }
 }

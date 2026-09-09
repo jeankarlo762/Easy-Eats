@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { LandingPage } from './landing-page/landingPage';
 import { Login } from './login/login';
 import { AppLayout } from './layout/app-layout';
 import { authGuard } from './auth/auth.guard';
@@ -12,7 +13,6 @@ import { ComponentFila } from './Fila/component.fila';
 import { TelaCozinha } from './tela-cozinha/tela-cozinha';
 import { RelatorioCozinha } from './relatorio-cozinha/relatorio-cozinha';
 import { RelatorioPedidos } from './relatorio-pedidos/relatorio-pedidos';
-import { ConfirmarPedComponent } from './confirmar-pedido/confirmar-pedido';
 import { ControleEstoque } from './controle-estoque/controle-estoque';
 import { HistoricoVendasComponent } from './historico-vendas/historico-vendas';
 import { Financeiro } from './financeiro/financeiro';
@@ -43,12 +43,19 @@ import { SuperadminDashboard } from './superadmin-dashboard/superadmin-dashboard
 import { SuperadminEmpresas } from './superadmin-empresas/superadmin-empresas';
 import { SuperadminSegmentos } from './superadmin-segmentos/superadmin-segmentos';
 import { SuperadminUsuarios } from './superadmin-usuarios/superadmin-usuarios';
-import { SuperadminPagamentos } from './superadmin-pagamentos/superadmin-pagamentos';
-import { SuperadminFinanceiro } from './superadmin-financeiro/superadmin-financeiro';
 import { SuperadminConfiguracoes } from './superadmin-configuracoes/superadmin-configuracoes';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
+
+  // Página pública de apresentação do projeto. Fica fora do layout autenticado
+  // e do authGuard de propósito: é a vitrine, acessível sem login.
+  // Para torná-la a porta de entrada do sistema, troque o redirect acima por
+  // { path: '', redirectTo: '/landing-page', pathMatch: 'full' }.
+  {
+    path: 'landing-page',
+    component: LandingPage,
+  },
 
   {
     path: 'login',
@@ -80,7 +87,7 @@ export const routes: Routes = [
       { path: 'delivery-relatorios', component: DeliveryRelatorios, canActivate: [funcionalidadeGuard(['DELIVERY'])] },
 
       { path: 'controle-estoque', component: ControleEstoque, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
-      { path: 'categorias', component: Categorias, canActivate: [funcionalidadeGuard(['ESTOQUE', 'PRODUTOS'])] },
+      { path: 'categorias', component: Categorias, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
       { path: 'relatorio-estoque', component: RelatorioEstoque, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
 
       { path: 'pedidos-compra', component: PedidosCompra, canActivate: [funcionalidadeGuard(['COMPRAS'])] },
@@ -107,13 +114,15 @@ export const routes: Routes = [
       { path: 'superadmin-empresas', component: SuperadminEmpresas, canActivate: [superadminGuard] },
       { path: 'superadmin-segmentos', component: SuperadminSegmentos, canActivate: [superadminGuard] },
       { path: 'superadmin-usuarios', component: SuperadminUsuarios, canActivate: [superadminGuard] },
-      { path: 'superadmin-pagamentos', component: SuperadminPagamentos, canActivate: [superadminGuard] },
-      { path: 'superadmin-financeiro', component: SuperadminFinanceiro, canActivate: [superadminGuard] },
       { path: 'superadmin-configuracoes', component: SuperadminConfiguracoes, canActivate: [superadminGuard] },
 
       { path: 'perfil-admin', component: PerfilAdmin },
       { path: 'perfil-garcom', component: PerfilGarcom },
-      { path: 'confirmar-pedido', component: ConfirmarPedComponent },
     ],
   },
+
+  // Sem esta rota qualquer URL desconhecida (link antigo, digitação, refresh em
+  // caminho inválido) estourava NG04002 no console e deixava a tela em branco.
+  // O authGuard da rota '' decide o destino real: /home se logado, /login se não.
+  { path: '**', redirectTo: '/home' },
 ];

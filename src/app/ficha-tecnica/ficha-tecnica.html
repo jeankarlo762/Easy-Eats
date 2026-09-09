@@ -4,40 +4,84 @@
     <p>Insumos e custo de produção de cada produto do cardápio</p>
   </header>
 
-  <div class="lista-produtos">
-    @for (produto of produtos; track produto.id) {
-      <section class="painel produto-card">
-        <button type="button" class="cabecalho-produto" (click)="alternarExpansao(produto)">
-          <span class="titulo">
-            <i class="bi" [ngClass]="produto.icone"></i>
-            {{ produto.nome }}
-          </span>
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
 
-          <span class="direita">
-            <span class="badge neutro">Custo: R$ {{ custoTotal(produto) | number: '1.2-2' }}</span>
-            <i class="bi" [ngClass]="produto.expandido ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-          </span>
-        </button>
+  @if (carregando) {
+    <app-carregando texto="Carregando produtos..."></app-carregando>
+  } @else {
+    <div class="lista-produtos">
+      @for (produto of produtosPreparados; track produto.id) {
+        <section class="painel produto-card">
+          <button type="button" class="cabecalho-produto" (click)="alternarExpansao(produto)">
+            <span class="titulo">
+              <i class="bi bi-egg-fried"></i>
+              {{ produto.nome }}
+            </span>
 
-        @if (produto.expandido) {
-          <div class="lista">
-            @for (insumo of produto.insumos; track insumo.nome) {
-              <div class="linha">
-                <div class="info">
-                  <strong>{{ insumo.nome }}</strong>
-                  <span>{{ insumo.quantidade }}</span>
+            <span class="direita">
+              @if (itensPorProduto[produto.id]) {
+                <span class="badge neutro">Custo: {{ custoTotal(produto) | currency: 'BRL' }}</span>
+              }
+              <i class="bi" [ngClass]="produtoExpandidoId === produto.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </span>
+          </button>
+
+          @if (produtoExpandidoId === produto.id) {
+            <div class="lista">
+              @if (carregandoItens && !itensPorProduto[produto.id]) {
+                <p class="vazio">Carregando insumos...</p>
+              } @else {
+                @for (item of itensPorProduto[produto.id]; track item.id) {
+                  <div class="linha">
+                    <div class="info">
+                      <strong>{{ item.insumo.nome }}</strong>
+                      <span>{{ item.quantidade }} × {{ item.insumo.custo | currency: 'BRL' }}</span>
+                    </div>
+
+                    <div class="direita">
+                      <span>{{ (item.insumo.custo ?? 0) * item.quantidade | currency: 'BRL' }}</span>
+                      <button type="button" class="btn-icone" (click)="removerInsumo(produto.id, item.id)" title="Remover">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                } @empty {
+                  <p class="vazio">Nenhum insumo cadastrado para este produto.</p>
+                }
+
+                @if (erroFormulario[produto.id]) {
+                  <p class="vazio erro-form">{{ erroFormulario[produto.id] }}</p>
+                }
+
+                <div class="form-insumo">
+                  <select [(ngModel)]="novoInsumoId[produto.id]">
+                    <option [ngValue]="null">Selecione um insumo...</option>
+                    @for (insumo of insumosDisponiveis; track insumo.id) {
+                      <option [ngValue]="insumo.id">{{ insumo.nome }}</option>
+                    }
+                  </select>
+
+                  <input
+                    type="number"
+                    placeholder="Quantidade"
+                    min="0"
+                    step="0.001"
+                    [(ngModel)]="novaQuantidade[produto.id]"
+                  />
+
+                  <button type="button" class="btn-adicionar" (click)="adicionarInsumo(produto.id)">
+                    <i class="bi bi-plus-lg"></i> Adicionar
+                  </button>
                 </div>
-
-                <div class="direita">
-                  <span>R$ {{ insumo.custoUnitario | number: '1.2-2' }} / unid.</span>
-                </div>
-              </div>
-            }
-          </div>
-        }
-      </section>
-    } @empty {
-      <p class="vazio">Nenhum produto cadastrado.</p>
-    }
-  </div>
+              }
+            </div>
+          }
+        </section>
+      } @empty {
+        <p class="vazio">Nenhum produto com natureza PREPARADO cadastrado.</p>
+      }
+    </div>
+  }
 </div>

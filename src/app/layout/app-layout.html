@@ -52,15 +52,15 @@
             </div>
 
             <div class="lista-notificacoes">
-              @for (n of notificacoes; track n.titulo) {
-                <div class="notificacao" [class.nao-lida]="!n.lida">
+              @for (n of notificacoes; track n.id) {
+                <div class="notificacao" [class.nao-lida]="!n.lida" (click)="marcarComoLida(n)">
                   <div class="notificacao-icone" [ngClass]="n.cor">
                     <i class="bi" [ngClass]="n.icone"></i>
                   </div>
                   <div class="notificacao-texto">
                     <strong>{{ n.titulo }}</strong>
                     <span>{{ n.descricao }}</span>
-                    <small>{{ n.tempo }}</small>
+                    <small>{{ tempoRelativo(n.dtCriacao) }}</small>
                   </div>
                 </div>
               } @empty {

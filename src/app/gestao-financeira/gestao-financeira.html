@@ -4,55 +4,63 @@
     <p>Acompanhe todos os lançamentos financeiros do negócio</p>
   </header>
 
-  <div class="grid-stats">
-    <div class="stat-card">
-      <div class="stat-label">Total de Ganhos</div>
-      <div class="stat-valor sucesso">R$ {{ totalGanhos | number: '1.2-2' }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Total de Gastos</div>
-      <div class="stat-valor alerta">R$ {{ totalGastos | number: '1.2-2' }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Saldo</div>
-      <div class="stat-valor" [ngClass]="saldo >= 0 ? 'sucesso' : 'alerta'">
-        R$ {{ saldo | number: '1.2-2' }}
+  @if (erro) {
+    <p class="vazio">{{ erro }}</p>
+  }
+
+  @if (carregando) {
+    <app-carregando texto="Carregando lançamentos..."></app-carregando>
+  } @else {
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">Total de Ganhos</div>
+        <div class="stat-valor sucesso">R$ {{ totalGanhos | number: '1.2-2' }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total de Gastos</div>
+        <div class="stat-valor alerta">R$ {{ totalGastos | number: '1.2-2' }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Saldo</div>
+        <div class="stat-valor" [ngClass]="saldo >= 0 ? 'sucesso' : 'alerta'">
+          R$ {{ saldo | number: '1.2-2' }}
+        </div>
       </div>
     </div>
-  </div>
 
-  <section class="painel">
-    <h3>Lançamentos</h3>
+    <section class="painel">
+      <h3>Lançamentos</h3>
 
-    <div class="filtros">
-      <button type="button" [class.ativo]="filtroAtivo === 'Todos'" (click)="selecionarFiltro('Todos')">
-        Todos
-      </button>
-      <button type="button" [class.ativo]="filtroAtivo === 'Ganhos'" (click)="selecionarFiltro('Ganhos')">
-        Ganhos
-      </button>
-      <button type="button" [class.ativo]="filtroAtivo === 'Gastos'" (click)="selecionarFiltro('Gastos')">
-        Gastos
-      </button>
-    </div>
+      <div class="filtros">
+        <button type="button" [class.ativo]="filtroAtivo === 'Todos'" (click)="selecionarFiltro('Todos')">
+          Todos
+        </button>
+        <button type="button" [class.ativo]="filtroAtivo === 'Ganhos'" (click)="selecionarFiltro('Ganhos')">
+          Ganhos
+        </button>
+        <button type="button" [class.ativo]="filtroAtivo === 'Gastos'" (click)="selecionarFiltro('Gastos')">
+          Gastos
+        </button>
+      </div>
 
-    <div class="lista">
-      @for (lancamento of lancamentosFiltrados; track lancamento.id) {
-        <div class="linha">
-          <div class="info">
-            <strong>{{ lancamento.descricao }}</strong>
-            <span>{{ lancamento.categoria }} · {{ lancamento.data | date: 'dd/MM/yyyy' }}</span>
+      <div class="lista">
+        @for (lancamento of lancamentosFiltrados; track lancamento.id) {
+          <div class="linha">
+            <div class="info">
+              <strong>{{ lancamento.descricao }}</strong>
+              <span>{{ lancamento.categoria }} · {{ lancamento.data | date: 'dd/MM/yyyy' }}</span>
+            </div>
+
+            <div class="direita">
+              <span class="valor" [ngClass]="lancamento.tipo === 'Ganho' ? 'sucesso' : 'alerta'">
+                {{ lancamento.tipo === 'Ganho' ? '+' : '-' }} R$ {{ lancamento.valor | number: '1.2-2' }}
+              </span>
+            </div>
           </div>
-
-          <div class="direita">
-            <span class="valor" [ngClass]="lancamento.tipo === 'Ganho' ? 'sucesso' : 'alerta'">
-              {{ lancamento.tipo === 'Ganho' ? '+' : '-' }} R$ {{ lancamento.valor | number: '1.2-2' }}
-            </span>
-          </div>
-        </div>
-      } @empty {
-        <p class="vazio">Nenhum lançamento encontrado.</p>
-      }
-    </div>
-  </section>
+        } @empty {
+          <p class="vazio">Nenhum lançamento encontrado.</p>
+        }
+      </div>
+    </section>
+  }
 </div>

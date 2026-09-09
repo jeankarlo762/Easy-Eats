@@ -10,12 +10,20 @@ export interface Usuario {
   email: string;
   role: Perfil;
   flAtivo: boolean | null;
+  empresa: { id: number; nome: string } | null;
 }
 
 export interface UsuarioPayload {
   nome: string;
   email: string;
   senha: string;
+  role: Perfil;
+  flAtivo: boolean;
+}
+
+export interface UsuarioAtualizacaoPayload {
+  nome: string;
+  email: string;
   role: Perfil;
   flAtivo: boolean;
 }
@@ -32,5 +40,9 @@ export class UsuarioService {
 
   criar(usuario: UsuarioPayload): Observable<Usuario> {
     return this.http.post<Usuario>(API_URL, usuario);
+  }
+
+  atualizar(id: number, usuario: UsuarioAtualizacaoPayload): Observable<Usuario> {
+    return this.http.put<Usuario>(`${API_URL}/${id}`, usuario);
   }
 }

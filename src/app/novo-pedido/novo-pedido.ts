@@ -154,9 +154,15 @@ export class NovoPedido implements OnInit {
     return this.carrinho.reduce((soma, item) => soma + this.precoUnitario(item) * item.qtd, 0);
   }
 
+  /**
+   * O backend exige identificação do pedido: mesa OU nome do cliente
+   * (VendaService.criar rejeita quando os dois faltam). Antes, para empresas
+   * sem a funcionalidade OPERACAO (sem mesas), o botão ficava habilitado sem
+   * nenhum dos dois e o pedido morria com 400 na API.
+   */
   podeFinalizar(): boolean {
     if (this.carrinho.length === 0) return false;
-    return this.usaMesa ? this.mesaSelecionada !== null || !!this.cliente.trim() : true;
+    return this.mesaSelecionada !== null || !!this.cliente.trim();
   }
 
   confirmarPedido() {

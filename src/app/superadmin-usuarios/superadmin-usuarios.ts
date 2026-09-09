@@ -1,61 +1,80 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { Perfil } from '../auth/auth.service';
+import { Usuario, UsuarioService } from '../usuarios/usuario.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
-type Cargo = 'Administrador' | 'Operador';
-type StatusUsuario = 'Ativo' | 'Inativo';
-
-interface UsuarioPlataforma {
-  id: number;
-  nome: string;
-  email: string;
-  empresa: string;
-  cargo: Cargo;
-  status: StatusUsuario;
-}
+const LABEL_CARGO: Record<Perfil, string> = {
+  SUPERADMIN: 'Superadmin',
+  ADMINISTRADOR: 'Administrador',
+  OPERADOR: 'Operador',
+  GARCOM: 'Garçom',
+  COZINHEIRO: 'Cozinheiro',
+};
 
 @Component({
   selector: 'app-superadmin-usuarios',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CarregandoComponent],
   templateUrl: './superadmin-usuarios.html',
   styleUrl: './superadmin-usuarios.scss',
 })
-export class SuperadminUsuarios {
+export class SuperadminUsuarios implements OnInit {
+  private usuarioService = inject(UsuarioService);
+
+  carregando = true;
+  erro: string | null = null;
+  atualizandoId: number | null = null;
+
   termoBusca = '';
   filtroEmpresa = 'Todas';
-  filtroCargo: 'Todos' | Cargo = 'Todos';
-  filtroStatus: 'Todos' | StatusUsuario = 'Todos';
+  filtroCargo: 'Todos' | Perfil = 'Todos';
+  filtroStatus: 'Todos' | 'Ativo' | 'Inativo' = 'Todos';
 
-  usuarios: UsuarioPlataforma[] = [
-    { id: 1, nome: 'Mateus Sousa', email: 'mateus.sousa@saborecia.com', empresa: 'Food Truck Sabor & Cia', cargo: 'Administrador', status: 'Ativo' },
-    { id: 2, nome: 'Ana Ribeiro', email: 'ana.ribeiro@saborecia.com', empresa: 'Food Truck Sabor & Cia', cargo: 'Operador', status: 'Ativo' },
-    { id: 3, nome: 'Carlos Mendes', email: 'carlos.mendes@burgerhouse.com', empresa: 'Burger House Ltda', cargo: 'Administrador', status: 'Ativo' },
-    { id: 4, nome: 'Juliana Lima', email: 'juliana.lima@burgerhouse.com', empresa: 'Burger House Ltda', cargo: 'Operador', status: 'Inativo' },
-    { id: 5, nome: 'Roberto Alves', email: 'roberto.alves@bellanapoli.com', empresa: 'Pizzaria Bella Napoli', cargo: 'Administrador', status: 'Inativo' },
-    { id: 6, nome: 'Fernanda Costa', email: 'fernanda.costa@docesonho.com', empresa: 'Doceria Doce Sonho', cargo: 'Operador', status: 'Ativo' },
-    { id: 7, nome: 'Bruno Teixeira', email: 'bruno.teixeira@docesonho.com', empresa: 'Doceria Doce Sonho', cargo: 'Administrador', status: 'Ativo' },
-    { id: 8, nome: 'Patrícia Gomes', email: 'patricia.gomes@saborexpress.com', empresa: 'Rede Sabor Express', cargo: 'Operador', status: 'Ativo' },
-  ];
+  usuarios: Usuario[] = [];
 
-  get empresasDisponiveis(): string[] {
-    return ['Todas', ...Array.from(new Set(this.usuarios.map((u) => u.empresa))).sort()];
+  ngOnInit() {
+    this.carregar();
   }
 
-  get usuariosFiltrados(): UsuarioPlataforma[] {
+  carregar() {
+    this.carregando = true;
+    this.usuarioService.listar().subscribe({
+      next: (usuarios) => {
+        this.usuarios = usuarios;
+        this.carregando = false;
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar os usuários da plataforma.');
+        this.carregando = false;
+      },
+    });
+  }
+
+  get empresasDisponiveis(): string[] {
+    const nomes = this.usuarios.map((u) => u.empresa?.nome ?? 'Sem empresa');
+    return ['Todas', ...Array.from(new Set(nomes)).sort()];
+  }
+
+  get usuariosFiltrados(): Usuario[] {
     const termo = this.termoBusca.trim().toLowerCase();
 
     return this.usuarios.filter((u) => {
+      const nomeEmpresa = u.empresa?.nome ?? 'Sem empresa';
+
       const bateBusca =
         !termo ||
         String(u.id).includes(termo) ||
         u.nome.toLowerCase().includes(termo) ||
         u.email.toLowerCase().includes(termo) ||
-        u.empresa.toLowerCase().includes(termo);
+        nomeEmpresa.toLowerCase().includes(termo);
 
-      const bateEmpresa = this.filtroEmpresa === 'Todas' || u.empresa === this.filtroEmpresa;
-      const bateCargo = this.filtroCargo === 'Todos' || u.cargo === this.filtroCargo;
-      const bateStatus = this.filtroStatus === 'Todos' || u.status === this.filtroStatus;
+      const bateEmpresa = this.filtroEmpresa === 'Todas' || nomeEmpresa === this.filtroEmpresa;
+      const bateCargo = this.filtroCargo === 'Todos' || u.role === this.filtroCargo;
+      const status = u.flAtivo ? 'Ativo' : 'Inativo';
+      const bateStatus = this.filtroStatus === 'Todos' || status === this.filtroStatus;
 
       return bateBusca && bateEmpresa && bateCargo && bateStatus;
     });
@@ -68,15 +87,46 @@ export class SuperadminUsuarios {
     this.filtroStatus = 'Todos';
   }
 
-  alternarStatus(usuario: UsuarioPlataforma) {
-    usuario.status = usuario.status === 'Ativo' ? 'Inativo' : 'Ativo';
+  nomeEmpresa(usuario: Usuario): string {
+    return usuario.empresa?.nome ?? 'Sem empresa';
   }
 
-  badgeCargo(cargo: Cargo): string {
-    return cargo === 'Administrador' ? 'roxo' : 'azul';
+  labelCargo(cargo: Perfil): string {
+    return LABEL_CARGO[cargo];
   }
 
-  badgeStatus(status: StatusUsuario): string {
-    return status === 'Ativo' ? 'sucesso' : 'neutro';
+  labelStatus(usuario: Usuario): 'Ativo' | 'Inativo' {
+    return usuario.flAtivo ? 'Ativo' : 'Inativo';
+  }
+
+  badgeCargo(cargo: Perfil): string {
+    return cargo === 'ADMINISTRADOR' || cargo === 'SUPERADMIN' ? 'roxo' : 'azul';
+  }
+
+  badgeStatus(usuario: Usuario): string {
+    return usuario.flAtivo ? 'sucesso' : 'neutro';
+  }
+
+  alternarStatus(usuario: Usuario) {
+    this.atualizandoId = usuario.id;
+    const novoStatus = !usuario.flAtivo;
+
+    this.usuarioService
+      .atualizar(usuario.id, {
+        nome: usuario.nome,
+        email: usuario.email,
+        role: usuario.role,
+        flAtivo: novoStatus,
+      })
+      .subscribe({
+        next: (usuarioAtualizado) => {
+          usuario.flAtivo = usuarioAtualizado.flAtivo;
+          this.atualizandoId = null;
+        },
+        error: (erro) => {
+          this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível atualizar o status do usuário.');
+          this.atualizandoId = null;
+        },
+      });
   }
 }

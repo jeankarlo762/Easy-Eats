@@ -1,68 +1,10 @@
 <div class="pagina">
   <header class="topo">
     <h1>Configurações da Plataforma</h1>
-    <p>Ajustes globais e acesso mestre do Superadmin</p>
+    <p>Ajustes globais da plataforma Easy Eats</p>
   </header>
 
-  <section class="painel painel-alerta">
-    <div class="aviso">
-      <i class="bi bi-shield-exclamation"></i>
-      <div>
-        <strong>Chave Mestra (Master Key)</strong>
-        <p>
-          Essa chave concede acesso independente a todas as empresas cadastradas na plataforma —
-          use apenas para suporte técnico emergencial. Trate como uma credencial crítica e nunca a
-          compartilhe fora da equipe da plataforma.
-        </p>
-      </div>
-    </div>
-
-    <div class="campo-chave">
-      <code>{{ chaveExibida }}</code>
-
-      <button type="button" class="btn-icone" (click)="alternarVisibilidade()" [title]="chaveVisivel ? 'Ocultar' : 'Mostrar'">
-        <i class="bi" [ngClass]="chaveVisivel ? 'bi-eye-slash' : 'bi-eye'"></i>
-      </button>
-
-      <button type="button" class="btn-icone" (click)="copiarChave()" title="Copiar">
-        <i class="bi" [ngClass]="copiado ? 'bi-check-lg' : 'bi-clipboard'"></i>
-      </button>
-    </div>
-
-    <div class="rodape-chave">
-      <span>Última geração: {{ ultimaGeracao }}</span>
-      <button type="button" class="btn-cancelar" (click)="regenerarChave()">
-        <i class="bi bi-arrow-repeat"></i> Gerar Nova Chave
-      </button>
-    </div>
-  </section>
-
   <section class="painel">
-    <h3>Histórico de Uso da Chave Mestra</h3>
-
-    <div class="tabela-wrap">
-      <table class="tabela">
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Ação</th>
-            <th>IP</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (uso of historicoUso; track uso.data) {
-            <tr>
-              <td class="celula-muted">{{ uso.data }}</td>
-              <td class="celula-nome">{{ uso.acao }}</td>
-              <td class="celula-muted">{{ uso.ip }}</td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="3" class="vazio">Nenhum uso registrado ainda.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+    <p class="vazio">Nenhuma configuração de plataforma disponível no momento.</p>
   </section>
 </div>

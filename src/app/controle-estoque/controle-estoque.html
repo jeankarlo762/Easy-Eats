@@ -4,9 +4,16 @@
     <p>Itens do estoque e últimas movimentações</p>
   </header>
 
+  @if (erro) {
+    <div class="alerta-erro">{{ erro }}</div>
+  }
+  @if (sucesso) {
+    <div class="alerta-sucesso"><i class="bi bi-check-circle"></i> Movimentação registrada com sucesso!</div>
+  }
+
   <div class="grid-resumo">
     <div class="resumo-card">
-      <div class="resumo-valor">{{ produtos.length }}</div>
+      <div class="resumo-valor">{{ estoques.length }}</div>
       <div class="resumo-label">Total de Itens</div>
     </div>
 
@@ -17,59 +24,144 @@
 
     <div class="resumo-card">
       <div class="resumo-valor">{{ movimentacoes.length }}</div>
-      <div class="resumo-label">Movimentações</div>
+      <div class="resumo-label">Movimentações Recentes</div>
     </div>
   </div>
 
-  <section class="painel">
-    <h3>Estoque Atual</h3>
+  <div class="grid-duas-colunas">
+    <section class="painel">
+      <h3>Cadastrar Produto no Estoque</h3>
 
-    <div class="lista">
-      @for (produto of produtos; track produto.id) {
-        <div class="linha">
-          <span class="nome">
-            <i class="bi" [ngClass]="iconeCategoria(produto.categoria)"></i>
-            {{ produto.nome }}
-          </span>
-
-          <span class="info">
-            {{ produto.quantidade }} {{ produto.unidade }}
-
-            @if (produto.quantidade < produto.quantidadeMinima) {
-              <span class="badge erro">Baixo</span>
-            } @else {
-              <span class="badge sucesso">Ok</span>
+      <form [formGroup]="formCadastro" (ngSubmit)="cadastrarNoEstoque()">
+        <div class="campo">
+          <label>Produto</label>
+          <select formControlName="produtoId">
+            <option [ngValue]="null">Selecione...</option>
+            @for (produto of produtosSemEstoque; track produto.id) {
+              <option [ngValue]="produto.id">{{ produto.nome }}</option>
             }
-          </span>
-        </div>
-      }
-    </div>
-  </section>
-
-  <section class="painel">
-    <h3>Últimas Movimentações</h3>
-
-    <div class="lista">
-      @for (mov of movimentacoes; track mov.id) {
-        <div class="linha">
-          <span class="nome">
-            <i class="bi" [ngClass]="mov.tipo === 'entrada' ? 'bi-box-arrow-in-down' : 'bi-box-arrow-up'"></i>
-            {{ mov.nomeProduto }}
-          </span>
-
-          @if (mov.tipo === 'entrada') {
-            <span class="info">
-              +{{ mov.quantidade }}
-              <span class="badge sucesso">Entrada</span>
-            </span>
-          } @else {
-            <span class="info">
-              -{{ mov.quantidade }}
-              <span class="badge alerta-fundo">Saída</span>
-            </span>
+          </select>
+          @if (produtosSemEstoque.length === 0) {
+            <small class="aviso">Todos os produtos já estão no controle de estoque.</small>
           }
         </div>
-      }
-    </div>
-  </section>
+
+        <div class="campo">
+          <label>Quantidade Inicial</label>
+          <input type="number" min="0" formControlName="quantidadeAtual" />
+        </div>
+
+        <div class="campo">
+          <label>Estoque Mínimo</label>
+          <input type="number" min="0" formControlName="estoqueMinimo" />
+        </div>
+
+        <div class="acoes-form">
+          <button type="submit" class="btn-salvar" [disabled]="enviandoCadastro">
+            {{ enviandoCadastro ? 'Cadastrando...' : 'Adicionar ao Estoque' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="painel">
+      <h3>Registrar Movimentação</h3>
+
+      <form [formGroup]="formMovimentacao" (ngSubmit)="registrarMovimentacao()">
+        <div class="campo">
+          <label>Produto</label>
+          <select formControlName="produtoId">
+            <option [ngValue]="null">Selecione...</option>
+            @for (estoque of estoques; track estoque.id) {
+              <option [ngValue]="estoque.produto.id">{{ estoque.produto.nome }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="campo">
+          <label>Tipo</label>
+          <select formControlName="tipo">
+            <option value="ENTRADA">Entrada</option>
+            <option value="SAIDA">Saída</option>
+          </select>
+        </div>
+
+        <div class="campo">
+          <label>Quantidade</label>
+          <input type="number" min="1" formControlName="quantidade" />
+        </div>
+
+        <div class="campo">
+          <label>Observação (opcional)</label>
+          <input type="text" placeholder="Ex: recebimento do fornecedor" formControlName="observacao" />
+        </div>
+
+        <div class="acoes-form">
+          <button type="submit" class="btn-salvar" [disabled]="enviandoMovimentacao">
+            {{ enviandoMovimentacao ? 'Registrando...' : 'Registrar Movimentação' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  @if (carregando) {
+    <app-carregando texto="Carregando estoque..."></app-carregando>
+  } @else {
+    <section class="painel">
+      <h3>Estoque Atual</h3>
+
+      <div class="lista">
+        @for (estoque of estoques; track estoque.id) {
+          <div class="linha">
+            <span class="nome">
+              <i class="bi" [ngClass]="iconeCategoria(estoque.produto.categoria?.nome)"></i>
+              {{ estoque.produto.nome }}
+            </span>
+
+            <span class="info">
+              {{ estoque.quantidadeAtual }}
+
+              @if (estoque.quantidadeAtual < estoque.estoqueMinimo) {
+                <span class="badge erro">Baixo</span>
+              } @else {
+                <span class="badge sucesso">Ok</span>
+              }
+            </span>
+          </div>
+        } @empty {
+          <p class="vazio">Nenhum produto cadastrado no estoque ainda.</p>
+        }
+      </div>
+    </section>
+
+    <section class="painel">
+      <h3>Últimas Movimentações</h3>
+
+      <div class="lista">
+        @for (mov of movimentacoes; track mov.id) {
+          <div class="linha">
+            <span class="nome">
+              <i class="bi" [ngClass]="mov.tipo === 'ENTRADA' ? 'bi-box-arrow-in-down' : 'bi-box-arrow-up'"></i>
+              {{ mov.produto.nome }}
+            </span>
+
+            @if (mov.tipo === 'ENTRADA') {
+              <span class="info">
+                +{{ mov.quantidade }}
+                <span class="badge sucesso">Entrada</span>
+              </span>
+            } @else {
+              <span class="info">
+                -{{ mov.quantidade }}
+                <span class="badge alerta-fundo">Saída</span>
+              </span>
+            }
+          </div>
+        } @empty {
+          <p class="vazio">Nenhuma movimentação registrada ainda.</p>
+        }
+      </div>
+    </section>
+  }
 </div>

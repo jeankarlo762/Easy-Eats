@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { ComandaService } from '../comandas/comanda.service';
 import { Mesa, MesaService } from './mesa.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-mesas',
@@ -95,9 +96,9 @@ export class Mesas implements OnInit {
         this.abrindoMesaId = null;
         this.router.navigate(['/novo-pedido'], { queryParams: { mesa: mesa.id } });
       },
-      error: () => {
+      error: (erro) => {
         this.abrindoMesaId = null;
-        this.erro = 'Não foi possível abrir a comanda dessa mesa.';
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível abrir a comanda dessa mesa.');
       },
     });
   }

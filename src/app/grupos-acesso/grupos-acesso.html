@@ -1,7 +1,7 @@
 <div class="pagina">
   <header class="topo">
     <h1>Grupos de Acesso</h1>
-    <p>Confira as permissões de cada perfil de usuário do sistema</p>
+    <p>Confira as permissões de cada perfil de usuário do sistema, derivadas da navegação real</p>
   </header>
 
   <div class="grid-duas-colunas-iguais">
@@ -27,6 +27,40 @@
 
       <div class="lista-permissoes">
         @for (permissao of permissoesOperador; track permissao.modulo) {
+          <div class="linha-permissao">
+            <span>{{ permissao.modulo }}</span>
+            @if (permissao.concedida) {
+              <i class="bi bi-check-circle-fill icone-concedida"></i>
+            } @else {
+              <i class="bi bi-x-circle icone-negada"></i>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="painel">
+      <h3><i class="bi bi-bicycle"></i> Garçom</h3>
+
+      <div class="lista-permissoes">
+        @for (permissao of permissoesGarcom; track permissao.modulo) {
+          <div class="linha-permissao">
+            <span>{{ permissao.modulo }}</span>
+            @if (permissao.concedida) {
+              <i class="bi bi-check-circle-fill icone-concedida"></i>
+            } @else {
+              <i class="bi bi-x-circle icone-negada"></i>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="painel">
+      <h3><i class="bi bi-egg-fried"></i> Cozinheiro</h3>
+
+      <div class="lista-permissoes">
+        @for (permissao of permissoesCozinheiro; track permissao.modulo) {
           <div class="linha-permissao">
             <span>{{ permissao.modulo }}</span>
             @if (permissao.concedida) {
