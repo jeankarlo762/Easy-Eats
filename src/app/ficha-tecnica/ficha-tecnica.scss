@@ -205,7 +205,32 @@
   }
 }
 
+.input-quantidade {
+  width: 90px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.unidade {
+  min-width: 18px;
+}
+
+.btn-icone.salvar {
+  color: #16a34a;
+
+  &:hover {
+    color: #15803d;
+  }
+}
+
 @media (max-width: 680px) {
+  .linha {
+    flex-wrap: wrap;
+  }
+
+
   .pagina {
     padding: 20px 16px 60px;
   }
