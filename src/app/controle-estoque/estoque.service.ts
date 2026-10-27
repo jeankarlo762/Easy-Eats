@@ -2,15 +2,34 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { UnidadeMedida } from '../cadastro-produto/produto.service';
 
 export type TipoMovimentacaoEstoque = 'ENTRADA' | 'SAIDA';
 
 export interface Estoque {
   id: number;
-  produto: { id: number; nome: string; preco: number; categoria: { id: number; nome: string } | null };
+  produto: {
+    id: number;
+    nome: string;
+    preco: number;
+    custo?: number | null;
+    natureza?: string | null;
+    unidadeMedida?: UnidadeMedida | null;
+    categoria: { id: number; nome: string } | null;
+  };
   quantidadeAtual: number;
   estoqueMinimo: number;
   dtUltimaMovimentacao: string | null;
+}
+
+// Ingrediente = produto INSUMO + seu registro de estoque, gravados juntos.
+// quantidadeAtual só vale na criação; depois o saldo muda por movimentação.
+export interface IngredientePayload {
+  nome: string;
+  unidadeMedida: UnidadeMedida;
+  custo: number | null;
+  quantidadeAtual: number | null;
+  estoqueMinimo: number;
 }
 
 export interface MovimentacaoEstoque {
@@ -72,5 +91,21 @@ export class EstoqueService {
 
   remover(produtoId: number): Observable<void> {
     return this.http.delete<void>(`${API_URL}/${produtoId}`);
+  }
+
+  listarIngredientes(): Observable<Estoque[]> {
+    return this.http.get<Estoque[]>(`${API_URL}/ingredientes`);
+  }
+
+  criarIngrediente(payload: IngredientePayload): Observable<Estoque> {
+    return this.http.post<Estoque>(`${API_URL}/ingredientes`, payload);
+  }
+
+  atualizarIngrediente(produtoId: number, payload: IngredientePayload): Observable<Estoque> {
+    return this.http.put<Estoque>(`${API_URL}/ingredientes/${produtoId}`, payload);
+  }
+
+  removerIngrediente(produtoId: number): Observable<void> {
+    return this.http.delete<void>(`${API_URL}/ingredientes/${produtoId}`);
   }
 }

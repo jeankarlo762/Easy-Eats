@@ -91,6 +91,7 @@ export const TODOS_ITENS: ItemMenu[] = [
     funcionalidades: ['ESTOQUE'],
     filhos: [
       { label: 'Itens em Estoque', icon: 'bi-boxes', rota: '/controle-estoque', cor: '#16a34a' },
+      { label: 'Ingredientes', icon: 'bi-basket2', rota: '/ingredientes', cor: '#16a34a' },
       { label: 'Categorias', icon: 'bi-tags', rota: '/categorias', cor: '#16a34a' },
       { label: 'Relatório de Estoque', icon: 'bi-bar-chart-line', rota: '/relatorio-estoque', cor: '#16a34a' },
     ],

@@ -1,0 +1,124 @@
+<div class="pagina">
+  <header class="topo">
+    <h1>Ingredientes</h1>
+    <p>Matérias-primas do estoque usadas na ficha técnica dos produtos</p>
+  </header>
+
+  @if (erro) {
+    <div class="alerta-erro">{{ erro }}</div>
+  }
+  @if (sucesso) {
+    <div class="alerta-sucesso"><i class="bi bi-check-circle"></i> {{ sucesso }}</div>
+  }
+
+  <div class="grid-resumo">
+    <div class="resumo-card">
+      <div class="resumo-valor">{{ ingredientes.length }}</div>
+      <div class="resumo-label">Ingredientes</div>
+    </div>
+    <div class="resumo-card">
+      <div class="resumo-valor alerta">{{ estoqueBaixo }}</div>
+      <div class="resumo-label">Abaixo do mínimo</div>
+    </div>
+  </div>
+
+  <section class="painel">
+    <h3>{{ editandoId ? 'Editar Ingrediente' : 'Novo Ingrediente' }}</h3>
+
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="grid-campos">
+        <div class="campo campo--largo">
+          <label>Nome</label>
+          <input type="text" placeholder="Ex: Queijo cheddar" formControlName="nome" />
+        </div>
+
+        <div class="campo">
+          <label>Unidade de medida</label>
+          <select formControlName="unidadeMedida">
+            <option [ngValue]="null">Selecione...</option>
+            @for (unidade of unidades; track unidade.valor) {
+              <option [ngValue]="unidade.valor">{{ unidade.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="campo">
+          <label>Custo por unidade (R$)</label>
+          <input type="number" min="0" step="0.01" placeholder="0.00" formControlName="custo" />
+        </div>
+
+        <div class="campo">
+          <label>{{ editandoId ? 'Quantidade em estoque' : 'Quantidade inicial' }}</label>
+          <input type="number" min="0" step="1" formControlName="quantidadeAtual" />
+          @if (editandoId) {
+            <small class="aviso">
+              Para alterar o saldo, registre uma entrada/saída em
+              <a routerLink="/controle-estoque">Itens em Estoque</a>.
+            </small>
+          }
+        </div>
+
+        <div class="campo">
+          <label>Estoque mínimo</label>
+          <input type="number" min="0" step="1" formControlName="estoqueMinimo" />
+        </div>
+      </div>
+
+      <div class="acoes-form">
+        <button type="submit" class="btn-salvar" [disabled]="form.invalid || enviando">
+          {{ enviando ? 'Salvando...' : editandoId ? 'Salvar Alterações' : 'Cadastrar Ingrediente' }}
+        </button>
+        @if (editandoId) {
+          <button type="button" class="btn-cancelar" (click)="cancelarEdicao()" [disabled]="enviando">Cancelar</button>
+        }
+      </div>
+    </form>
+  </section>
+
+  @if (carregando) {
+    <app-carregando texto="Carregando ingredientes..."></app-carregando>
+  } @else {
+    <section class="painel">
+      <h3>Ingredientes cadastrados</h3>
+
+      <div class="tabela">
+        <div class="tabela__cabecalho">
+          <span>Nome</span>
+          <span>Unidade</span>
+          <span class="num">Em estoque</span>
+          <span class="num">Mínimo</span>
+          <span class="num">Custo/un.</span>
+          <span></span>
+        </div>
+
+        @for (estoque of ingredientes; track estoque.produto.id) {
+          <div class="tabela__linha">
+            <span class="nome">
+              <i class="bi bi-basket2"></i>
+              {{ estoque.produto.nome }}
+            </span>
+            <span>{{ unidade(estoque) }}</span>
+            <span class="num">
+              {{ estoque.quantidadeAtual }}
+              @if (estoque.quantidadeAtual < estoque.estoqueMinimo) {
+                <span class="badge erro">Baixo</span>
+              }
+            </span>
+            <span class="num">{{ estoque.estoqueMinimo }}</span>
+            <span class="num">{{ (estoque.produto.custo ?? estoque.produto.preco) | currency: 'BRL' }}</span>
+            <span class="acoes">
+              <button type="button" (click)="editar(estoque)" title="Editar" aria-label="Editar ingrediente">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button type="button" class="perigo" (click)="excluir(estoque)" title="Excluir" aria-label="Excluir ingrediente">
+                <i class="bi bi-trash"></i>
+              </button>
+            </span>
+          </div>
+        } @empty {
+          <p class="vazio">Nenhum ingrediente cadastrado ainda.</p>
+        }
+      </div>
+    </section>
+  }
+</div>

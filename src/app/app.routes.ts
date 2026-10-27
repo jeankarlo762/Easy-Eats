@@ -14,6 +14,7 @@ import { TelaCozinha } from './tela-cozinha/tela-cozinha';
 import { RelatorioCozinha } from './relatorio-cozinha/relatorio-cozinha';
 import { RelatorioPedidos } from './relatorio-pedidos/relatorio-pedidos';
 import { ControleEstoque } from './controle-estoque/controle-estoque';
+import { Ingredientes } from './ingredientes/ingredientes';
 import { HistoricoVendasComponent } from './historico-vendas/historico-vendas';
 import { Financeiro } from './financeiro/financeiro';
 import { NovoPedido } from './novo-pedido/novo-pedido';
@@ -87,6 +88,7 @@ export const routes: Routes = [
       { path: 'delivery-relatorios', component: DeliveryRelatorios, canActivate: [funcionalidadeGuard(['DELIVERY'])] },
 
       { path: 'controle-estoque', component: ControleEstoque, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
+      { path: 'ingredientes', component: Ingredientes, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
       { path: 'categorias', component: Categorias, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
       { path: 'relatorio-estoque', component: RelatorioEstoque, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
 

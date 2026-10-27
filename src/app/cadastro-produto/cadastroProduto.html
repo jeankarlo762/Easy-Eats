@@ -1,11 +1,14 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Novo Produto</h1>
-    <p>Cadastre um novo item no catálogo</p>
+    <h1>{{ editandoId ? 'Editar Produto' : 'Novo Produto' }}</h1>
+    <p>{{ editandoId ? 'Altere os dados e a ficha técnica do produto' : 'Cadastre um novo item no catálogo' }}</p>
   </header>
 
   @if (erro) {
     <div class="alerta-erro">{{ erro }}</div>
+  }
+  @if (sucesso) {
+    <div class="alerta-sucesso"><i class="bi bi-check-circle"></i> {{ sucesso }}</div>
   }
 
   <div class="card-form">
@@ -39,6 +42,9 @@
               <option [ngValue]="opcao.valor">{{ opcao.label }}</option>
             }
           </select>
+          <small class="ajuda-campo">
+            Ingredientes são cadastrados em <a routerLink="/ingredientes">Estoque &gt; Ingredientes</a>.
+          </small>
         </div>
       </div>
 
@@ -54,6 +60,55 @@
         </div>
       </div>
 
+      @if (exibeFichaTecnicaNoForm) {
+        <div class="ficha-form">
+          <div class="ficha-form__topo">
+            <label>Ficha técnica</label>
+            <span class="ajuda">Custo estimado: {{ custoFichaTecnica | currency: 'BRL' }}</span>
+          </div>
+          <p class="ajuda">Ingredientes do estoque e a quantidade utilizada para produzir uma unidade.</p>
+
+          @if (carregandoFicha) {
+            <p class="ajuda">Carregando ficha técnica...</p>
+          } @else {
+            @for (linha of fichaTecnica; track $index) {
+              <div class="ficha-form__linha">
+                <select [(ngModel)]="linha.ingredienteId" [ngModelOptions]="{ standalone: true }">
+                  <option [ngValue]="null">Selecione o ingrediente...</option>
+                  @for (estoque of ingredientesParaLinha(linha); track estoque.produto.id) {
+                    <option [ngValue]="estoque.produto.id">{{ estoque.produto.nome }}</option>
+                  }
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  placeholder="Quantidade"
+                  [(ngModel)]="linha.quantidadeUtilizada"
+                  [ngModelOptions]="{ standalone: true }"
+                />
+                <span class="unidade">{{ ingrediente(linha.ingredienteId)?.produto?.unidadeMedida ?? '' | lowercase }}</span>
+                <button type="button" class="btn-remover-linha" (click)="removerLinhaFicha($index)" title="Remover ingrediente">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            } @empty {
+              <p class="ajuda">Nenhum ingrediente na ficha técnica.</p>
+            }
+
+            @if (ingredientes.length === 0) {
+              <p class="ajuda">
+                Nenhum ingrediente no estoque. Cadastre em <a routerLink="/ingredientes">Estoque &gt; Ingredientes</a>.
+              </p>
+            } @else {
+              <button type="button" class="btn-add-linha" (click)="adicionarLinhaFicha()">
+                <i class="bi bi-plus-lg"></i> Adicionar ingrediente
+              </button>
+            }
+          }
+        </div>
+      }
+
       <div class="input-group input-group--toggle">
         <app-toggle-switch
           [checked]="form.controls.flAtivo.value"
@@ -63,9 +118,16 @@
       </div>
 
       <div class="actions">
-        <button type="submit" class="btn-save" [disabled]="form.invalid || enviando">
-          <span>+</span> {{ enviando ? 'Salvando...' : 'Cadastrar Produto' }}
+        <button type="submit" class="btn-save" [disabled]="form.invalid || enviando || carregandoFicha">
+          @if (editandoId) {
+            {{ enviando ? 'Salvando...' : 'Salvar Alterações' }}
+          } @else {
+            <span>+</span> {{ enviando ? 'Salvando...' : 'Cadastrar Produto' }}
+          }
         </button>
+        @if (editandoId) {
+          <button type="button" class="btn-cancelar" (click)="cancelarEdicao()" [disabled]="enviando">Cancelar edição</button>
+        }
       </div>
     </form>
   </div>
@@ -79,15 +141,35 @@
       <p class="vazio">Nenhum produto cadastrado ainda.</p>
     } @else {
       @for (produto of produtos; track produto.id) {
-        <div class="produto-item">
-          <button class="produto-item__header" (click)="alternarExpandir(produto)">
-            <div class="produto-item__info">
-              <strong>{{ produto.nome }}</strong>
-              <span class="badge-natureza">{{ produto.natureza ?? 'Sem natureza definida' }}</span>
+        <div class="produto-item" [class.produto-item--inativo]="produto.flAtivo === false">
+          <div class="produto-item__linha">
+            <button class="produto-item__header" (click)="alternarExpandir(produto)">
+              <div class="produto-item__info">
+                <strong>{{ produto.nome }}</strong>
+                <span class="produto-item__badges">
+                  <span class="badge-natureza">{{ produto.natureza ?? 'Sem natureza definida' }}</span>
+                  @if (produto.categoria) {
+                    <span class="badge-categoria">{{ produto.categoria.nome }}</span>
+                  }
+                  @if (produto.flAtivo === false) {
+                    <span class="badge-inativo">Inativo</span>
+                  }
+                </span>
+              </div>
+              <span class="preco">R$ {{ produto.preco.toFixed(2) }}</span>
+              <i class="bi" [ngClass]="produtoExpandidoId === produto.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+            <div class="produto-item__acoes">
+              <button type="button" (click)="editar(produto)" title="Editar produto" aria-label="Editar produto">
+                <i class="bi bi-pencil"></i>
+              </button>
+              @if (produto.flAtivo !== false) {
+                <button type="button" class="perigo" (click)="excluir(produto)" title="Excluir produto" aria-label="Excluir produto">
+                  <i class="bi bi-trash"></i>
+                </button>
+              }
             </div>
-            <span class="preco">R$ {{ produto.preco.toFixed(2) }}</span>
-            <i class="bi" [ngClass]="produtoExpandidoId === produto.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-          </button>
+          </div>
 
           @if (produtoExpandidoId === produto.id) {
             <div class="produto-item__detalhes">

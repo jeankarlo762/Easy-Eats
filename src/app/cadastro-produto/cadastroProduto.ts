@@ -1,20 +1,30 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { Observable, of, switchMap } from 'rxjs';
 import { ToggleSwitchComponent } from '../../components/toggle-switch/toggle-switch';
 import { CarregandoComponent } from '../../components/carregando/carregando';
 import { ModalCadastroProduto } from '../../components/modal-cadastro-produto/modal-cadastro-produto';
 import { Adicional, AdicionalService } from './adicional.service';
 import { Categoria, CategoriaService } from '../categorias/categoria.service';
 import { ComposicaoItem, ComposicaoItemService } from './composicao-item.service';
-import { NaturezaProduto, Produto, ProdutoService } from './produto.service';
+import { NaturezaProduto, Produto, ProdutoPayload, ProdutoService } from './produto.service';
+import { Estoque, EstoqueService } from '../controle-estoque/estoque.service';
+import { FichaTecnicaService, custoIngrediente } from '../ficha-tecnica/ficha-tecnica.service';
 import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
+// Ingredientes (INSUMO) são cadastrados em Estoque > Ingredientes, junto com
+// unidade e saldo — o catálogo cuida só dos produtos vendidos.
 const NATUREZAS: { valor: NaturezaProduto; label: string }[] = [
   { valor: 'PREPARADO', label: 'Preparado/montado (ex.: X-Burger)' },
   { valor: 'REVENDA', label: 'Revenda (ex.: refrigerante lacrado)' },
-  { valor: 'INSUMO', label: 'Insumo/matéria-prima (ex.: pão, queijo)' },
 ];
+
+interface LinhaFichaTecnica {
+  ingredienteId: number | null;
+  quantidadeUtilizada: number | null;
+}
 
 @Component({
   selector: 'app-cadastro-produto',
@@ -23,6 +33,7 @@ const NATUREZAS: { valor: NaturezaProduto; label: string }[] = [
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
+    RouterLink,
     ToggleSwitchComponent,
     CarregandoComponent,
     ModalCadastroProduto,
@@ -34,12 +45,19 @@ export class CadastroProdutoComponent implements OnInit {
   naturezas = NATUREZAS;
   categorias: Categoria[] = [];
   produtos: Produto[] = [];
+  ingredientes: Estoque[] = [];
 
   carregando = true;
   enviando = false;
   erro: string | null = null;
+  sucesso: string | null = null;
 
   produtoParaConfirmar: Produto | null = null;
+
+  // Produto em edição no formulário (null = cadastro novo).
+  editandoId: number | null = null;
+  fichaTecnica: LinhaFichaTecnica[] = [];
+  carregandoFicha = false;
 
   form = new FormGroup({
     nome: new FormControl('', { nonNullable: true, validators: Validators.required }),
@@ -65,11 +83,17 @@ export class CadastroProdutoComponent implements OnInit {
     private categoriaService: CategoriaService,
     private composicaoItemService: ComposicaoItemService,
     private adicionalService: AdicionalService,
+    private estoqueService: EstoqueService,
+    private fichaTecnicaService: FichaTecnicaService,
   ) {}
 
   ngOnInit() {
     this.categoriaService.listar().subscribe({
       next: (categorias) => (this.categorias = categorias),
+      error: () => {},
+    });
+    this.estoqueService.listarIngredientes().subscribe({
+      next: (ingredientes) => (this.ingredientes = ingredientes),
       error: () => {},
     });
     this.carregarProdutos();
@@ -79,7 +103,7 @@ export class CadastroProdutoComponent implements OnInit {
     this.carregando = true;
     this.produtoService.listar().subscribe({
       next: (produtos) => {
-        this.produtos = produtos;
+        this.produtos = produtos.filter((p) => p.natureza !== 'INSUMO');
         this.carregando = false;
       },
       error: () => {
@@ -89,6 +113,49 @@ export class CadastroProdutoComponent implements OnInit {
     });
   }
 
+  get exibeFichaTecnicaNoForm(): boolean {
+    return this.form.controls.natureza.value === 'PREPARADO';
+  }
+
+  ingrediente(ingredienteId: number | null): Estoque | undefined {
+    return this.ingredientes.find((e) => e.produto.id === ingredienteId);
+  }
+
+  // Ingredientes ainda livres para a linha (não repete o mesmo ingrediente na ficha).
+  ingredientesParaLinha(linha: LinhaFichaTecnica): Estoque[] {
+    const usados = new Set(this.fichaTecnica.filter((l) => l !== linha).map((l) => l.ingredienteId));
+    return this.ingredientes.filter((e) => !usados.has(e.produto.id));
+  }
+
+  get custoFichaTecnica(): number {
+    return this.fichaTecnica.reduce((soma, linha) => {
+      const estoque = this.ingrediente(linha.ingredienteId);
+      return estoque && linha.quantidadeUtilizada
+        ? soma + custoIngrediente(estoque.produto) * linha.quantidadeUtilizada
+        : soma;
+    }, 0);
+  }
+
+  adicionarLinhaFicha() {
+    this.fichaTecnica = [...this.fichaTecnica, { ingredienteId: null, quantidadeUtilizada: null }];
+  }
+
+  removerLinhaFicha(indice: number) {
+    this.fichaTecnica = this.fichaTecnica.filter((_, i) => i !== indice);
+  }
+
+  private validarFichaTecnica(): string | null {
+    for (const linha of this.fichaTecnica) {
+      if (!linha.ingredienteId) return 'Selecione o ingrediente em todas as linhas da ficha técnica.';
+      if (!linha.quantidadeUtilizada || linha.quantidadeUtilizada <= 0) {
+        return 'Informe uma quantidade utilizada maior que zero para cada ingrediente.';
+      }
+    }
+    const ids = this.fichaTecnica.map((l) => l.ingredienteId);
+    if (new Set(ids).size !== ids.length) return 'O mesmo ingrediente aparece mais de uma vez na ficha técnica.';
+    return null;
+  }
+
   salvar() {
     if (this.form.invalid || this.enviando) {
       this.form.markAllAsTouched();
@@ -96,34 +163,136 @@ export class CadastroProdutoComponent implements OnInit {
     }
 
     const valores = this.form.getRawValue();
+    const erroFicha = valores.natureza === 'PREPARADO' ? this.validarFichaTecnica() : null;
+    if (erroFicha) {
+      this.erro = erroFicha;
+      return;
+    }
+
+    const payload: ProdutoPayload = {
+      nome: valores.nome,
+      descricao: valores.descricao || null,
+      preco: valores.preco!,
+      custo: valores.custo,
+      flAtivo: valores.flAtivo,
+      natureza: valores.natureza!,
+      categoria: { id: valores.categoriaId! },
+    };
+    const editando = this.editandoId !== null;
+    // Produto que deixa de ser PREPARADO perde a ficha técnica.
+    const itensFicha =
+      valores.natureza === 'PREPARADO'
+        ? this.fichaTecnica.map((l) => ({ ingredienteId: l.ingredienteId!, quantidadeUtilizada: l.quantidadeUtilizada! }))
+        : [];
+
     this.enviando = true;
     this.erro = null;
+    this.sucesso = null;
 
-    this.produtoService
-      .criar({
-        nome: valores.nome,
-        descricao: valores.descricao || null,
-        preco: valores.preco!,
-        custo: valores.custo,
-        flAtivo: valores.flAtivo,
-        natureza: valores.natureza!,
-        categoria: { id: valores.categoriaId! },
-      })
+    let produtoSalvo: Produto | undefined;
+    const salvarProduto$ = editando
+      ? this.produtoService.atualizar(this.editandoId!, payload)
+      : this.produtoService.criar(payload);
+
+    salvarProduto$
+      .pipe(
+        switchMap((produto): Observable<unknown> => {
+          produtoSalvo = produto;
+          if (!editando && itensFicha.length === 0) return of(null);
+          return this.fichaTecnicaService.substituir(produto.id, itensFicha);
+        }),
+      )
       .subscribe({
-        next: (produtoCriado) => {
+        next: () => {
+          const produto = produtoSalvo!;
           this.enviando = false;
-          this.produtos = [produtoCriado, ...this.produtos];
-          this.produtoParaConfirmar = produtoCriado;
-          this.form.reset({ flAtivo: true, descricao: '' });
+          this.atualizarNaLista(produto, !editando);
+          if (editando) {
+            this.sucesso = `"${produto.nome}" atualizado com sucesso.`;
+          } else {
+            this.produtoParaConfirmar = produto;
+          }
+          this.cancelarEdicao();
         },
         error: (erro) => {
           this.enviando = false;
+          // Se o produto novo foi gravado e só a ficha falhou, segue em modo
+          // edição para que a nova tentativa não crie um produto duplicado.
+          if (!editando && produtoSalvo) {
+            this.atualizarNaLista(produtoSalvo, true);
+            this.editandoId = produtoSalvo.id;
+          }
           this.erro = MensagemErroApiUtil.extrair(
             erro,
-            'Não foi possível cadastrar o produto. Verifique os dados e tente novamente.',
+            'Não foi possível salvar o produto. Verifique os dados e tente novamente.',
           );
         },
       });
+  }
+
+  private atualizarNaLista(produto: Produto, novo: boolean) {
+    this.produtos = novo && !this.produtos.some((p) => p.id === produto.id)
+      ? [produto, ...this.produtos]
+      : this.produtos.map((p) => (p.id === produto.id ? produto : p));
+  }
+
+  editar(produto: Produto) {
+    this.editandoId = produto.id;
+    this.erro = null;
+    this.sucesso = null;
+    this.form.reset({
+      nome: produto.nome,
+      descricao: produto.descricao ?? '',
+      categoriaId: produto.categoria?.id ?? null,
+      natureza: produto.natureza,
+      preco: produto.preco,
+      custo: produto.custo,
+      flAtivo: produto.flAtivo !== false,
+    });
+
+    this.fichaTecnica = [];
+    if (produto.natureza === 'PREPARADO') {
+      this.carregandoFicha = true;
+      this.fichaTecnicaService.listar(produto.id).subscribe({
+        next: (itens) => {
+          this.fichaTecnica = itens.map((i) => ({
+            ingredienteId: i.ingredienteId,
+            quantidadeUtilizada: i.quantidadeUtilizada,
+          }));
+          this.carregandoFicha = false;
+        },
+        error: (erro) => {
+          this.carregandoFicha = false;
+          this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar a ficha técnica do produto.');
+        },
+      });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  cancelarEdicao() {
+    this.editandoId = null;
+    this.fichaTecnica = [];
+    this.form.reset({ flAtivo: true, descricao: '' });
+  }
+
+  excluir(produto: Produto) {
+    if (!confirm(`Excluir o produto "${produto.nome}"? Ele será desativado e deixará de aparecer nas vendas; o histórico é mantido.`)) {
+      return;
+    }
+
+    this.erro = null;
+    this.sucesso = null;
+    this.produtoService.excluir(produto.id).subscribe({
+      next: () => {
+        this.produtos = this.produtos.map((p) => (p.id === produto.id ? { ...p, flAtivo: false } : p));
+        if (this.editandoId === produto.id) this.cancelarEdicao();
+        this.sucesso = `"${produto.nome}" foi excluído (desativado).`;
+      },
+      error: (erro) => {
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível excluir o produto.');
+      },
+    });
   }
 
   fecharModalConfirmacao() {
