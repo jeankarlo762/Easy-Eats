@@ -10,7 +10,7 @@ import { garcomAreaGuard } from './auth/garcom-area.guard';
 import { cozinheiroAreaGuard } from './auth/cozinheiro-area.guard';
 import { Home } from './home/home';
 import { DashboardComponent } from './dashboard/dashboard';
-import { ComponentFila } from './Fila/component.fila';
+import { ComponentFila } from './fila/component.fila';
 import { TelaCozinha } from './tela-cozinha/tela-cozinha';
 import { RelatorioCozinha } from './relatorio-cozinha/relatorio-cozinha';
 import { RelatorioPedidos } from './relatorio-pedidos/relatorio-pedidos';
@@ -22,7 +22,7 @@ import { PerfilAdmin } from './perfil-admin/perfilAdmin';
 import { PerfilGarcom } from './perfil-garcom/perfilGarcom';
 import { CadastroProdutoComponent } from './cadastro-produto/cadastroProduto';
 import { CardapioAdmin } from './cardapio-admin/cardapio-admin';
-import { CaixaComponent } from './caixa/caixa';
+//import { CaixaComponent } from './caixa/caixa';//
 import { CuponsCashback } from './cupons-cashback/cupons-cashback';
 import { Mesas } from './mesas/mesas';
 import { Comandas } from './comandas/comandas';
@@ -80,7 +80,7 @@ export const routes: Routes = [
 
       { path: 'mesas', component: Mesas, canActivate: [funcionalidadeGuard(['OPERACAO'])] },
       { path: 'comandas', component: Comandas, canActivate: [funcionalidadeGuard(['OPERACAO'])] },
-      { path: 'caixa', component: CaixaComponent, canActivate: [funcionalidadeGuard(['CAIXA'])] },
+      //{ path: 'caixa', component: CaixaComponent, canActivate: [funcionalidadeGuard(['CAIXA'])] },//
 
       { path: 'novo-pedido', component: NovoPedido, canActivate: [funcionalidadeGuard(['PEDIDO'])] },
       { path: 'historico-vendas', component: HistoricoVendasComponent, canActivate: [funcionalidadeGuard(['PEDIDO'])] },
