@@ -30,6 +30,7 @@ import { RelatorioEstoque } from './relatorio-estoque/relatorio-estoque';
 import { PedidosCompra } from './pedidos-compra/pedidos-compra';
 import { GestaoFinanceira } from './gestao-financeira/gestao-financeira';
 import { FichaTecnica } from './ficha-tecnica/ficha-tecnica';
+import { Ingredientes } from './ingredientes/ingredientes';
 import { Clientes } from './clientes/clientes';
 import { Fidelidade } from './fidelidade/fidelidade';
 import { Usuarios } from './usuarios/usuarios';
@@ -87,6 +88,7 @@ export const routes: Routes = [
       { path: 'delivery-relatorios', component: DeliveryRelatorios, canActivate: [funcionalidadeGuard(['DELIVERY'])] },
 
       { path: 'controle-estoque', component: ControleEstoque, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
+      { path: 'ingredientes', component: Ingredientes, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
       { path: 'categorias', component: Categorias, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
       { path: 'relatorio-estoque', component: RelatorioEstoque, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
 

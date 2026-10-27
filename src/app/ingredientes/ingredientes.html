@@ -1,0 +1,132 @@
+<div class="pagina">
+  <header class="topo">
+    <h1>Ingredientes</h1>
+    <p>Matérias-primas usadas na ficha técnica dos produtos, com unidade de medida e estoque</p>
+  </header>
+
+  @if (erro) {
+    <div class="alerta-erro">{{ erro }}</div>
+  }
+
+  <div class="grid-duas-colunas">
+    <section class="painel">
+      <h3>{{ editandoId !== null ? 'Editar Ingrediente' : 'Novo Ingrediente' }}</h3>
+
+      <form [formGroup]="form" (ngSubmit)="salvar()">
+        <div class="campo">
+          <label>Nome</label>
+          <input type="text" placeholder="Ex: Queijo cheddar" formControlName="nome" />
+          @if (form.get('nome')?.touched && form.get('nome')?.errors?.['required']) {
+            <small class="erro">Nome é obrigatório.</small>
+          }
+        </div>
+
+        <div class="campo-duplo">
+          <div class="campo">
+            <label>Unidade de medida</label>
+            <select formControlName="unidadeMedida">
+              <option [ngValue]="null">Selecione...</option>
+              @for (unidade of unidades; track unidade.valor) {
+                <option [ngValue]="unidade.valor">{{ unidade.label }}</option>
+              }
+            </select>
+            @if (form.get('unidadeMedida')?.touched && form.get('unidadeMedida')?.errors?.['required']) {
+              <small class="erro">Unidade é obrigatória.</small>
+            }
+          </div>
+
+          <div class="campo">
+            <label>Custo por unidade (R$)</label>
+            <input type="number" step="0.0001" min="0" placeholder="0.00" formControlName="custo" />
+          </div>
+        </div>
+
+        <div class="campo">
+          <label>Categoria</label>
+          <select formControlName="categoriaId">
+            <option [ngValue]="null">Sem categoria</option>
+            @for (categoria of categorias; track categoria.id) {
+              <option [ngValue]="categoria.id">{{ categoria.nome }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="campo-duplo">
+          <div class="campo">
+            <label>Quantidade em estoque</label>
+            <input type="number" min="0" step="1" formControlName="quantidadeEstoque" />
+            @if (form.get('quantidadeEstoque')?.touched && form.get('quantidadeEstoque')?.invalid) {
+              <small class="erro">Informe uma quantidade maior ou igual a zero.</small>
+            }
+          </div>
+
+          <div class="campo">
+            <label>Estoque mínimo</label>
+            <input type="number" min="0" step="1" formControlName="estoqueMinimo" />
+            @if (form.get('estoqueMinimo')?.touched && form.get('estoqueMinimo')?.invalid) {
+              <small class="erro">Informe um mínimo maior ou igual a zero.</small>
+            }
+          </div>
+        </div>
+
+        @if (sucesso) {
+          <div class="alerta-sucesso"><i class="bi bi-check-circle"></i> Ingrediente salvo com sucesso!</div>
+        }
+
+        <div class="acoes-form">
+          <button type="submit" class="btn-salvar" [disabled]="enviando">
+            {{ enviando ? 'Salvando...' : editandoId !== null ? 'Salvar Alterações' : 'Adicionar Ingrediente' }}
+          </button>
+
+          @if (editandoId !== null) {
+            <button type="button" class="btn-cancelar" (click)="cancelarEdicao()">Cancelar</button>
+          }
+        </div>
+      </form>
+    </section>
+
+    <section class="painel">
+      <h3>Ingredientes Cadastrados</h3>
+
+      @if (carregando) {
+        <app-carregando texto="Carregando ingredientes..."></app-carregando>
+      } @else {
+        <div class="lista">
+          @for (ingrediente of ingredientes; track ingrediente.id) {
+            <div class="linha">
+              <div class="info">
+                <strong>{{ ingrediente.nome }}</strong>
+                <span>
+                  {{ ingrediente.categoriaNome || 'Sem categoria' }} ·
+                  @if (ingrediente.custo !== null) {
+                    {{ ingrediente.custo | currency: 'BRL' }}{{ ingrediente.unidadeMedida ? ' / ' + rotuloUnidade(ingrediente.unidadeMedida) : '' }}
+                  } @else {
+                    sem custo
+                  }
+                </span>
+              </div>
+
+              <div class="direita">
+                @if (ingrediente.quantidadeEstoque !== null) {
+                  <span class="badge" [class.alerta]="estoqueBaixo(ingrediente)">
+                    {{ ingrediente.quantidadeEstoque }} {{ rotuloUnidade(ingrediente.unidadeMedida) }} em estoque
+                  </span>
+                } @else {
+                  <span class="badge">Sem estoque</span>
+                }
+                <button type="button" class="btn-icone" (click)="editar(ingrediente)" title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button type="button" class="btn-icone" (click)="excluir(ingrediente)" title="Excluir">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhum ingrediente cadastrado.</p>
+          }
+        </div>
+      }
+    </section>
+  </div>
+</div>
