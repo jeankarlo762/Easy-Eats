@@ -3,6 +3,8 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import QRCode from 'qrcode';
+import { CardapioPublicoService } from '../cardapio-publico/cardapio-publico.service';
 import { ModalProdutoComponent } from '../../components/modal-produto/modalProduto';
 import { CarregandoComponent } from '../../components/carregando/carregando';
 import { AuthService } from '../auth/auth.service';
@@ -43,6 +45,7 @@ export class NovoPedido implements OnInit {
   private itemVendaService = inject(ItemVendaService);
   private comandaService = inject(ComandaService);
   private route = inject(ActivatedRoute);
+  private cardapioPublicoService = inject(CardapioPublicoService);
   protected authService = inject(AuthService);
 
   cliente = '';
@@ -65,6 +68,13 @@ export class NovoPedido implements OnInit {
 
   carrinho: ItemCarrinho[] = [];
   produtoSelecionado: Produto | null = null;
+
+  qrCodeAberto = false;
+  qrCodeImagem: string | null = null;
+  qrCodeErro: string | null = null;
+  linkPedido = '';
+  linkCopiado = false;
+  mesaDoQrCode: Mesa | null = null;
 
   get usaMesa(): boolean {
     return this.authService.temFuncionalidade('OPERACAO');
@@ -258,6 +268,43 @@ export class NovoPedido implements OnInit {
     this.cliente = '';
     this.mesaSelecionada = null;
     setTimeout(() => (this.sucesso = false), 4000);
+  }
+
+  /**
+   * Gera o QR Code do link público (/cardapio/:slug). Com uma mesa
+   * selecionada, o link já leva a mesa, e o pedido do cliente entra nela.
+   */
+  abrirQrCode() {
+    this.qrCodeAberto = true;
+    this.qrCodeErro = null;
+    this.qrCodeImagem = null;
+    this.linkCopiado = false;
+    this.mesaDoQrCode = this.mesas.find((m) => m.id === this.mesaSelecionada) ?? null;
+
+    this.cardapioPublicoService.meuLink().subscribe({
+      next: ({ slug }) => {
+        const mesa = this.mesaDoQrCode ? `?mesa=${this.mesaDoQrCode.id}` : '';
+        this.linkPedido = `${window.location.origin}/cardapio/${encodeURIComponent(slug)}${mesa}`;
+        QRCode.toDataURL(this.linkPedido, { width: 320, margin: 2 })
+          .then((imagem) => (this.qrCodeImagem = imagem))
+          .catch(() => (this.qrCodeErro = 'Não foi possível gerar o QR Code.'));
+      },
+      error: (erro) => {
+        this.qrCodeErro = MensagemErroApiUtil.extrair(erro, 'Não foi possível obter o link de pedido.');
+      },
+    });
+  }
+
+  fecharQrCode() {
+    this.qrCodeAberto = false;
+  }
+
+  abrirPaginaPedido() {
+    window.open(this.linkPedido, '_blank', 'noopener');
+  }
+
+  copiarLink() {
+    navigator.clipboard?.writeText(this.linkPedido).then(() => (this.linkCopiado = true));
   }
 
   abrirDetalhes(produto: Produto) {

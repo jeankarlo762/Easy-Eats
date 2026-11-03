@@ -1,0 +1,110 @@
+<div class="pagina">
+  @if (carregando) {
+    <app-carregando texto="Carregando cardápio..."></app-carregando>
+  } @else if (!cardapio) {
+    <div class="estado-vazio">
+      <i class="bi bi-emoji-frown"></i>
+      <p>{{ erro || 'Cardápio não encontrado.' }}</p>
+    </div>
+  } @else if (pedidoCriado) {
+    <div class="confirmacao">
+      <i class="bi bi-check-circle-fill"></i>
+      <h2>Pedido enviado!</h2>
+      <p>Seu pedido <strong>#{{ pedidoCriado.numeroPedido }}</strong> já está na fila da cozinha.</p>
+      <p class="total-confirmacao">Total: R$ {{ pedidoCriado.total.toFixed(2) }}</p>
+      <button class="botao-principal" (click)="novoPedido()">Fazer outro pedido</button>
+    </div>
+  } @else {
+    <header class="topo">
+      <h1>{{ cardapio.empresa.nome }}</h1>
+      @if (cardapio.mesa) {
+        <span class="selo-mesa"><i class="bi bi-geo-alt"></i> Mesa {{ cardapio.mesa.numero }}</span>
+      }
+      @if (cardapio.empresa.horarioFuncionamento) {
+        <p><i class="bi bi-clock"></i> {{ cardapio.empresa.horarioFuncionamento }}</p>
+      }
+    </header>
+
+    @if (erro) {
+      <div class="alerta-erro">{{ erro }}</div>
+    }
+
+    <div class="filtros">
+      @for (cat of categorias; track cat) {
+        <button [class.ativo]="categoriaSelecionada === cat" (click)="categoriaSelecionada = cat">
+          {{ cat }}
+        </button>
+      }
+    </div>
+
+    <div class="produtos">
+      @for (produto of produtosFiltrados(); track produto.id) {
+        <button class="produto-card" (click)="adicionar(produto)">
+          <div class="info">
+            <h4>{{ produto.nome }}</h4>
+            @if (produto.descricao) {
+              <small>{{ produto.descricao }}</small>
+            }
+            <span class="preco">R$ {{ produto.preco.toFixed(2) }}</span>
+          </div>
+          <span class="adicionar" [class.com-qtd]="qtdNoCarrinho(produto) > 0">
+            @if (qtdNoCarrinho(produto) > 0) {
+              {{ qtdNoCarrinho(produto) }}
+            } @else {
+              <i class="bi bi-plus-lg"></i>
+            }
+          </span>
+        </button>
+      } @empty {
+        <p class="vazio">Nenhum produto disponível no momento.</p>
+      }
+    </div>
+
+    @if (carrinho.length > 0) {
+      <section class="carrinho">
+        <h3><i class="bi bi-bag"></i> Seu pedido ({{ totalItens() }})</h3>
+
+        @for (item of carrinho; track item.produto.id; let i = $index) {
+          <div class="item">
+            <div class="linha">
+              <span class="nome">{{ item.produto.nome }}</span>
+              <div class="qtd">
+                <button (click)="diminuir(i)" aria-label="Diminuir">−</button>
+                <span>{{ item.qtd }}</span>
+                <button (click)="adicionar(item.produto)" aria-label="Aumentar">+</button>
+              </div>
+              <span class="preco-item">R$ {{ (item.produto.preco * item.qtd).toFixed(2) }}</span>
+            </div>
+            <input
+              class="observacao"
+              type="text"
+              maxlength="200"
+              placeholder="Observação (ex.: sem cebola)"
+              [(ngModel)]="item.observacao"
+            />
+          </div>
+        }
+
+        <input
+          class="campo-nome"
+          type="text"
+          maxlength="80"
+          [placeholder]="temMesa ? 'Seu nome (opcional)' : 'Seu nome'"
+          [(ngModel)]="nomeCliente"
+        />
+
+        <div class="total">
+          <span>Total</span>
+          <strong>R$ {{ total().toFixed(2) }}</strong>
+        </div>
+
+        <button class="botao-principal" [disabled]="!podeEnviar() || enviando" (click)="enviarPedido()">
+          {{ enviando ? 'Enviando...' : 'Enviar pedido' }}
+        </button>
+        @if (!podeEnviar()) {
+          <small class="aviso">Informe seu nome para enviar o pedido.</small>
+        }
+      </section>
+    }
+  }
+</div>

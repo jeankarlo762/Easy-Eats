@@ -1,8 +1,40 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Novo Pedido</h1>
-    <p>Monte o pedido do cliente selecionando os produtos abaixo</p>
+    <div>
+      <h1>Novo Pedido</h1>
+      <p>Monte o pedido do cliente selecionando os produtos abaixo</p>
+    </div>
+    <button class="botao-qrcode" (click)="abrirQrCode()">
+      <i class="bi bi-qr-code"></i> QR Code do pedido
+    </button>
   </header>
+
+  @if (qrCodeAberto) {
+    <div class="qr-overlay" (click)="fecharQrCode()">
+      <div class="qr-modal" (click)="$event.stopPropagation()">
+        <button class="qr-fechar" (click)="fecharQrCode()" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+        <h3>Pedido pelo QR Code</h3>
+        <p class="qr-descricao">
+          {{ mesaDoQrCode ? 'O cliente escaneia e o pedido cai na Mesa ' + mesaDoQrCode.numero + '.' : 'O cliente escaneia, monta o pedido e ele vai direto para a cozinha.' }}
+        </p>
+
+        @if (qrCodeErro) {
+          <div class="alerta-erro">{{ qrCodeErro }}</div>
+        } @else if (!qrCodeImagem) {
+          <app-carregando texto="Gerando QR Code..."></app-carregando>
+        } @else {
+          <img class="qr-imagem" [src]="qrCodeImagem" alt="QR Code do link de pedido" />
+          <a class="qr-link" [href]="linkPedido" target="_blank" rel="noopener">{{ linkPedido }}</a>
+
+          <div class="qr-acoes">
+            <button (click)="abrirPaginaPedido()"><i class="bi bi-box-arrow-up-right"></i> Abrir página</button>
+            <button (click)="copiarLink()"><i class="bi" [ngClass]="linkCopiado ? 'bi-check2' : 'bi-clipboard'"></i> {{ linkCopiado ? 'Copiado!' : 'Copiar link' }}</button>
+            <a [href]="qrCodeImagem" [download]="'qrcode-pedido.png'"><i class="bi bi-download"></i> Baixar</a>
+          </div>
+        }
+      </div>
+    </div>
+  }
 
   @if (sucesso) {
     <div class="alerta-sucesso">

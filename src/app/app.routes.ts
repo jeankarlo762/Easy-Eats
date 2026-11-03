@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { LandingPage } from './landing-page/landingPage';
 import { Login } from './login/login';
+import { CardapioPublicoPage } from './cardapio-publico/cardapio-publico';
 import { AppLayout } from './layout/app-layout';
 import { authGuard } from './auth/auth.guard';
 import { superadminGuard } from './auth/role.guard';
@@ -60,6 +61,12 @@ export const routes: Routes = [
   {
     path: 'login',
     component: Login,
+  },
+
+  // Cardápio aberto pelo QR Code do Novo Pedido: o cliente final pede sem login.
+  {
+    path: 'cardapio/:slug',
+    component: CardapioPublicoPage,
   },
 
   {
