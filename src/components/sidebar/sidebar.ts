@@ -39,12 +39,14 @@ export class Sidebar {
   }
 
   private filtrarPorAcesso(itens: ItemMenu[], perfilAtual: Perfil | undefined): ItemMenu[] {
-    return itens.filter((item) => {
-      const perfilOk = !item.perfis || (perfilAtual && item.perfis.includes(perfilAtual));
-      const funcionalidadeOk =
-        !item.funcionalidades || item.funcionalidades.some((f) => this.authService.temFuncionalidade(f));
-      return perfilOk && funcionalidadeOk;
-    });
+    return itens
+      .filter((item) => {
+        const perfilOk = !item.perfis || (perfilAtual && item.perfis.includes(perfilAtual));
+        const funcionalidadeOk =
+          !item.funcionalidades || item.funcionalidades.some((f) => this.authService.temFuncionalidade(f));
+        return perfilOk && funcionalidadeOk;
+      })
+      .map((item) => (item.filhos ? { ...item, filhos: this.filtrarPorAcesso(item.filhos, perfilAtual) } : item));
   }
 
   alternarGrupo(label: string) {

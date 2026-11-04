@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ToggleSwitchComponent } from '../../components/toggle-switch/toggle-switch';
 import { CarregandoComponent } from '../../components/carregando/carregando';
@@ -16,6 +17,13 @@ const NATUREZAS: { valor: NaturezaProduto; label: string }[] = [
   { valor: 'INSUMO', label: 'Insumo/matéria-prima (ex.: pão, queijo)' },
 ];
 
+/**
+ * A mesma tela atende as duas sub-abas de Produtos > Cadastros, escolhida
+ * pelo `data.tipoCadastro` da rota: INSUMO (matéria-prima, natureza fixa)
+ * ou PRODUTO (o que é vendido: preparado ou revenda).
+ */
+export type TipoCadastro = 'INSUMO' | 'PRODUTO';
+
 @Component({
   selector: 'app-cadastro-produto',
   standalone: true,
@@ -23,6 +31,7 @@ const NATUREZAS: { valor: NaturezaProduto; label: string }[] = [
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
+    RouterLink,
     ToggleSwitchComponent,
     CarregandoComponent,
     ModalCadastroProduto,
@@ -31,8 +40,13 @@ const NATUREZAS: { valor: NaturezaProduto; label: string }[] = [
   styleUrls: ['./cadastroProduto.scss'],
 })
 export class CadastroProdutoComponent implements OnInit {
-  naturezas = NATUREZAS;
+  readonly tipoCadastro: TipoCadastro =
+    inject(ActivatedRoute).snapshot.data['tipoCadastro'] === 'INSUMO' ? 'INSUMO' : 'PRODUTO';
+  readonly ehInsumo = this.tipoCadastro === 'INSUMO';
+
+  naturezas = NATUREZAS.filter((n) => (this.ehInsumo ? n.valor === 'INSUMO' : n.valor !== 'INSUMO'));
   categorias: Categoria[] = [];
+  /** Itens da sub-aba atual (só insumos ou só produtos de venda). */
   produtos: Produto[] = [];
 
   carregando = true;
@@ -45,7 +59,7 @@ export class CadastroProdutoComponent implements OnInit {
     nome: new FormControl('', { nonNullable: true, validators: Validators.required }),
     descricao: new FormControl('', { nonNullable: true }),
     categoriaId: new FormControl<number | null>(null, Validators.required),
-    natureza: new FormControl<NaturezaProduto | null>(null, Validators.required),
+    natureza: new FormControl<NaturezaProduto | null>(this.ehInsumo ? 'INSUMO' : null, Validators.required),
     preco: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
     custo: new FormControl<number | null>(null, Validators.min(0)),
     flAtivo: new FormControl(true, { nonNullable: true }),
@@ -79,14 +93,22 @@ export class CadastroProdutoComponent implements OnInit {
     this.carregando = true;
     this.produtoService.listar().subscribe({
       next: (produtos) => {
-        this.produtos = produtos;
+        this.produtos = produtos.filter((p) => this.pertenceAoTipo(p));
         this.carregando = false;
       },
       error: () => {
-        this.erro = 'Não foi possível carregar os produtos cadastrados.';
+        this.erro = `Não foi possível carregar os ${this.ehInsumo ? 'insumos' : 'produtos'} cadastrados.`;
         this.carregando = false;
       },
     });
+  }
+
+  private pertenceAoTipo(produto: Produto): boolean {
+    return this.ehInsumo ? produto.natureza === 'INSUMO' : produto.natureza !== 'INSUMO';
+  }
+
+  get rotulo(): string {
+    return this.ehInsumo ? 'Insumo' : 'Produto';
   }
 
   salvar() {
@@ -114,7 +136,7 @@ export class CadastroProdutoComponent implements OnInit {
           this.enviando = false;
           this.produtos = [produtoCriado, ...this.produtos];
           this.produtoParaConfirmar = produtoCriado;
-          this.form.reset({ flAtivo: true, descricao: '' });
+          this.form.reset({ flAtivo: true, descricao: '', natureza: this.ehInsumo ? 'INSUMO' : null });
         },
         error: (erro) => {
           this.enviando = false;

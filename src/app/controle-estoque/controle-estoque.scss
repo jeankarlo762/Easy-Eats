@@ -251,3 +251,50 @@
     padding: 20px 16px 60px;
   }
 }
+
+.alerta-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+  padding: 10px 14px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  margin-bottom: 16px;
+}
+
+.ajuda {
+  margin: -8px 0 10px;
+  color: #6b7280;
+  font-size: 12.5px;
+}
+
+.nome-producao {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nome-producao small {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.nome-producao small.aviso {
+  color: #b45309;
+}
+
+.vazio a,
+.campo small.aviso a {
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+:host-context(html[data-theme='escuro']) .alerta-info {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #c7d2fe;
+}

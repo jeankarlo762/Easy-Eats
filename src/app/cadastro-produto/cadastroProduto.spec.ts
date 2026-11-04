@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute } from '@angular/router';
 
 import { CadastroProdutoComponent } from './cadastroProduto';
 import { providersTeste } from '../testing/providers-teste';
@@ -22,6 +23,11 @@ describe('CadastroProdutoComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('na sub-aba Produtos não oferece a natureza Insumo', () => {
+    expect(component.ehInsumo).toBe(false);
+    expect(component.naturezas.map((n) => n.valor)).not.toContain('INSUMO');
+  });
+
   it('exige nome, categoria, natureza e preço antes de enviar', () => {
     expect(component.form.valid).toBe(false);
 
@@ -36,5 +42,25 @@ describe('CadastroProdutoComponent', () => {
     });
 
     expect(component.form.valid).toBe(true);
+  });
+});
+
+describe('CadastroProdutoComponent (sub-aba Insumos)', () => {
+  it('fixa a natureza em INSUMO e só oferece essa opção', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CadastroProdutoComponent],
+      providers: [
+        providersTeste,
+        { provide: ActivatedRoute, useValue: { snapshot: { data: { tipoCadastro: 'INSUMO' } } } },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(CadastroProdutoComponent);
+    const component = fixture.componentInstance;
+    await fixture.whenStable();
+
+    expect(component.ehInsumo).toBe(true);
+    expect(component.naturezas.map((n) => n.valor)).toEqual(['INSUMO']);
+    expect(component.form.controls.natureza.value).toBe('INSUMO');
   });
 });

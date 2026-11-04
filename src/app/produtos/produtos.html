@@ -1,0 +1,35 @@
+<div class="modulo-produtos">
+  <header class="cabecalho">
+    <div class="titulo">
+      <h1>Produtos</h1>
+      <p>Cadastros, ficha técnica, estoque de insumos, cardápio e relatórios em um só lugar</p>
+    </div>
+
+    <nav class="abas" role="tablist">
+      @for (aba of abas; track aba.rota) {
+        <a class="aba" role="tab" [routerLink]="aba.rota" routerLinkActive="ativa">
+          <i class="bi" [ngClass]="aba.icon"></i>
+          <span>{{ aba.label }}</span>
+        </a>
+      }
+    </nav>
+
+    @if (noCadastros()) {
+      <nav class="sub-abas">
+        <a class="sub-aba" routerLink="cadastros/insumos" routerLinkActive="ativa">
+          <i class="bi bi-droplet-half"></i> Insumos
+        </a>
+        <a class="sub-aba" routerLink="cadastros/produtos" routerLinkActive="ativa">
+          <i class="bi bi-basket3"></i> Produtos
+        </a>
+        <a class="sub-aba" routerLink="cadastros/categorias" routerLinkActive="ativa">
+          <i class="bi bi-tags"></i> Categorias
+        </a>
+      </nav>
+    }
+  </header>
+
+  <div class="conteudo-aba">
+    <router-outlet></router-outlet>
+  </div>
+</div>

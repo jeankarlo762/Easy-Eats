@@ -42,10 +42,10 @@ export class Home {
     },
     {
       label: 'Estoque',
-      descricao: 'Itens e movimentações',
+      descricao: 'Estoque de insumos e movimentações',
       icon: 'bi-box-seam',
       cor: 'azul',
-      rota: '/controle-estoque',
+      rota: '/produtos/estoque',
     },
   ];
 

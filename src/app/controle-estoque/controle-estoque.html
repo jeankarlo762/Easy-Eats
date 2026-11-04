@@ -1,8 +1,16 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Controle de Estoque</h1>
-    <p>Itens do estoque e últimas movimentações</p>
+    <h1>Estoque de Insumos</h1>
+    <p>O estoque é controlado pelos insumos. Com a ficha técnica, ele mostra quantos produtos dá para preparar.</p>
   </header>
+
+  @if (estoquesOcultos > 0) {
+    <div class="alerta-info">
+      <i class="bi bi-info-circle"></i>
+      {{ estoquesOcultos }} {{ estoquesOcultos === 1 ? 'produto que não é insumo tem' : 'produtos que não são insumo têm' }}
+      estoque registrado de antes e não {{ estoquesOcultos === 1 ? 'aparece' : 'aparecem' }} aqui.
+    </div>
+  }
 
   @if (erro) {
     <div class="alerta-erro">{{ erro }}</div>
@@ -14,7 +22,7 @@
   <div class="grid-resumo">
     <div class="resumo-card">
       <div class="resumo-valor">{{ estoques.length }}</div>
-      <div class="resumo-label">Total de Itens</div>
+      <div class="resumo-label">Insumos em Estoque</div>
     </div>
 
     <div class="resumo-card">
@@ -30,11 +38,11 @@
 
   <div class="grid-duas-colunas">
     <section class="painel">
-      <h3>Cadastrar Produto no Estoque</h3>
+      <h3>Adicionar Insumo ao Estoque</h3>
 
       <form [formGroup]="formCadastro" (ngSubmit)="cadastrarNoEstoque()">
         <div class="campo">
-          <label>Produto</label>
+          <label>Insumo</label>
           <select formControlName="produtoId">
             <option [ngValue]="null">Selecione...</option>
             @for (produto of produtosSemEstoque; track produto.id) {
@@ -42,7 +50,10 @@
             }
           </select>
           @if (produtosSemEstoque.length === 0) {
-            <small class="aviso">Todos os produtos já estão no controle de estoque.</small>
+            <small class="aviso">
+              Todos os insumos já estão no controle de estoque.
+              <a routerLink="/produtos/cadastros/insumos">Cadastrar novo insumo</a>
+            </small>
           }
         </div>
 
@@ -69,7 +80,7 @@
 
       <form [formGroup]="formMovimentacao" (ngSubmit)="registrarMovimentacao()">
         <div class="campo">
-          <label>Produto</label>
+          <label>Insumo</label>
           <select formControlName="produtoId">
             <option [ngValue]="null">Selecione...</option>
             @for (estoque of estoques; track estoque.id) {
@@ -130,9 +141,53 @@
             </span>
           </div>
         } @empty {
-          <p class="vazio">Nenhum produto cadastrado no estoque ainda.</p>
+          <p class="vazio">Nenhum insumo cadastrado no estoque ainda.</p>
         }
       </div>
+    </section>
+
+    <section class="painel">
+      <h3>Produtos Possíveis com o Estoque Atual</h3>
+      <p class="ajuda">Calculado pela ficha técnica de cada produto preparado ativo.</p>
+
+      @if (carregandoProducao) {
+        <app-carregando texto="Calculando produção possível..."></app-carregando>
+      } @else {
+        <div class="lista">
+          @for (item of producaoPossivel; track item.produto.id) {
+            <div class="linha">
+              <span class="nome">
+                <i class="bi bi-egg-fried"></i>
+                <span class="nome-producao">
+                  {{ item.produto.nome }}
+                  @if (item.limitante) {
+                    <small>Limitado por: {{ item.limitante }}</small>
+                  }
+                  @if (item.semControle.length) {
+                    <small class="aviso">Sem estoque cadastrado: {{ item.semControle.join(', ') }}</small>
+                  }
+                </span>
+              </span>
+
+              <span class="info">
+                {{ item.quantidade }} un.
+                @if (item.quantidade === 0) {
+                  <span class="badge erro">Indisponível</span>
+                } @else if (item.quantidade < 5) {
+                  <span class="badge alerta-fundo">Pouco</span>
+                } @else {
+                  <span class="badge sucesso">Disponível</span>
+                }
+              </span>
+            </div>
+          } @empty {
+            <p class="vazio">
+              Nenhum produto preparado com ficha técnica ainda.
+              <a routerLink="/produtos/ficha-tecnica">Montar ficha técnica</a>
+            </p>
+          }
+        </div>
+      }
     </section>
 
     <section class="painel">

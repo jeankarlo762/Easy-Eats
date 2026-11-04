@@ -84,19 +84,6 @@ export const TODOS_ITENS: ItemMenu[] = [
       { label: 'Relatórios', icon: 'bi-bar-chart-line', rota: '/delivery-relatorios', cor: '#0891b2' },
     ],
   }, */
-  {
-    label: 'Estoque',
-    icon: 'bi-box-seam',
-    rota: null,
-    cor: '#16a34a',
-    perfis: ['ADMINISTRADOR'],
-    funcionalidades: ['ESTOQUE'],
-    filhos: [
-      { label: 'Itens em Estoque', icon: 'bi-boxes', rota: '/controle-estoque', cor: '#16a34a' },
-      { label: 'Categorias', icon: 'bi-tags', rota: '/categorias', cor: '#16a34a' },
-      { label: 'Relatório de Estoque', icon: 'bi-bar-chart-line', rota: '/relatorio-estoque', cor: '#16a34a' },
-    ],
-  },
   // Oculto do menu (PR #28 do Pedro).
   /* {
     label: 'Compras',
@@ -128,14 +115,15 @@ export const TODOS_ITENS: ItemMenu[] = [
     rota: null,
     cor: '#4f46e5',
     perfis: ['ADMINISTRADOR'],
-    funcionalidades: ['PRODUTOS'],
-    // Categorias mora só no menu Estoque (abaixo): organiza o catálogo por
-    // insumo/produto guardado, mesmo conceito em ambos os módulos — mantê-la
-    // duplicada aqui também confundia mais do que ajudava.
+    // O antigo menu Estoque foi incorporado aqui: quem só tinha ESTOQUE
+    // continua vendo o grupo, com as abas Estoque e Relatório.
+    funcionalidades: ['PRODUTOS', 'ESTOQUE'],
     filhos: [
-      { label: 'Catálogo', icon: 'bi-grid', rota: '/cadastro-produto', cor: '#4f46e5' },
-      { label: 'Ficha Técnica', icon: 'bi-clipboard2-data', rota: '/ficha-tecnica', cor: '#4f46e5' },
-      { label: 'Cardápio Digital', icon: 'bi-phone', rota: '/cardapio-admin', cor: '#4f46e5' },
+      { label: 'Cadastros', icon: 'bi-grid', rota: '/produtos/cadastros', cor: '#4f46e5', funcionalidades: ['PRODUTOS'] },
+      { label: 'Ficha Técnica', icon: 'bi-clipboard2-data', rota: '/produtos/ficha-tecnica', cor: '#4f46e5', funcionalidades: ['PRODUTOS'] },
+      { label: 'Estoque', icon: 'bi-boxes', rota: '/produtos/estoque', cor: '#4f46e5', funcionalidades: ['PRODUTOS', 'ESTOQUE'] },
+      { label: 'Cardápio', icon: 'bi-phone', rota: '/produtos/cardapio', cor: '#4f46e5', funcionalidades: ['PRODUTOS'] },
+      { label: 'Relatório', icon: 'bi-bar-chart-line', rota: '/produtos/relatorio', cor: '#4f46e5', funcionalidades: ['PRODUTOS', 'ESTOQUE'] },
     ],
   },
   {

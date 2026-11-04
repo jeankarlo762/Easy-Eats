@@ -1,3 +1,4 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { LandingPage } from './landing-page/landingPage';
 import { Login } from './login/login';
@@ -45,6 +46,8 @@ import { SuperadminEmpresas } from './superadmin-empresas/superadmin-empresas';
 import { SuperadminSegmentos } from './superadmin-segmentos/superadmin-segmentos';
 import { SuperadminUsuarios } from './superadmin-usuarios/superadmin-usuarios';
 import { SuperadminConfiguracoes } from './superadmin-configuracoes/superadmin-configuracoes';
+import { ProdutosModulo, primeiraAbaPermitida } from './produtos/produtos';
+import { AuthService } from './auth/auth.service';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -93,9 +96,6 @@ export const routes: Routes = [
       { path: 'delivery-dashboard', component: DeliveryDashboard, canActivate: [funcionalidadeGuard(['DELIVERY'])] },
       { path: 'delivery-relatorios', component: DeliveryRelatorios, canActivate: [funcionalidadeGuard(['DELIVERY'])] },
 
-      { path: 'controle-estoque', component: ControleEstoque, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
-      { path: 'categorias', component: Categorias, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
-      { path: 'relatorio-estoque', component: RelatorioEstoque, canActivate: [funcionalidadeGuard(['ESTOQUE'])] },
 
       { path: 'pedidos-compra', component: PedidosCompra, canActivate: [funcionalidadeGuard(['COMPRAS'])] },
       { path: 'fornecedores', component: Fornecedores, canActivate: [funcionalidadeGuard(['COMPRAS'])] },
@@ -103,9 +103,50 @@ export const routes: Routes = [
       { path: 'financeiro', component: Financeiro, canActivate: [funcionalidadeGuard(['FINANCEIRO'])] },
       { path: 'gestao-financeira', component: GestaoFinanceira, canActivate: [funcionalidadeGuard(['FINANCEIRO'])] },
 
-      { path: 'cadastro-produto', component: CadastroProdutoComponent, canActivate: [funcionalidadeGuard(['PRODUTOS'])] },
-      { path: 'ficha-tecnica', component: FichaTecnica, canActivate: [funcionalidadeGuard(['PRODUTOS'])] },
-      { path: 'cardapio-admin', component: CardapioAdmin, canActivate: [funcionalidadeGuard(['PRODUTOS'])] },
+      // Módulo Produto: o antigo módulo Estoque foi incorporado aqui, em abas.
+      // Quem só tem ESTOQUE no segmento continua entrando (abas Estoque e Relatório).
+      {
+        path: 'produtos',
+        component: ProdutosModulo,
+        canActivate: [funcionalidadeGuard(['PRODUTOS', 'ESTOQUE'])],
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            redirectTo: () => {
+              const auth = inject(AuthService);
+              return `/produtos/${primeiraAbaPermitida((f) => auth.temFuncionalidade(f))}`;
+            },
+          },
+          { path: 'cadastros', pathMatch: 'full', redirectTo: 'cadastros/insumos' },
+          {
+            path: 'cadastros/insumos',
+            component: CadastroProdutoComponent,
+            data: { tipoCadastro: 'INSUMO' },
+            canActivate: [funcionalidadeGuard(['PRODUTOS'])],
+          },
+          {
+            path: 'cadastros/produtos',
+            component: CadastroProdutoComponent,
+            data: { tipoCadastro: 'PRODUTO' },
+            canActivate: [funcionalidadeGuard(['PRODUTOS'])],
+          },
+          { path: 'cadastros/categorias', component: Categorias, canActivate: [funcionalidadeGuard(['PRODUTOS', 'ESTOQUE'])] },
+          { path: 'ficha-tecnica', component: FichaTecnica, canActivate: [funcionalidadeGuard(['PRODUTOS'])] },
+          { path: 'estoque', component: ControleEstoque, canActivate: [funcionalidadeGuard(['PRODUTOS', 'ESTOQUE'])] },
+          { path: 'cardapio', component: CardapioAdmin, canActivate: [funcionalidadeGuard(['PRODUTOS'])] },
+          { path: 'relatorio', component: RelatorioEstoque, canActivate: [funcionalidadeGuard(['PRODUTOS', 'ESTOQUE'])] },
+        ],
+      },
+
+      // Rotas antigas (menus Estoque e Produtos de antes), mantidas como redirect
+      // para não quebrar favoritos e links salvos.
+      { path: 'cadastro-produto', redirectTo: 'produtos/cadastros/produtos' },
+      { path: 'ficha-tecnica', redirectTo: 'produtos/ficha-tecnica' },
+      { path: 'cardapio-admin', redirectTo: 'produtos/cardapio' },
+      { path: 'controle-estoque', redirectTo: 'produtos/estoque' },
+      { path: 'categorias', redirectTo: 'produtos/cadastros/categorias' },
+      { path: 'relatorio-estoque', redirectTo: 'produtos/relatorio' },
 
       { path: 'clientes', component: Clientes, canActivate: [funcionalidadeGuard(['CLIENTES'])] },
       { path: 'fidelidade', component: Fidelidade, canActivate: [funcionalidadeGuard(['CLIENTES'])] },
