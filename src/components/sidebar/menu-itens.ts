@@ -39,13 +39,14 @@ export const TODOS_ITENS: ItemMenu[] = [
       { label: 'Comandas', icon: 'bi-receipt', rota: '/comandas', cor: '#7c3aed' },
     ],
   },
-  {
+  // Oculto do menu (PR #28 do Pedro).
+  /* {
     label: 'Caixa',
     icon: 'bi-cash-stack',
     rota: '/caixa',
     cor: '#16a34a',
     funcionalidades: ['CAIXA'],
-  },
+  }, */
   {
     label: 'Pedido',
     icon: 'bi-cart3',
@@ -70,7 +71,8 @@ export const TODOS_ITENS: ItemMenu[] = [
       { label: 'Relatório da Cozinha', icon: 'bi-bar-chart-line', rota: '/relatorio-cozinha', cor: '#d97706' },
     ],
   },
-  {
+  // Oculto do menu (PR #28 do Pedro).
+  /* {
     label: 'Delivery',
     icon: 'bi-bicycle',
     rota: null,
@@ -81,7 +83,7 @@ export const TODOS_ITENS: ItemMenu[] = [
       { label: 'Dashboard', icon: 'bi-speedometer2', rota: '/delivery-dashboard', cor: '#0891b2' },
       { label: 'Relatórios', icon: 'bi-bar-chart-line', rota: '/delivery-relatorios', cor: '#0891b2' },
     ],
-  },
+  }, */
   {
     label: 'Estoque',
     icon: 'bi-box-seam',
@@ -95,7 +97,8 @@ export const TODOS_ITENS: ItemMenu[] = [
       { label: 'Relatório de Estoque', icon: 'bi-bar-chart-line', rota: '/relatorio-estoque', cor: '#16a34a' },
     ],
   },
-  {
+  // Oculto do menu (PR #28 do Pedro).
+  /* {
     label: 'Compras',
     icon: 'bi-bag-check',
     rota: null,
@@ -106,7 +109,7 @@ export const TODOS_ITENS: ItemMenu[] = [
       { label: 'Pedidos de Compra', icon: 'bi-cart-plus', rota: '/pedidos-compra', cor: '#b45309' },
       { label: 'Fornecedores', icon: 'bi-truck', rota: '/fornecedores', cor: '#b45309' },
     ],
-  },
+  }, */
   {
     label: 'Financeiro',
     icon: 'bi-cash-coin',
@@ -181,7 +184,7 @@ export const ITENS_GARCOM: ItemMenu[] = [
   { label: 'Novo Pedido', icon: 'bi-plus-circle', rota: '/novo-pedido', cor: '#ea580c', funcionalidades: ['PEDIDO'] },
   { label: 'Mesas', icon: 'bi-grid-3x3-gap', rota: '/mesas', cor: '#7c3aed', funcionalidades: ['OPERACAO'] },
   { label: 'Comandas', icon: 'bi-receipt', rota: '/comandas', cor: '#7c3aed', funcionalidades: ['OPERACAO'] },
-  { label: 'Caixa', icon: 'bi-cash-stack', rota: '/caixa', cor: '#16a34a', funcionalidades: ['CAIXA'] },
+  // { label: 'Caixa', icon: 'bi-cash-stack', rota: '/caixa', cor: '#16a34a', funcionalidades: ['CAIXA'] },
   { label: 'Cozinha', icon: 'bi-egg-fried', rota: '/tela-cozinha', cor: '#d97706', funcionalidades: ['COZINHA'] },
 ];
 

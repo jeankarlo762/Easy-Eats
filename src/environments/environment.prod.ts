@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://easy-eats-api-production.up.railway.app',
+  apiUrl: 'https://api-production-06d1d.up.railway.app',
 };
