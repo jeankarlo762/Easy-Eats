@@ -1,7 +1,18 @@
 <div class="pagina">
-  <header class="topo">
-    <h1>Novo Produto</h1>
-    <p>Cadastre um novo item no catálogo</p>
+  <header class="topo topo-com-acao">
+    <div>
+      <h1>Novo {{ rotulo }}</h1>
+      <p>
+        @if (ehInsumo) {
+          Matéria-prima usada na ficha técnica dos produtos. O estoque é controlado por insumo.
+        } @else {
+          Itens vendidos no cardápio: preparados (ex.: X-Burger) ou de revenda.
+        }
+      </p>
+    </div>
+    <a class="btn-estoque" routerLink="/produtos/estoque">
+      <i class="bi bi-boxes"></i> Ir para Estoque
+    </a>
   </header>
 
   @if (erro) {
@@ -11,13 +22,13 @@
   <div class="card-form">
     <form [formGroup]="form" (ngSubmit)="salvar()">
       <div class="input-group">
-        <label>Nome do Produto</label>
-        <input type="text" placeholder="Ex: Hambúrguer Clássico" formControlName="nome" />
+        <label>Nome do {{ rotulo }}</label>
+        <input type="text" [placeholder]="ehInsumo ? 'Ex: Pão de hambúrguer' : 'Ex: Hambúrguer Clássico'" formControlName="nome" />
       </div>
 
       <div class="input-group">
         <label>Descrição</label>
-        <input type="text" placeholder="Ex: Pão, hambúrguer, queijo, alface e tomate" formControlName="descricao" />
+        <input type="text" [placeholder]="ehInsumo ? 'Ex: Pão brioche 60g' : 'Ex: Pão, hambúrguer, queijo, alface e tomate'" formControlName="descricao" />
       </div>
 
       <div class="input-row">
@@ -31,15 +42,17 @@
           </select>
         </div>
 
-        <div class="input-group">
-          <label>Natureza</label>
-          <select formControlName="natureza">
-            <option [ngValue]="null">Selecione...</option>
-            @for (opcao of naturezas; track opcao.valor) {
-              <option [ngValue]="opcao.valor">{{ opcao.label }}</option>
-            }
-          </select>
-        </div>
+        @if (!ehInsumo) {
+          <div class="input-group">
+            <label>Natureza</label>
+            <select formControlName="natureza">
+              <option [ngValue]="null">Selecione...</option>
+              @for (opcao of naturezas; track opcao.valor) {
+                <option [ngValue]="opcao.valor">{{ opcao.label }}</option>
+              }
+            </select>
+          </div>
+        }
       </div>
 
       <div class="input-row">
@@ -57,26 +70,26 @@
       <div class="input-group input-group--toggle">
         <app-toggle-switch
           [checked]="form.controls.flAtivo.value"
-          label="Produto ativo"
+          [label]="rotulo + ' ativo'"
           (checkedChange)="form.controls.flAtivo.setValue($event)"
         ></app-toggle-switch>
       </div>
 
       <div class="actions">
         <button type="submit" class="btn-save" [disabled]="form.invalid || enviando">
-          <span>+</span> {{ enviando ? 'Salvando...' : 'Cadastrar Produto' }}
+          <span>+</span> {{ enviando ? 'Salvando...' : 'Cadastrar ' + rotulo }}
         </button>
       </div>
     </form>
   </div>
 
   <section class="lista-produtos">
-    <h2>Produtos cadastrados</h2>
+    <h2>{{ ehInsumo ? 'Insumos cadastrados' : 'Produtos cadastrados' }}</h2>
 
     @if (carregando) {
       <app-carregando texto="Carregando produtos..."></app-carregando>
     } @else if (produtos.length === 0) {
-      <p class="vazio">Nenhum produto cadastrado ainda.</p>
+      <p class="vazio">Nenhum {{ ehInsumo ? 'insumo' : 'produto' }} cadastrado ainda.</p>
     } @else {
       @for (produto of produtos; track produto.id) {
         <div class="produto-item">

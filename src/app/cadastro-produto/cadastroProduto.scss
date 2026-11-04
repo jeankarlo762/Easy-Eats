@@ -25,6 +25,33 @@
   margin-bottom: 24px;
 }
 
+.topo-com-acao {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-estoque {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-estoque:hover {
+  background: #e0e7ff;
+}
+
 .topo h1 {
   margin: 0;
   font-size: 28px;

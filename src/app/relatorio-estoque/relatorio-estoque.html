@@ -1,7 +1,7 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Relatório de Estoque</h1>
-    <p>Visão geral do estoque, consumo e distribuição por categoria</p>
+    <h1>Relatório de Produtos e Estoque</h1>
+    <p>Catálogo, margens, níveis de estoque e consumo</p>
   </header>
 
   @if (erro) {
@@ -11,9 +11,64 @@
   @if (carregando) {
     <app-carregando texto="Carregando relatório..."></app-carregando>
   } @else {
+    <h2 class="secao">Produtos</h2>
+
     <div class="grid-stats">
       <div class="stat-card">
-        <div class="stat-label">Total de Itens</div>
+        <div class="stat-label">Produtos Cadastrados</div>
+        <div class="stat-valor">{{ totalProdutos }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Produtos Ativos</div>
+        <div class="stat-valor">{{ produtosAtivos }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Margem Média</div>
+        <div class="stat-valor">
+          @if (margemMedia !== null) {
+            {{ margemMedia | number: '1.0-1' }}%
+          } @else {
+            —
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-duas-colunas">
+      <section class="painel">
+        <h3>Produtos por Natureza</h3>
+        <div class="lista">
+          @for (item of produtosPorNatureza; track item.grupo) {
+            <div class="linha">
+              <div class="info"><strong>{{ item.grupo }}</strong></div>
+              <span class="badge neutro">{{ item.quantidade }} produtos</span>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhum produto cadastrado.</p>
+          }
+        </div>
+      </section>
+
+      <section class="painel">
+        <h3>Produtos por Categoria</h3>
+        <div class="lista">
+          @for (item of produtosPorCategoria; track item.grupo) {
+            <div class="linha">
+              <div class="info"><strong>{{ item.grupo }}</strong></div>
+              <span class="badge neutro">{{ item.quantidade }} produtos</span>
+            </div>
+          } @empty {
+            <p class="vazio">Nenhum produto cadastrado.</p>
+          }
+        </div>
+      </section>
+    </div>
+
+    <h2 class="secao">Estoque de Insumos</h2>
+
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">Insumos em Estoque</div>
         <div class="stat-valor">{{ totalItens }}</div>
       </div>
       <div class="stat-card">
@@ -24,14 +79,18 @@
         <div class="stat-label">Itens em Estado Crítico</div>
         <div class="stat-valor alerta">{{ itensCriticos }}</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-label">Insumos sem Controle</div>
+        <div class="stat-valor">{{ insumosSemControle }}</div>
+      </div>
     </div>
 
     <div class="grid-duas-colunas">
       <section class="painel">
-        <h3>Itens Mais Consumidos (saídas registradas)</h3>
+        <h3>Insumos Mais Consumidos (saídas registradas)</h3>
 
         <div class="lista">
-          @for (item of itensMaisConsumidos; track item.nomeProduto; let i = $index) {
+          @for (item of insumosMaisConsumidos; track item.nomeProduto; let i = $index) {
             <div class="linha">
               <div class="info">
                 <strong>{{ i + 1 }}. {{ item.nomeProduto }}</strong>
@@ -45,15 +104,15 @@
       </section>
 
       <section class="painel">
-        <h3>Estoque por Categoria</h3>
+        <h3>Insumos em Estoque por Categoria</h3>
 
         <div class="lista">
-          @for (categoria of estoquePorCategoria; track categoria.categoria) {
+          @for (categoria of estoquePorCategoria; track categoria.grupo) {
             <div class="linha">
               <div class="info">
-                <strong>{{ categoria.categoria }}</strong>
+                <strong>{{ categoria.grupo }}</strong>
               </div>
-              <span class="badge neutro">{{ categoria.quantidadeItens }} itens</span>
+              <span class="badge neutro">{{ categoria.quantidade }} itens</span>
             </div>
           } @empty {
             <p class="vazio">Nenhuma categoria cadastrada.</p>
@@ -61,5 +120,70 @@
         </div>
       </section>
     </div>
+
+    <section class="painel painel-tabela">
+      <div class="cabecalho-tabela">
+        <h3>Produtos e Estoque</h3>
+        <div class="filtros">
+          <input type="text" class="campo-filtro" placeholder="Buscar produto..." [(ngModel)]="busca" />
+          <select class="campo-filtro" [(ngModel)]="filtroSituacao">
+            <option value="">Todas as situações</option>
+            <option value="OK">Estoque ok</option>
+            <option value="BAIXO">Estoque baixo</option>
+            <option value="SEM_CONTROLE">Insumo sem controle de estoque</option>
+            <option value="NAO_SE_APLICA">Produto de venda</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tabela-wrap">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>Natureza</th>
+              <th class="num">Preço</th>
+              <th class="num">Custo</th>
+              <th class="num">Margem</th>
+              <th class="num">Estoque</th>
+              <th class="num">Mínimo</th>
+              <th>Situação</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (linha of linhas; track linha.produto.id) {
+              <tr [class.inativo]="!linha.produto.flAtivo">
+                <td>
+                  {{ linha.produto.nome }}
+                  @if (!linha.produto.flAtivo) {
+                    <span class="badge neutro">Inativo</span>
+                  }
+                </td>
+                <td>{{ linha.produto.categoria?.nome ?? '—' }}</td>
+                <td>{{ labelNatureza(linha.produto.natureza) }}</td>
+                <td class="num">{{ linha.produto.preco | currency: 'BRL' }}</td>
+                <td class="num">{{ linha.produto.custo ? (linha.produto.custo | currency: 'BRL') : '—' }}</td>
+                <td class="num">{{ linha.margem !== null ? (linha.margem | number: '1.0-1') + '%' : '—' }}</td>
+                <td class="num">{{ linha.estoque ? linha.estoque.quantidadeAtual : '—' }}</td>
+                <td class="num">{{ linha.estoque ? linha.estoque.estoqueMinimo : '—' }}</td>
+                <td>
+                  @switch (situacao(linha)) {
+                    @case ('OK') { <span class="badge sucesso">Ok</span> }
+                    @case ('BAIXO') { <span class="badge erro">Baixo</span> }
+                    @case ('SEM_CONTROLE') { <span class="badge alerta">Sem controle</span> }
+                    @default { <span class="badge neutro">Via ficha técnica</span> }
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="vazio">Nenhum produto encontrado.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
   }
 </div>

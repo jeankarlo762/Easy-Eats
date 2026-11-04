@@ -2,12 +2,19 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { NaturezaProduto } from '../cadastro-produto/produto.service';
 
 export type TipoMovimentacaoEstoque = 'ENTRADA' | 'SAIDA';
 
 export interface Estoque {
   id: number;
-  produto: { id: number; nome: string; preco: number; categoria: { id: number; nome: string } | null };
+  produto: {
+    id: number;
+    nome: string;
+    preco: number;
+    natureza?: NaturezaProduto | null;
+    categoria: { id: number; nome: string } | null;
+  };
   quantidadeAtual: number;
   estoqueMinimo: number;
   dtUltimaMovimentacao: string | null;

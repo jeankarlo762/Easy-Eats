@@ -1,0 +1,107 @@
+:host {
+  display: block;
+  width: 100%;
+  font-family: Inter, 'Poppins', sans-serif;
+}
+
+.cabecalho {
+  padding: 24px 28px 0;
+  box-sizing: border-box;
+}
+
+.titulo h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.titulo p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14.5px;
+}
+
+.abas {
+  display: flex;
+  gap: 4px;
+  margin-top: 18px;
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.aba:hover {
+  color: var(--color-text);
+}
+
+.aba.ativa {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+}
+
+.sub-abas {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.sub-aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sub-aba.ativa {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4f46e5;
+}
+
+:host-context(html[data-theme='escuro']) .aba.ativa,
+:host-context(html[data-theme='escuro']) .sub-aba.ativa {
+  color: #a5b4fc;
+  border-color: #6366f1;
+}
+
+:host-context(html[data-theme='escuro']) .sub-aba.ativa {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+/* As telas de cada aba já trazem o próprio título; aqui só aproximamos do
+   cabeçalho do módulo para não sobrar espaço vazio entre as abas e o conteúdo. */
+.conteudo-aba ::ng-deep .pagina {
+  padding-top: 18px;
+}
+
+@media (max-width: 680px) {
+  .cabecalho {
+    padding: 20px 16px 0;
+  }
+  .aba {
+    padding: 10px 12px;
+  }
+}
