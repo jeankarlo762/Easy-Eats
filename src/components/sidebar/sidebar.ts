@@ -98,6 +98,13 @@ export class Sidebar {
       ],
     },
     {
+      label: 'WhatsApp',
+      icon: 'bi-whatsapp',
+      rota: '/integracao-whatsapp',
+      cor: '#16a34a',
+      perfis: PERFIS_GESTAO,
+    },
+    {
       label: 'Usuários',
       icon: 'bi-person-badge',
       rota: '/usuarios',
