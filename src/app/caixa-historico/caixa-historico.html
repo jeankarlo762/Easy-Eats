@@ -1,0 +1,109 @@
+<div class="pagina">
+  <header class="topo">
+    <div>
+      <h1>Histórico de Caixas</h1>
+      <p>Consulte os turnos de caixa, quem abriu e fechou e as diferenças apuradas</p>
+    </div>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+    </div>
+  </header>
+
+  <app-filtro-periodo (periodoChange)="aplicarPeriodo($event)"></app-filtro-periodo>
+
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
+  }
+
+  <section class="painel">
+    <div class="barra-filtros">
+      <div class="filtros">
+        @for (filtro of filtrosStatus; track filtro.valor) {
+          <button type="button" [class.ativo]="status() === filtro.valor" (click)="selecionarStatus(filtro.valor)">
+            {{ filtro.label }}
+          </button>
+        }
+      </div>
+      <form class="busca-usuario" (ngSubmit)="carregar(0)">
+        <input
+          type="search"
+          name="usuario"
+          class="input-padrao"
+          placeholder="Filtrar por usuário (abriu ou fechou)"
+          [ngModel]="usuario()"
+          (ngModelChange)="usuario.set($event)"
+        />
+        <button type="submit" class="btn btn-secundario">Filtrar</button>
+      </form>
+    </div>
+
+    @if (carregando()) {
+      <app-carregando texto="Carregando caixas..."></app-carregando>
+    } @else {
+      <div class="tabela-wrap">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Caixa</th>
+              <th>Abertura</th>
+              <th>Fechamento</th>
+              <th>Aberto por</th>
+              <th>Fechado por</th>
+              <th class="num">Fundo</th>
+              <th class="num">Esperado</th>
+              <th class="num">Contado</th>
+              <th class="num">Diferença</th>
+              <th class="acoes"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of pagina()?.itens ?? []; track c.id) {
+              <tr>
+                <td>
+                  <strong>#{{ c.id }}</strong>
+                  @if (c.status === 'ABERTO') {
+                    <span class="badge sucesso">Aberto</span>
+                  }
+                </td>
+                <td>{{ c.dataAbertura | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ c.dataFechamento ? (c.dataFechamento | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
+                <td>{{ c.usuarioAbertura }}</td>
+                <td>{{ c.usuarioFechamento || '—' }}</td>
+                <td class="num">{{ c.fundoCaixa | currency: 'BRL' }}</td>
+                <td class="num">{{ c.status === 'FECHADO' ? (c.valorEsperado | currency: 'BRL') : '—' }}</td>
+                <td class="num">{{ c.status === 'FECHADO' ? (c.valorContado | currency: 'BRL') : '—' }}</td>
+                <td class="num">
+                  @if (c.status === 'FECHADO') {
+                    <span [class]="'badge ' + classeDiferenca(c.diferenca)">{{ c.diferenca | currency: 'BRL' }}</span>
+                  } @else {
+                    —
+                  }
+                </td>
+                <td class="acoes">
+                  <div>
+                    @if (c.status === 'FECHADO') {
+                      <a class="btn-icone" [routerLink]="['/caixa-relatorio', c.id]" title="Relatório de fechamento" aria-label="Relatório de fechamento">
+                        <i class="bi bi-file-earmark-text"></i>
+                      </a>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="10" class="vazio">Nenhum caixa encontrado nesse período.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (pagina(); as p) {
+        <app-paginacao [pagina]="p.pagina" [totalPaginas]="p.totalPaginas" [total]="p.total" (paginaChange)="carregar($event)"></app-paginacao>
+      }
+    }
+  </section>
+</div>

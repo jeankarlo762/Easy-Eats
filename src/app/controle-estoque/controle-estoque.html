@@ -1,222 +1,231 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Estoque de Insumos</h1>
-    <p>O estoque é controlado pelos insumos. Com a ficha técnica, ele mostra quantos produtos dá para preparar.</p>
+    <div>
+      <h1>Ingredientes e Estoque</h1>
+      <p>Cadastre ingredientes, defina o estoque mínimo e registre entradas e saídas</p>
+    </div>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+    </div>
   </header>
 
-  @if (estoquesOcultos > 0) {
-    <div class="alerta-info">
-      <i class="bi bi-info-circle"></i>
-      {{ estoquesOcultos }} {{ estoquesOcultos === 1 ? 'produto que não é insumo tem' : 'produtos que não são insumo têm' }}
-      estoque registrado de antes e não {{ estoquesOcultos === 1 ? 'aparece' : 'aparecem' }} aqui.
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
     </div>
   }
-
-  @if (erro) {
-    <div class="alerta-erro">{{ erro }}</div>
-  }
-  @if (sucesso) {
-    <div class="alerta-sucesso"><i class="bi bi-check-circle"></i> Movimentação registrada com sucesso!</div>
+  @if (sucesso()) {
+    <div class="alerta alerta-sucesso"><i class="bi bi-check-circle"></i><span class="alerta-texto">{{ sucesso() }}</span></div>
   }
 
-  <div class="grid-resumo">
-    <div class="resumo-card">
-      <div class="resumo-valor">{{ estoques.length }}</div>
-      <div class="resumo-label">Insumos em Estoque</div>
-    </div>
-
-    <div class="resumo-card">
-      <div class="resumo-valor alerta">{{ estoqueBaixo.length }}</div>
-      <div class="resumo-label">Estoque Baixo</div>
-    </div>
-
-    <div class="resumo-card">
-      <div class="resumo-valor">{{ movimentacoes.length }}</div>
-      <div class="resumo-label">Movimentações Recentes</div>
-    </div>
-  </div>
-
-  <div class="grid-duas-colunas">
-    <section class="painel">
-      <h3>Adicionar Insumo ao Estoque</h3>
-
-      <form [formGroup]="formCadastro" (ngSubmit)="cadastrarNoEstoque()">
-        <div class="campo">
-          <label>Insumo</label>
-          <select formControlName="produtoId">
-            <option [ngValue]="null">Selecione...</option>
-            @for (produto of produtosSemEstoque; track produto.id) {
-              <option [ngValue]="produto.id">{{ produto.nome }}</option>
-            }
-          </select>
-          @if (produtosSemEstoque.length === 0) {
-            <small class="aviso">
-              Todos os insumos já estão no controle de estoque.
-              <a routerLink="/produtos/cadastros/insumos">Cadastrar novo insumo</a>
-            </small>
-          }
-        </div>
-
-        <div class="campo">
-          <label>Quantidade Inicial</label>
-          <input type="number" min="0" formControlName="quantidadeAtual" />
-        </div>
-
-        <div class="campo">
-          <label>Estoque Mínimo</label>
-          <input type="number" min="0" formControlName="estoqueMinimo" />
-        </div>
-
-        <div class="acoes-form">
-          <button type="submit" class="btn-salvar" [disabled]="enviandoCadastro">
-            {{ enviandoCadastro ? 'Cadastrando...' : 'Adicionar ao Estoque' }}
-          </button>
-        </div>
-      </form>
-    </section>
-
-    <section class="painel">
-      <h3>Registrar Movimentação</h3>
-
-      <form [formGroup]="formMovimentacao" (ngSubmit)="registrarMovimentacao()">
-        <div class="campo">
-          <label>Insumo</label>
-          <select formControlName="produtoId">
-            <option [ngValue]="null">Selecione...</option>
-            @for (estoque of estoques; track estoque.id) {
-              <option [ngValue]="estoque.produto.id">{{ estoque.produto.nome }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="campo">
-          <label>Tipo</label>
-          <select formControlName="tipo">
-            <option value="ENTRADA">Entrada</option>
-            <option value="SAIDA">Saída</option>
-          </select>
-        </div>
-
-        <div class="campo">
-          <label>Quantidade</label>
-          <input type="number" min="1" formControlName="quantidade" />
-        </div>
-
-        <div class="campo">
-          <label>Observação (opcional)</label>
-          <input type="text" placeholder="Ex: recebimento do fornecedor" formControlName="observacao" />
-        </div>
-
-        <div class="acoes-form">
-          <button type="submit" class="btn-salvar" [disabled]="enviandoMovimentacao">
-            {{ enviandoMovimentacao ? 'Registrando...' : 'Registrar Movimentação' }}
-          </button>
-        </div>
-      </form>
-    </section>
-  </div>
-
-  @if (carregando) {
-    <app-carregando texto="Carregando estoque..."></app-carregando>
-  } @else {
-    <section class="painel">
-      <h3>Estoque Atual</h3>
-
-      <div class="lista">
-        @for (estoque of estoques; track estoque.id) {
-          <div class="linha">
-            <span class="nome">
-              <i class="bi" [ngClass]="iconeCategoria(estoque.produto.categoria?.nome)"></i>
-              {{ estoque.produto.nome }}
-            </span>
-
-            <span class="info">
-              {{ estoque.quantidadeAtual }}
-
-              @if (estoque.quantidadeAtual < estoque.estoqueMinimo) {
-                <span class="badge erro">Baixo</span>
-              } @else {
-                <span class="badge sucesso">Ok</span>
-              }
-            </span>
-          </div>
-        } @empty {
-          <p class="vazio">Nenhum insumo cadastrado no estoque ainda.</p>
-        }
+  <div class="grid-stats">
+    <div class="stat-card">
+      <div class="stat-icon azul"><i class="bi bi-boxes"></i></div>
+      <div>
+        <div class="stat-valor">{{ itens().length }}</div>
+        <div class="stat-label">Ingredientes ativos</div>
       </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon vermelho"><i class="bi bi-exclamation-triangle"></i></div>
+      <div>
+        <div class="stat-valor" [class.critico]="totalCriticos() > 0">{{ totalCriticos() }}</div>
+        <div class="stat-label">No mínimo ou abaixo</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon verde"><i class="bi bi-cash-stack"></i></div>
+      <div>
+        <div class="stat-valor">{{ valorTotal() | currency: 'BRL' }}</div>
+        <div class="stat-label">Valor em estoque</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-form-lista">
+    <section class="painel">
+      <h3>{{ editando() ? 'Editar ingrediente' : 'Novo ingrediente' }}</h3>
+
+      <form [formGroup]="form" (ngSubmit)="salvar()">
+        <div class="campo">
+          <label for="ing-nome">Nome</label>
+          <input id="ing-nome" type="text" placeholder="Ex: Pão de hambúrguer" formControlName="nome" />
+          @if (form.controls.nome.touched && form.controls.nome.invalid) {
+            <small class="erro-campo">Informe o nome.</small>
+          }
+        </div>
+
+        <div class="campo-linha">
+          <div class="campo">
+            <label for="ing-unidade">Unidade</label>
+            <select id="ing-unidade" formControlName="unidadeMedida">
+              @for (unidade of unidades(); track unidade) {
+                <option [value]="unidade">{{ unidade }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="ing-custo">Custo por unidade (R$)</label>
+            <input id="ing-custo" type="number" min="0" step="0.01" placeholder="0,00" formControlName="custo" />
+            @if (form.controls.custo.touched && form.controls.custo.invalid) {
+              <small class="erro-campo">Informe um custo válido.</small>
+            }
+          </div>
+        </div>
+
+        <div class="campo-linha">
+          <div class="campo">
+            <label for="ing-atual">Quantidade atual</label>
+            <input id="ing-atual" type="number" min="0" step="0.001" formControlName="qtdAtual" />
+            @if (editando()?.estoque) {
+              <small class="ajuda-campo">Use Entrada/Saída para alterar.</small>
+            }
+          </div>
+
+          <div class="campo">
+            <label for="ing-minima">Quantidade mínima</label>
+            <input id="ing-minima" type="number" min="0" step="0.001" formControlName="qtdMinima" />
+          </div>
+        </div>
+
+        <div class="acoes-form">
+          <button type="submit" class="btn btn-primario" [disabled]="salvando()">
+            {{ salvando() ? 'Salvando...' : editando() ? 'Salvar alterações' : 'Adicionar ingrediente' }}
+          </button>
+          @if (editando()) {
+            <button type="button" class="btn btn-secundario" (click)="cancelarEdicao()">Cancelar</button>
+          }
+        </div>
+      </form>
     </section>
 
     <section class="painel">
-      <h3>Produtos Possíveis com o Estoque Atual</h3>
-      <p class="ajuda">Calculado pela ficha técnica de cada produto preparado ativo.</p>
+      <div class="painel-cabecalho">
+        <h3>Estoque atual</h3>
+        <label class="filtro-critico">
+          <input type="checkbox" [ngModel]="somenteCriticos()" (ngModelChange)="somenteCriticos.set($event)" />
+          Só os que precisam repor
+        </label>
+      </div>
 
-      @if (carregandoProducao) {
-        <app-carregando texto="Calculando produção possível..."></app-carregando>
+      <input
+        type="search"
+        class="input-padrao busca"
+        placeholder="Buscar ingrediente..."
+        [ngModel]="busca()"
+        (ngModelChange)="busca.set($event)"
+      />
+
+      @if (carregando()) {
+        <app-carregando texto="Carregando estoque..."></app-carregando>
       } @else {
-        <div class="lista">
-          @for (item of producaoPossivel; track item.produto.id) {
-            <div class="linha">
-              <span class="nome">
-                <i class="bi bi-egg-fried"></i>
-                <span class="nome-producao">
-                  {{ item.produto.nome }}
-                  @if (item.limitante) {
-                    <small>Limitado por: {{ item.limitante }}</small>
-                  }
-                  @if (item.semControle.length) {
-                    <small class="aviso">Sem estoque cadastrado: {{ item.semControle.join(', ') }}</small>
-                  }
-                </span>
-              </span>
-
-              <span class="info">
-                {{ item.quantidade }} un.
-                @if (item.quantidade === 0) {
-                  <span class="badge erro">Indisponível</span>
-                } @else if (item.quantidade < 5) {
-                  <span class="badge alerta-fundo">Pouco</span>
-                } @else {
-                  <span class="badge sucesso">Disponível</span>
-                }
-              </span>
-            </div>
-          } @empty {
-            <p class="vazio">
-              Nenhum produto preparado com ficha técnica ainda.
-              <a routerLink="/produtos/ficha-tecnica">Montar ficha técnica</a>
-            </p>
-          }
+        <div class="tabela-wrap">
+          <table class="tabela">
+            <thead>
+              <tr>
+                <th>Ingrediente</th>
+                <th class="num">Atual</th>
+                <th class="num">Mínimo</th>
+                <th class="num">Custo</th>
+                <th>Situação</th>
+                <th class="acoes"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of itensFiltrados(); track item.ingrediente.id) {
+                <tr [class.linha-critica]="critico(item)">
+                  <td><strong>{{ item.ingrediente.nome }}</strong></td>
+                  <td class="num">
+                    @if (item.estoque) {
+                      {{ item.estoque.qtdAtual | number: '1.0-3' }} {{ item.ingrediente.unidadeMedida }}
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td class="num">
+                    {{ item.estoque ? (item.estoque.qtdMinima | number: '1.0-3') : '—' }}
+                  </td>
+                  <td class="num">{{ item.ingrediente.custo | currency: 'BRL' }}</td>
+                  <td>
+                    @if (!item.estoque) {
+                      <span class="badge neutro">Sem estoque</span>
+                    } @else if (critico(item)) {
+                      <span class="badge erro">Repor</span>
+                    } @else {
+                      <span class="badge sucesso">OK</span>
+                    }
+                  </td>
+                  <td class="acoes">
+                    <div>
+                      <button type="button" class="btn-icone" (click)="abrirMovimento(item, 'entrada')" title="Registrar entrada" aria-label="Registrar entrada">
+                        <i class="bi bi-plus-lg"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-icone"
+                        [disabled]="!item.estoque"
+                        (click)="abrirMovimento(item, 'saida')"
+                        title="Registrar saída"
+                        aria-label="Registrar saída"
+                      >
+                        <i class="bi bi-dash-lg"></i>
+                      </button>
+                      <button type="button" class="btn-icone" (click)="editar(item)" title="Editar" aria-label="Editar">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button type="button" class="btn-icone perigo" (click)="excluir(item)" title="Excluir" aria-label="Excluir">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="vazio">Nenhum ingrediente encontrado.</td></tr>
+              }
+            </tbody>
+          </table>
         </div>
       }
     </section>
-
-    <section class="painel">
-      <h3>Últimas Movimentações</h3>
-
-      <div class="lista">
-        @for (mov of movimentacoes; track mov.id) {
-          <div class="linha">
-            <span class="nome">
-              <i class="bi" [ngClass]="mov.tipo === 'ENTRADA' ? 'bi-box-arrow-in-down' : 'bi-box-arrow-up'"></i>
-              {{ mov.produto.nome }}
-            </span>
-
-            @if (mov.tipo === 'ENTRADA') {
-              <span class="info">
-                +{{ mov.quantidade }}
-                <span class="badge sucesso">Entrada</span>
-              </span>
-            } @else {
-              <span class="info">
-                -{{ mov.quantidade }}
-                <span class="badge alerta-fundo">Saída</span>
-              </span>
-            }
-          </div>
-        } @empty {
-          <p class="vazio">Nenhuma movimentação registrada ainda.</p>
-        }
-      </div>
-    </section>
-  }
+  </div>
 </div>
+
+@if (movimento(); as mov) {
+  <div class="modal-fundo" (click)="fecharMovimento()">
+    <div class="modal-caixa" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h3>{{ mov.tipo === 'entrada' ? 'Entrada' : 'Saída' }} de estoque</h3>
+      <p>
+        {{ mov.item.ingrediente.nome }}
+        @if (mov.item.estoque) {
+          — atual: {{ mov.item.estoque.qtdAtual | number: '1.0-3' }} {{ mov.item.ingrediente.unidadeMedida }}
+        } @else {
+          — ainda sem estoque; a entrada cria o estoque com mínimo 0.
+        }
+      </p>
+
+      <form (ngSubmit)="confirmarMovimento()">
+        <div class="campo">
+          <label for="qtd-movimento">Quantidade ({{ mov.item.ingrediente.unidadeMedida }})</label>
+          <input id="qtd-movimento" name="quantidade" type="number" min="0.001" step="0.001" [(ngModel)]="quantidadeMovimento" autofocus />
+        </div>
+        <div class="acoes-form">
+          <button type="button" class="btn btn-secundario" (click)="fecharMovimento()">Cancelar</button>
+          <button
+            type="submit"
+            class="btn"
+            [class.btn-primario]="mov.tipo === 'entrada'"
+            [class.btn-perigo]="mov.tipo === 'saida'"
+            [disabled]="movimentando() || !quantidadeMovimento || quantidadeMovimento <= 0"
+          >
+            {{ movimentando() ? 'Salvando...' : 'Confirmar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

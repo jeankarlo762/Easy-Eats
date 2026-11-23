@@ -1,50 +1,147 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Mesas</h1>
-    <p>Visualize o status das mesas do salão e abra comandas</p>
+    <div>
+      <h1>Mesas</h1>
+      <p>Selecione uma mesa para lançar um pedido. A mesa fica ocupada até a conta ser finalizada ou cancelada.</p>
+    </div>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="novaRetirada()">
+        <i class="bi bi-bag-check"></i> Nova retirada
+      </button>
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+    </div>
   </header>
 
-  @if (erro) {
-    <p class="vazio">{{ erro }}</p>
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
+  }
+  @if (sucesso()) {
+    <div class="alerta alerta-sucesso"><i class="bi bi-check-circle"></i><span class="alerta-texto">{{ sucesso() }}</span></div>
   }
 
   <div class="grid-stats">
     <div class="stat-card">
-      <div class="stat-label">Mesas Livres</div>
-      <div class="stat-valor">{{ totalLivres }}</div>
+      <div class="stat-icon verde"><i class="bi bi-check2-circle"></i></div>
+      <div>
+        <div class="stat-valor">{{ totalLivres() }}</div>
+        <div class="stat-label">Mesas livres</div>
+      </div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Mesas Ocupadas</div>
-      <div class="stat-valor">{{ totalOcupadas }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Mesas Reservadas</div>
-      <div class="stat-valor">{{ totalReservadas }}</div>
+      <div class="stat-icon laranja"><i class="bi bi-people"></i></div>
+      <div>
+        <div class="stat-valor">{{ totalOcupadas() }}</div>
+        <div class="stat-label">Mesas ocupadas</div>
+      </div>
     </div>
   </div>
 
-  <section class="painel">
-    <h3>Mapa de Mesas</h3>
+  <div [class.grid-form-lista]="podeGerenciar">
+    @if (podeGerenciar) {
+      <section class="painel">
+        <h3>{{ editando() ? 'Editar mesa ' + editando()!.numero : 'Nova mesa' }}</h3>
 
-    @if (carregando) {
-      <p class="vazio">Carregando mesas...</p>
-    } @else {
-      <div class="grid-mesas">
-        @for (mesa of mesas; track mesa.id) {
-          <button
-            type="button"
-            class="cartao-mesa"
-            [disabled]="abrindoMesaId === mesa.id"
-            (click)="selecionarMesa(mesa)"
-          >
-            <i class="bi bi-grid-3x3-gap-fill"></i>
-            <span class="numero-mesa">Mesa {{ mesa.numero }}</span>
-            <span class="badge" [ngClass]="badgeClasse(mesa.status)">{{ rotulo(mesa.status) }}</span>
-          </button>
-        } @empty {
-          <p class="vazio">Nenhuma mesa cadastrada.</p>
+        <form (ngSubmit)="salvar()">
+          <div class="campo">
+            <label for="numero-mesa">Número da mesa</label>
+            <input id="numero-mesa" name="numero" type="number" min="1" step="1" placeholder="Ex: 5" [(ngModel)]="numero" required />
+          </div>
+
+          <div class="acoes-form">
+            <button type="submit" class="btn btn-primario" [disabled]="salvando() || !numero">
+              {{ salvando() ? 'Salvando...' : editando() ? 'Salvar alterações' : 'Adicionar mesa' }}
+            </button>
+            @if (editando()) {
+              <button type="button" class="btn btn-secundario" (click)="cancelarEdicao()">Cancelar</button>
+            }
+          </div>
+        </form>
+      </section>
+    }
+
+    <section class="painel">
+      <h3>Mapa de mesas</h3>
+
+      @if (carregando()) {
+        <app-carregando texto="Carregando mesas..."></app-carregando>
+      } @else {
+        <div class="grid-mesas">
+          @for (mesa of mesas(); track mesa.mesaId) {
+            <div class="cartao-mesa" [class.ocupada]="mesa.ocupada">
+              <div class="cartao-mesa__topo">
+                <span class="numero-mesa">Mesa {{ mesa.numero }}</span>
+                @if (mesa.ocupada) {
+                  <span class="badge laranja">Ocupada</span>
+                } @else {
+                  <span class="badge sucesso">Livre</span>
+                }
+              </div>
+              @if (mesa.ocupada) {
+                <span class="cartao-mesa__info">
+                  {{ mesa.quantidadeComandas }} comanda(s) · {{ mesa.valorParcial | currency: 'BRL' }}
+                </span>
+                @if (mesa.nomeCliente) {
+                  <span class="cartao-mesa__info"><i class="bi bi-person"></i> {{ mesa.nomeCliente }}</span>
+                }
+              } @else {
+                <span class="cartao-mesa__info">Sem conta aberta</span>
+              }
+              <div class="cartao-mesa__acoes">
+                <button type="button" class="btn btn-primario btn-sm" (click)="novoPedido(mesa)">
+                  <i class="bi bi-plus-circle"></i> Pedido
+                </button>
+                @if (mesa.ocupada) {
+                  <a class="btn btn-secundario btn-sm" [routerLink]="['/conta', mesa.vendaId]" title="Ver a conta da mesa">
+                    <i class="bi bi-receipt"></i> Conta
+                  </a>
+                }
+                @if (podeGerenciar) {
+                  <button type="button" class="btn-icone" (click)="editar(mesa)" title="Editar" aria-label="Editar mesa">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button type="button" class="btn-icone perigo" (click)="excluir(mesa)" title="Excluir" aria-label="Excluir mesa">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                }
+              </div>
+            </div>
+          } @empty {
+            <p class="vazio">
+              Nenhuma mesa cadastrada.
+              @if (podeGerenciar) {
+                Use o formulário para criar a primeira.
+              }
+            </p>
+          }
+        </div>
+      }
+    </section>
+  </div>
+
+  @if (retiradas().length > 0) {
+    <section class="painel painel-retiradas">
+      <h3>Retiradas em aberto</h3>
+      <div class="lista">
+        @for (retirada of retiradas(); track retirada.id) {
+          <div class="linha">
+            <div class="linha-info">
+              <strong><i class="bi bi-bag-check"></i> {{ retirada.nomeCliente }}</strong>
+              <span>Aberta às {{ retirada.dataAbertura | date: 'HH:mm' }} · {{ retirada.valorTotal | currency: 'BRL' }}</span>
+            </div>
+            <div class="linha-acoes">
+              <a class="btn btn-secundario btn-sm" [routerLink]="['/conta', retirada.id]">
+                <i class="bi bi-receipt"></i> Abrir conta
+              </a>
+            </div>
+          </div>
         }
       </div>
-    }
-  </section>
+    </section>
+  }
 </div>

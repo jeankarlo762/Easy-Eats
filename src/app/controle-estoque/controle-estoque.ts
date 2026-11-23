@@ -1,252 +1,236 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { catchError, forkJoin, of } from 'rxjs';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Observable, of, switchMap } from 'rxjs';
 import { CarregandoComponent } from '../../components/carregando/carregando';
-import { Produto, ProdutoService } from '../cadastro-produto/produto.service';
-import { FichaTecnicaItem, FichaTecnicaService } from '../ficha-tecnica/ficha-tecnica.service';
 import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
-import { Estoque, EstoqueService, MovimentacaoEstoque, TipoMovimentacaoEstoque } from './estoque.service';
+import { Estoque, EstoqueService, ItemEstoque } from './estoque.service';
 
-const ICONE_POR_CATEGORIA: Record<string, string> = {
-  Pães: 'bi-basket3',
-  Carnes: 'bi-fire',
-  Laticínios: 'bi-egg',
-  Vegetais: 'bi-flower1',
-  Congelados: 'bi-snow',
-  Bebidas: 'bi-cup-straw',
-};
+type TipoMovimento = 'entrada' | 'saida';
 
-/** Quantas unidades de um produto preparado dá para montar com o estoque de insumos. */
-export interface ProducaoPossivel {
-  produto: Produto;
-  quantidade: number;
-  /** Insumo que limita a produção (o que acaba primeiro). */
-  limitante: string | null;
-  /** Insumos da ficha técnica sem controle de estoque cadastrado. */
-  semControle: string[];
+interface Movimento {
+  item: ItemEstoque;
+  tipo: TipoMovimento;
 }
 
-/**
- * Aba Estoque do módulo Produto. Controla só o estoque de INSUMOS: é a partir
- * deles (e da ficha técnica) que se sabe se dá para fazer cada produto.
- */
+export const UNIDADES_MEDIDA = ['un', 'kg', 'g', 'L', 'ml', 'fatia', 'folha', 'bola', 'pct'];
+
 @Component({
   selector: 'app-controle-estoque',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, CarregandoComponent],
+  imports: [CurrencyPipe, DecimalPipe, FormsModule, ReactiveFormsModule, CarregandoComponent],
   templateUrl: './controle-estoque.html',
   styleUrls: ['./controle-estoque.scss'],
 })
 export class ControleEstoque implements OnInit {
-  private fb = inject(FormBuilder);
   private estoqueService = inject(EstoqueService);
-  private produtoService = inject(ProdutoService);
-  private fichaTecnicaService = inject(FichaTecnicaService);
 
-  /** Só estoque de insumos. */
-  estoques: Estoque[] = [];
-  /** Registros de estoque de produtos que não são insumo (de antes da unificação). */
-  estoquesOcultos = 0;
-  producaoPossivel: ProducaoPossivel[] = [];
-  carregandoProducao = false;
-  movimentacoes: MovimentacaoEstoque[] = [];
-  produtosSemEstoque: Produto[] = [];
+  itens = signal<ItemEstoque[]>([]);
 
-  carregando = true;
-  enviandoCadastro = false;
-  enviandoMovimentacao = false;
-  erro: string | null = null;
-  sucesso = false;
+  /** Unidades padrão + as que já existem nos ingredientes cadastrados na API. */
+  unidades = computed(() => [
+    ...new Set([...UNIDADES_MEDIDA, ...this.itens().map((item) => item.ingrediente.unidadeMedida).filter(Boolean)]),
+  ]);
+  carregando = signal(true);
+  salvando = signal(false);
+  erro = signal<string | null>(null);
+  sucesso = signal<string | null>(null);
+  editando = signal<ItemEstoque | null>(null);
+  busca = signal('');
+  somenteCriticos = signal(false);
 
-  formCadastro = this.fb.group({
-    produtoId: [null as number | null, Validators.required],
-    quantidadeAtual: [0, [Validators.required, Validators.min(0)]],
-    estoqueMinimo: [0, [Validators.required, Validators.min(0)]],
+  movimento = signal<Movimento | null>(null);
+  quantidadeMovimento: number | null = null;
+  movimentando = signal(false);
+
+  form = new FormGroup({
+    nome: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    unidadeMedida: new FormControl('un', { nonNullable: true, validators: [Validators.required] }),
+    custo: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
+    qtdAtual: new FormControl<number | null>(0, [Validators.required, Validators.min(0)]),
+    qtdMinima: new FormControl<number | null>(0, [Validators.required, Validators.min(0)]),
   });
 
-  formMovimentacao = this.fb.group({
-    produtoId: [null as number | null, Validators.required],
-    tipo: ['ENTRADA' as TipoMovimentacaoEstoque, Validators.required],
-    quantidade: [null as number | null, [Validators.required, Validators.min(1)]],
-    observacao: [''],
+  itensFiltrados = computed(() => {
+    const termo = this.busca().trim().toLowerCase();
+    return this.itens().filter(
+      (item) =>
+        (!termo || item.ingrediente.nome.toLowerCase().includes(termo)) &&
+        (!this.somenteCriticos() || this.critico(item)),
+    );
   });
+
+  totalCriticos = computed(() => this.itens().filter((item) => this.critico(item)).length);
+  valorTotal = computed(() =>
+    this.itens().reduce((soma, item) => soma + (item.estoque?.qtdAtual ?? 0) * item.ingrediente.custo, 0),
+  );
 
   ngOnInit() {
     this.carregar();
   }
 
-  private carregar() {
-    this.carregando = true;
-    this.erro = null;
-
-    this.estoqueService.listar().subscribe({
-      next: (estoques) => {
-        this.todosEstoques = estoques;
-        this.aplicarFiltroInsumo();
-        this.carregando = false;
+  carregar() {
+    this.carregando.set(true);
+    this.estoqueService.listarItens().subscribe({
+      next: (itens) => {
+        this.itens.set(itens);
+        this.carregando.set(false);
       },
       error: (erro) => {
-        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o estoque.');
-        this.carregando = false;
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o estoque.'));
+        this.carregando.set(false);
       },
-    });
-
-    this.estoqueService.listarMovimentacoes().subscribe({
-      next: (movimentacoes) => {
-        this.todasMovimentacoes = movimentacoes;
-        this.aplicarFiltroInsumo();
-      },
-      error: () => {},
-    });
-
-    this.produtoService.listar().subscribe({
-      next: (produtos) => {
-        this.todosProdutos = produtos;
-        this.aplicarFiltroInsumo();
-        this.carregarProducaoPossivel();
-      },
-      error: () => {},
     });
   }
 
-  private todosProdutos: Produto[] = [];
-  private todosEstoques: Estoque[] = [];
-  private todasMovimentacoes: MovimentacaoEstoque[] = [];
-  private fichasPorProduto: Record<number, FichaTecnicaItem[]> = {};
-
-  /**
-   * A natureza vem tanto embutida no estoque quanto na lista de produtos;
-   * usa a lista de produtos quando já carregou (é a fonte mais completa).
-   */
-  private ehInsumo(produtoId: number, natureza?: string | null): boolean {
-    const produto = this.todosProdutos.find((p) => p.id === produtoId);
-    return (produto?.natureza ?? natureza) === 'INSUMO';
+  critico(item: ItemEstoque): boolean {
+    return !!item.estoque && item.estoque.abaixoDoMinimo;
   }
 
-  private aplicarFiltroInsumo() {
-    this.estoques = this.todosEstoques.filter((e) => this.ehInsumo(e.produto.id, e.produto.natureza));
-    this.estoquesOcultos = this.todosEstoques.length - this.estoques.length;
-
-    const idsInsumo = new Set(this.estoques.map((e) => e.produto.id));
-    this.movimentacoes = this.todasMovimentacoes.filter((m) => idsInsumo.has(m.produto.id));
-
-    const idsComEstoque = new Set(this.todosEstoques.map((e) => e.produto.id));
-    this.produtosSemEstoque = this.todosProdutos.filter((p) => p.natureza === 'INSUMO' && !idsComEstoque.has(p.id));
-
-    this.calcularProducaoPossivel();
-  }
-
-  private carregarProducaoPossivel() {
-    const preparados = this.todosProdutos.filter((p) => p.natureza === 'PREPARADO' && p.flAtivo);
-    if (preparados.length === 0) {
-      this.producaoPossivel = [];
+  salvar() {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
       return;
     }
 
-    this.carregandoProducao = true;
-    forkJoin(
-      preparados.map((p) => this.fichaTecnicaService.listar(p.id).pipe(catchError(() => of([] as FichaTecnicaItem[])))),
-    ).subscribe({
-      next: (fichas) => {
-        this.fichasPorProduto = {};
-        preparados.forEach((p, i) => (this.fichasPorProduto[p.id] = fichas[i]));
-        this.carregandoProducao = false;
-        this.calcularProducaoPossivel();
-      },
-      error: () => (this.carregandoProducao = false),
-    });
-  }
+    const valores = this.form.getRawValue();
+    const ingrediente = {
+      nome: valores.nome.trim(),
+      unidadeMedida: valores.unidadeMedida,
+      custo: Number(valores.custo ?? 0),
+    };
+    const qtdAtual = Number(valores.qtdAtual ?? 0);
+    const qtdMinima = Number(valores.qtdMinima ?? 0);
+    const editando = this.editando();
 
-  private calcularProducaoPossivel() {
-    const estoquePorInsumo = new Map(this.estoques.map((e) => [e.produto.id, e.quantidadeAtual]));
+    this.salvando.set(true);
+    this.erro.set(null);
 
-    this.producaoPossivel = this.todosProdutos
-      .filter((p) => this.fichasPorProduto[p.id]?.length)
-      .map((produto) => {
-        let quantidade = Number.POSITIVE_INFINITY;
-        let limitante: string | null = null;
-        const semControle: string[] = [];
+    const requisicao: Observable<unknown> = editando
+      ? this.estoqueService.atualizarIngrediente(editando.ingrediente.id, ingrediente).pipe(
+          switchMap(() => this.salvarEstoque(editando.ingrediente.id, editando.estoque, qtdAtual, qtdMinima)),
+        )
+      : this.estoqueService
+          .criarIngrediente(ingrediente)
+          .pipe(switchMap((criado) => this.estoqueService.criarEstoque(criado.id, qtdAtual, qtdMinima)));
 
-        for (const item of this.fichasPorProduto[produto.id]) {
-          const disponivel = estoquePorInsumo.get(item.insumo.id);
-          if (disponivel === undefined) {
-            semControle.push(item.insumo.nome);
-            continue;
-          }
-          if (!item.quantidade || item.quantidade <= 0) continue;
-          const possivel = Math.floor(disponivel / item.quantidade);
-          if (possivel < quantidade) {
-            quantidade = possivel;
-            limitante = item.insumo.nome;
-          }
-        }
-
-        return {
-          produto,
-          quantidade: Number.isFinite(quantidade) ? quantidade : 0,
-          limitante,
-          semControle,
-        };
-      })
-      .sort((a, b) => a.quantidade - b.quantidade || a.produto.nome.localeCompare(b.produto.nome));
-  }
-
-  get estoqueBaixo(): Estoque[] {
-    return this.estoques.filter((e) => e.quantidadeAtual < e.estoqueMinimo);
-  }
-
-  iconeCategoria(categoriaNome?: string | null): string {
-    return (categoriaNome && ICONE_POR_CATEGORIA[categoriaNome]) || 'bi-box-seam';
-  }
-
-  cadastrarNoEstoque() {
-    if (this.formCadastro.invalid || this.enviandoCadastro) {
-      this.formCadastro.markAllAsTouched();
-      return;
-    }
-
-    const { produtoId, quantidadeAtual, estoqueMinimo } = this.formCadastro.getRawValue();
-    this.enviandoCadastro = true;
-    this.erro = null;
-
-    this.estoqueService.criar(produtoId!, quantidadeAtual!, estoqueMinimo!).subscribe({
-      next: (estoque) => {
-        this.enviandoCadastro = false;
-        this.todosEstoques = [estoque, ...this.todosEstoques];
-        this.aplicarFiltroInsumo();
-        this.formCadastro.reset({ produtoId: null, quantidadeAtual: 0, estoqueMinimo: 0 });
-      },
-      error: (erro) => {
-        this.enviandoCadastro = false;
-        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível cadastrar o produto no estoque.');
-      },
-    });
-  }
-
-  registrarMovimentacao() {
-    if (this.formMovimentacao.invalid || this.enviandoMovimentacao) {
-      this.formMovimentacao.markAllAsTouched();
-      return;
-    }
-
-    const { produtoId, tipo, quantidade, observacao } = this.formMovimentacao.getRawValue();
-    this.enviandoMovimentacao = true;
-    this.erro = null;
-
-    this.estoqueService.registrarMovimentacao(produtoId!, tipo!, quantidade!, observacao || undefined).subscribe({
-      next: (movimentacao) => {
-        this.enviandoMovimentacao = false;
-        this.sucesso = true;
-        setTimeout(() => (this.sucesso = false), 4000);
-        this.formMovimentacao.reset({ produtoId: null, tipo: 'ENTRADA', quantidade: null, observacao: '' });
+    requisicao.subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.mostrarSucesso(editando ? `"${ingrediente.nome}" atualizado.` : `"${ingrediente.nome}" cadastrado.`);
+        this.cancelarEdicao();
         this.carregar();
       },
       error: (erro) => {
-        this.enviandoMovimentacao = false;
-        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível registrar a movimentação.');
+        this.salvando.set(false);
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível salvar o ingrediente.'));
+        // o ingrediente pode ter sido salvo mesmo se o estoque falhou
+        this.carregar();
       },
     });
+  }
+
+  /** Cria o estoque se ainda não existir; senão altera só o mínimo (se mudou). */
+  private salvarEstoque(
+    idIngrediente: number,
+    estoque: Estoque | null,
+    qtdAtual: number,
+    qtdMinima: number,
+  ): Observable<unknown> {
+    if (!estoque) {
+      return this.estoqueService.criarEstoque(idIngrediente, qtdAtual, qtdMinima);
+    }
+    return estoque.qtdMinima !== qtdMinima ? this.estoqueService.alterarMinimo(estoque, qtdMinima) : of(null);
+  }
+
+  editar(item: ItemEstoque) {
+    this.editando.set(item);
+    this.form.setValue({
+      nome: item.ingrediente.nome,
+      unidadeMedida: item.ingrediente.unidadeMedida,
+      custo: item.ingrediente.custo,
+      qtdAtual: item.estoque?.qtdAtual ?? 0,
+      qtdMinima: item.estoque?.qtdMinima ?? 0,
+    });
+    // a quantidade atual só muda por entrada/saída
+    if (item.estoque) {
+      this.form.controls.qtdAtual.disable();
+    } else {
+      this.form.controls.qtdAtual.enable();
+    }
+  }
+
+  cancelarEdicao() {
+    this.editando.set(null);
+    this.form.controls.qtdAtual.enable();
+    this.form.reset({ nome: '', unidadeMedida: 'un', custo: null, qtdAtual: 0, qtdMinima: 0 });
+  }
+
+  excluir(item: ItemEstoque) {
+    if (!confirm(`Excluir o ingrediente "${item.ingrediente.nome}"?`)) {
+      return;
+    }
+
+    this.estoqueService.excluirIngrediente(item.ingrediente.id).subscribe({
+      next: () => {
+        this.mostrarSucesso(`"${item.ingrediente.nome}" excluído.`);
+        if (this.editando()?.ingrediente.id === item.ingrediente.id) this.cancelarEdicao();
+        this.carregar();
+      },
+      error: (erro) =>
+        this.erro.set(
+          MensagemErroApiUtil.extrair(
+            erro,
+            'Não foi possível excluir. Verifique se o ingrediente está na ficha técnica de algum produto.',
+          ),
+        ),
+    });
+  }
+
+  // ------------------------------------------------------------ movimento
+  abrirMovimento(item: ItemEstoque, tipo: TipoMovimento) {
+    this.movimento.set({ item, tipo });
+    this.quantidadeMovimento = null;
+  }
+
+  fecharMovimento() {
+    this.movimento.set(null);
+  }
+
+  confirmarMovimento() {
+    const movimento = this.movimento();
+    const quantidade = Number(this.quantidadeMovimento);
+    if (!movimento || !(quantidade > 0)) {
+      return;
+    }
+
+    const { item, tipo } = movimento;
+    const requisicao = !item.estoque
+      ? this.estoqueService.criarEstoque(item.ingrediente.id, quantidade, 0)
+      : tipo === 'entrada'
+        ? this.estoqueService.registrarEntrada(item.estoque.id, quantidade)
+        : this.estoqueService.registrarSaida(item.estoque.id, quantidade);
+
+    this.movimentando.set(true);
+    requisicao.subscribe({
+      next: () => {
+        this.movimentando.set(false);
+        this.movimento.set(null);
+        this.mostrarSucesso(
+          `${tipo === 'entrada' ? 'Entrada' : 'Saída'} de ${quantidade} ${item.ingrediente.unidadeMedida} em "${item.ingrediente.nome}" registrada.`,
+        );
+        this.carregar();
+      },
+      error: (erro) => {
+        this.movimentando.set(false);
+        this.movimento.set(null);
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível registrar a movimentação.'));
+      },
+    });
+  }
+
+  private mostrarSucesso(mensagem: string) {
+    this.sucesso.set(mensagem);
+    setTimeout(() => this.sucesso.set(null), 4000);
   }
 }

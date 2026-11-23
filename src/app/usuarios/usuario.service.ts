@@ -1,48 +1,54 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Perfil } from '../auth/auth.service';
+import { Perfil, ROLE_BACKEND, perfilDasRoles } from '../auth/auth.service';
 
 export interface Usuario {
-  id: number;
-  nome: string;
-  email: string;
-  role: Perfil;
-  flAtivo: boolean | null;
-  empresa: { id: number; nome: string } | null;
+  username: string;
+  roles: string[];
+  perfil: Perfil;
 }
 
 export interface UsuarioPayload {
-  nome: string;
-  email: string;
+  username: string;
   senha: string;
-  role: Perfil;
-  flAtivo: boolean;
+  perfil: Perfil;
 }
 
-export interface UsuarioAtualizacaoPayload {
-  nome: string;
-  email: string;
-  role: Perfil;
-  flAtivo: boolean;
+interface ApiUsuario {
+  username: string;
+  roles: string[] | null;
 }
 
 const API_URL = `${environment.apiUrl}/usuarios`;
 
+/** Endpoints /usuarios do backend (UsuarioDTO: username, password, roles). */
 @Injectable({ providedIn: 'root' })
 export class UsuarioService {
   constructor(private http: HttpClient) {}
 
   listar(): Observable<Usuario[]> {
-    return this.http.get<Usuario[]>(API_URL);
+    return this.http.get<ApiUsuario[] | null>(API_URL).pipe(
+      map((usuarios) =>
+        (usuarios ?? [])
+          .map((usuario) => this.mapear(usuario))
+          .sort((a, b) => a.username.localeCompare(b.username)),
+      ),
+    );
   }
 
+  /** POST /usuarios responde 201 sem corpo. */
   criar(usuario: UsuarioPayload): Observable<Usuario> {
-    return this.http.post<Usuario>(API_URL, usuario);
+    const roles = [ROLE_BACKEND[usuario.perfil]];
+
+    return this.http
+      .post<void>(API_URL, { username: usuario.username, password: usuario.senha, roles })
+      .pipe(map(() => this.mapear({ username: usuario.username, roles })));
   }
 
-  atualizar(id: number, usuario: UsuarioAtualizacaoPayload): Observable<Usuario> {
-    return this.http.put<Usuario>(`${API_URL}/${id}`, usuario);
+  private mapear(usuario: ApiUsuario): Usuario {
+    const roles = usuario.roles ?? [];
+    return { username: usuario.username, roles, perfil: perfilDasRoles(roles) };
   }
 }

@@ -1,0 +1,33 @@
+:host {
+  display: block;
+}
+
+.barra-filtros {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.barra-filtros .filtros {
+  margin-bottom: 0;
+}
+
+.busca-usuario {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  max-width: 420px;
+  min-width: 240px;
+}
+
+.tabela td strong {
+  color: var(--color-text);
+  margin-right: 6px;
+}
+
+.tabela .btn-icone {
+  text-decoration: none;
+}

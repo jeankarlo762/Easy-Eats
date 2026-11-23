@@ -1,196 +1,134 @@
 <div class="pagina">
-  <header class="topo topo-com-acao">
+  <header class="topo">
     <div>
-      <h1>Novo {{ rotulo }}</h1>
-      <p>
-        @if (ehInsumo) {
-          Matéria-prima usada na ficha técnica dos produtos. O estoque é controlado por insumo.
-        } @else {
-          Itens vendidos no cardápio: preparados (ex.: X-Burger) ou de revenda.
-        }
-      </p>
+      <h1>Catálogo de Produtos</h1>
+      <p>Cadastre e edite os produtos vendidos. Alterar o preço cria uma nova versão de preço na API.</p>
     </div>
-    <a class="btn-estoque" routerLink="/produtos/estoque">
-      <i class="bi bi-boxes"></i> Ir para Estoque
-    </a>
   </header>
 
-  @if (erro) {
-    <div class="alerta-erro">{{ erro }}</div>
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
+  }
+  @if (sucesso()) {
+    <div class="alerta alerta-sucesso"><i class="bi bi-check-circle"></i><span class="alerta-texto">{{ sucesso() }}</span></div>
   }
 
-  <div class="card-form">
-    <form [formGroup]="form" (ngSubmit)="salvar()">
-      <div class="input-group">
-        <label>Nome do {{ rotulo }}</label>
-        <input type="text" [placeholder]="ehInsumo ? 'Ex: Pão de hambúrguer' : 'Ex: Hambúrguer Clássico'" formControlName="nome" />
-      </div>
+  <div class="grid-form-lista">
+    <section class="painel">
+      <h3>{{ editando() ? 'Editar produto' : 'Novo produto' }}</h3>
 
-      <div class="input-group">
-        <label>Descrição</label>
-        <input type="text" [placeholder]="ehInsumo ? 'Ex: Pão brioche 60g' : 'Ex: Pão, hambúrguer, queijo, alface e tomate'" formControlName="descricao" />
-      </div>
-
-      <div class="input-row">
-        <div class="input-group">
-          <label>Categoria</label>
-          <select formControlName="categoriaId">
-            <option [ngValue]="null">Selecione...</option>
-            @for (categoria of categorias; track categoria.id) {
-              <option [ngValue]="categoria.id">{{ categoria.nome }}</option>
-            }
-          </select>
-        </div>
-
-        @if (!ehInsumo) {
-          <div class="input-group">
-            <label>Natureza</label>
-            <select formControlName="natureza">
-              <option [ngValue]="null">Selecione...</option>
-              @for (opcao of naturezas; track opcao.valor) {
-                <option [ngValue]="opcao.valor">{{ opcao.label }}</option>
-              }
-            </select>
-          </div>
-        }
-      </div>
-
-      <div class="input-row">
-        <div class="input-group">
-          <label>Preço (R$)</label>
-          <input type="number" step="0.01" placeholder="0.00" formControlName="preco" />
-        </div>
-
-        <div class="input-group">
-          <label>Custo (R$)</label>
-          <input type="number" step="0.01" placeholder="0.00" formControlName="custo" />
-        </div>
-      </div>
-
-      <div class="input-group input-group--toggle">
-        <app-toggle-switch
-          [checked]="form.controls.flAtivo.value"
-          [label]="rotulo + ' ativo'"
-          (checkedChange)="form.controls.flAtivo.setValue($event)"
-        ></app-toggle-switch>
-      </div>
-
-      <div class="actions">
-        <button type="submit" class="btn-save" [disabled]="form.invalid || enviando">
-          <span>+</span> {{ enviando ? 'Salvando...' : 'Cadastrar ' + rotulo }}
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <section class="lista-produtos">
-    <h2>{{ ehInsumo ? 'Insumos cadastrados' : 'Produtos cadastrados' }}</h2>
-
-    @if (carregando) {
-      <app-carregando texto="Carregando produtos..."></app-carregando>
-    } @else if (produtos.length === 0) {
-      <p class="vazio">Nenhum {{ ehInsumo ? 'insumo' : 'produto' }} cadastrado ainda.</p>
-    } @else {
-      @for (produto of produtos; track produto.id) {
-        <div class="produto-item">
-          <button class="produto-item__header" (click)="alternarExpandir(produto)">
-            <div class="produto-item__info">
-              <strong>{{ produto.nome }}</strong>
-              <span class="badge-natureza">{{ produto.natureza ?? 'Sem natureza definida' }}</span>
-            </div>
-            <span class="preco">R$ {{ produto.preco.toFixed(2) }}</span>
-            <i class="bi" [ngClass]="produtoExpandidoId === produto.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-          </button>
-
-          @if (produtoExpandidoId === produto.id) {
-            <div class="produto-item__detalhes">
-              @if (exibeComposicao) {
-                <div class="bloco-detalhe">
-                  <h4>Composição</h4>
-                  <p class="ajuda">Itens que aparecem como toggle no carrinho (podem ser retirados do pedido).</p>
-
-                  <ul class="lista-chips">
-                    @for (item of composicaoPorProduto[produto.id] ?? []; track item.id) {
-                      <li class="chip">
-                        {{ item.nome }}
-                        <button class="chip__remover" (click)="excluirItemComposicao(produto.id, item.id)" aria-label="Remover item">
-                          <i class="bi bi-x"></i>
-                        </button>
-                      </li>
-                    } @empty {
-                      <li class="vazio-inline">Nenhum item de composição cadastrado.</li>
-                    }
-                  </ul>
-
-                  <div class="linha-adicionar">
-                    <input
-                      type="text"
-                      placeholder="Ex: Queijo"
-                      [(ngModel)]="novoItemComposicaoNome"
-                      [ngModelOptions]="{ standalone: true }"
-                      (keyup.enter)="adicionarItemComposicao(produto.id)"
-                    />
-                    <button (click)="adicionarItemComposicao(produto.id)">Adicionar</button>
-                  </div>
-                </div>
-              }
-
-              @if (exibeAdicionais) {
-                <div class="bloco-detalhe">
-                  <h4>Adicionais</h4>
-                  <p class="ajuda">Opções extras oferecidas para este produto no carrinho, com preço.</p>
-
-                  <ul class="lista-chips">
-                    @for (adicional of adicionaisPorProduto[produto.id] ?? []; track adicional.id) {
-                      <li class="chip">
-                        {{ adicional.nome }} — R$ {{ adicional.preco.toFixed(2) }}
-                        <button class="chip__remover" (click)="excluirAdicional(produto.id, adicional.id)" aria-label="Remover adicional">
-                          <i class="bi bi-x"></i>
-                        </button>
-                      </li>
-                    } @empty {
-                      <li class="vazio-inline">Nenhum adicional cadastrado.</li>
-                    }
-                  </ul>
-
-                  <div class="linha-adicionar">
-                    <input
-                      type="text"
-                      placeholder="Ex: Bacon"
-                      [(ngModel)]="novoAdicionalNome"
-                      [ngModelOptions]="{ standalone: true }"
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Preço"
-                      class="input-preco"
-                      [(ngModel)]="novoAdicionalPreco"
-                      [ngModelOptions]="{ standalone: true }"
-                    />
-                    <button (click)="adicionarAdicional(produto.id)">Adicionar</button>
-                  </div>
-                </div>
-              }
-
-              @if (!exibeComposicao && !exibeAdicionais) {
-                <p class="ajuda">
-                  Produtos do tipo Insumo não têm composição nem adicionais — eles são usados como matéria-prima de
-                  outros produtos.
-                </p>
-              }
-            </div>
+      <form [formGroup]="form" (ngSubmit)="salvar()">
+        <div class="campo">
+          <label for="prod-nome">Nome</label>
+          <input id="prod-nome" type="text" placeholder="Ex: Hambúrguer clássico" formControlName="nome" />
+          @if (form.controls.nome.touched && form.controls.nome.invalid) {
+            <small class="erro-campo">Informe o nome.</small>
           }
         </div>
-      }
-    }
-  </section>
 
-  @if (produtoParaConfirmar) {
-    <app-modal-cadastro-produto
-      [produto]="produtoParaConfirmar"
-      (fechar)="fecharModalConfirmacao()"
-      (cadastrar)="fecharModalConfirmacao()">
-    </app-modal-cadastro-produto>
-  }
+        <div class="campo">
+          <label for="prod-descricao">Descrição</label>
+          <textarea id="prod-descricao" rows="2" placeholder="Opcional" formControlName="descricao"></textarea>
+        </div>
+
+        <div class="campo-linha">
+          <div class="campo">
+            <label for="prod-categoria">Categoria</label>
+            <select id="prod-categoria" formControlName="categoriaId">
+              <option [ngValue]="null">Selecione...</option>
+              @for (categoria of categoriasAtivas(); track categoria.id) {
+                <option [ngValue]="categoria.id">{{ categoria.nome }}</option>
+              }
+            </select>
+            @if (form.controls.categoriaId.touched && form.controls.categoriaId.invalid) {
+              <small class="erro-campo">Selecione a categoria.</small>
+            }
+            @if (!carregando() && categoriasAtivas().length === 0) {
+              <small class="erro-campo">Nenhuma categoria ativa. <a routerLink="/categorias">Cadastrar</a></small>
+            }
+          </div>
+
+          <div class="campo">
+            <label for="prod-preco">Preço (R$)</label>
+            <input id="prod-preco" type="number" step="0.01" min="0.01" placeholder="0,00" formControlName="preco" />
+            @if (form.controls.preco.touched && form.controls.preco.invalid) {
+              <small class="erro-campo">Informe um preço maior que zero.</small>
+            }
+          </div>
+        </div>
+
+        <div class="acoes-form">
+          <button type="submit" class="btn btn-primario" [disabled]="enviando()">
+            {{ enviando() ? 'Salvando...' : editando() ? 'Salvar alterações' : 'Cadastrar produto' }}
+          </button>
+          @if (editando()) {
+            <button type="button" class="btn btn-secundario" (click)="cancelarEdicao()">Cancelar</button>
+          }
+        </div>
+      </form>
+    </section>
+
+    <section class="painel">
+      <div class="painel-cabecalho">
+        <h3>Produtos ativos ({{ produtos().length }})</h3>
+        <a class="btn btn-secundario btn-sm" routerLink="/ficha-tecnica"><i class="bi bi-clipboard2-data"></i> Ficha técnica</a>
+      </div>
+
+      <input
+        type="search"
+        class="input-padrao busca"
+        placeholder="Buscar por nome ou categoria..."
+        [ngModel]="busca()"
+        (ngModelChange)="busca.set($event)"
+      />
+
+      @if (carregando()) {
+        <app-carregando texto="Carregando produtos..."></app-carregando>
+      } @else {
+        <div class="tabela-wrap">
+          <table class="tabela">
+            <thead>
+              <tr><th>Produto</th><th>Categoria</th><th class="num">Preço</th><th class="acoes"></th></tr>
+            </thead>
+            <tbody>
+              @for (produto of produtosFiltrados(); track produto.id) {
+                <tr [class.em-edicao]="editando()?.id === produto.id">
+                  <td>
+                    <strong>{{ produto.nome }}</strong>
+                    @if (produto.descricao) {
+                      <small class="descricao-produto">{{ produto.descricao }}</small>
+                    }
+                  </td>
+                  <td>{{ produto.categoria?.nome ?? 'Sem categoria' }}</td>
+                  <td class="num">
+                    @if (produto.preco > 0) {
+                      {{ produto.preco | currency: 'BRL' }}
+                    } @else {
+                      <span class="badge aviso">Sem preço</span>
+                    }
+                  </td>
+                  <td class="acoes">
+                    <div>
+                      <button type="button" class="btn-icone" (click)="editar(produto)" title="Editar" aria-label="Editar">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button type="button" class="btn-icone perigo" (click)="excluir(produto)" title="Excluir" aria-label="Excluir">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="4" class="vazio">Nenhum produto encontrado.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  </div>
 </div>

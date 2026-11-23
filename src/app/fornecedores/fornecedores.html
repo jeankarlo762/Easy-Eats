@@ -5,7 +5,7 @@
   </header>
 
   @if (erro) {
-    <div class="alerta-erro">{{ erro }}</div>
+    <p class="vazio">{{ erro }}</p>
   }
 
   <div class="grid-duas-colunas">
@@ -23,7 +23,7 @@
 
         <div class="campo">
           <label>CNPJ</label>
-          <input type="text" placeholder="00.000.000/0000-00" formControlName="cnpj" />
+          <input type="text" placeholder="00.000.000/0001-00" formControlName="cnpj" />
           @if (form.get('cnpj')?.touched && form.get('cnpj')?.errors?.['required']) {
             <small class="erro">CNPJ é obrigatório.</small>
           }
@@ -31,24 +31,27 @@
 
         <div class="campo">
           <label>Telefone (opcional)</label>
-          <input type="text" placeholder="Ex: (11) 98765-4321" formControlName="telefone" />
+          <input type="text" placeholder="(11) 98765-4321" formControlName="telefone" />
         </div>
 
         <div class="campo">
-          <label>E-mail (opcional)</label>
+          <label>Email (opcional)</label>
           <input type="email" placeholder="contato@fornecedor.com" formControlName="email" />
           @if (form.get('email')?.touched && form.get('email')?.errors?.['email']) {
-            <small class="erro">E-mail inválido.</small>
+            <small class="erro">Email inválido.</small>
           }
         </div>
 
-        @if (sucesso) {
-          <div class="alerta-sucesso"><i class="bi bi-check-circle"></i> Fornecedor salvo com sucesso!</div>
-        }
+        <div class="campo campo-checkbox">
+          <label>
+            <input type="checkbox" formControlName="flAtivo" />
+            Fornecedor ativo
+          </label>
+        </div>
 
         <div class="acoes-form">
-          <button type="submit" class="btn-salvar" [disabled]="enviando">
-            {{ enviando ? 'Salvando...' : editandoId !== null ? 'Salvar Alterações' : 'Adicionar Fornecedor' }}
+          <button type="submit" class="btn-salvar" [disabled]="salvando">
+            {{ editandoId !== null ? 'Salvar Alterações' : 'Adicionar Fornecedor' }}
           </button>
 
           @if (editandoId !== null) {
@@ -62,17 +65,20 @@
       <h3>Fornecedores Cadastrados</h3>
 
       @if (carregando) {
-        <app-carregando texto="Carregando fornecedores..."></app-carregando>
+        <p class="vazio">Carregando fornecedores...</p>
       } @else {
         <div class="lista">
           @for (fornecedor of fornecedores; track fornecedor.id) {
             <div class="linha">
               <div class="info">
                 <strong>{{ fornecedor.nome }}</strong>
-                <span>{{ fornecedor.cnpj }}{{ fornecedor.telefone ? ' · ' + fornecedor.telefone : '' }}</span>
+                <span>{{ fornecedor.cnpj }}@if (fornecedor.telefone) { · {{ fornecedor.telefone }} }</span>
               </div>
 
               <div class="direita">
+                <span class="badge" [class.sucesso]="fornecedor.flAtivo" [class.neutro]="!fornecedor.flAtivo">
+                  {{ fornecedor.flAtivo ? 'Ativo' : 'Inativo' }}
+                </span>
                 <button type="button" class="btn-icone" (click)="editar(fornecedor)" title="Editar">
                   <i class="bi bi-pencil"></i>
                 </button>

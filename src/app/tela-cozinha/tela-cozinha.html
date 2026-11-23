@@ -1,136 +1,79 @@
 <div class="pagina">
-  <header class="topo topo-cozinha">
+  <header class="topo">
     <div>
       <h1><i class="bi bi-display"></i> Tela Cozinha</h1>
-      <p>Toque na seta para avançar o status do pedido</p>
+      <p>Toque no botão do pedido para avançar o status. Atualiza sozinha a cada 10 segundos.</p>
     </div>
 
-    <button type="button" class="btn-nova-janela" (click)="abrirNovaJanela()" title="Abrir tela cozinha em uma nova janela">
-      <i class="bi bi-box-arrow-up-right"></i> Abrir em Nova Janela
-    </button>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+      <button type="button" class="btn btn-secundario" (click)="abrirNovaJanela()" title="Abrir a tela da cozinha em uma nova janela">
+        <i class="bi bi-box-arrow-up-right"></i> Nova janela
+      </button>
+    </div>
   </header>
 
-  @if (erro) {
-    <div class="alerta-erro">{{ erro }}</div>
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
   }
 
-  @if (carregando) {
-    <p class="vazio">Carregando pedidos...</p>
+  @if (carregando()) {
+    <app-carregando texto="Carregando pedidos..."></app-carregando>
   } @else {
     <div class="colunas">
       <section class="coluna">
-        <div class="coluna-titulo aguardando">Aguardando <span>{{ aguardando.length }}</span></div>
-
+        <div class="coluna-titulo aguardando">Aguardando <span>{{ aguardando().length }}</span></div>
         <div class="cartoes">
-          @for (venda of aguardando; track venda.id) {
-            <div class="cartao">
-              <div class="cartao-conteudo">
-                <div class="cartao-topo">
-                  <strong>#{{ venda.id }}</strong>
-                  <span>{{ identificacao(venda) }}</span>
-                </div>
-                <ul>
-                  @for (item of itensResumo(venda); track item) {
-                    <li>
-                      <span class="item-nome">{{ item.texto }}</span>
-                      @if (item.removidos.length) {
-                        <span class="item-removido"><i class="bi bi-dash-circle"></i> Sem {{ item.removidos.join(', ') }}</span>
-                      }
-                      @if (item.adicionais.length) {
-                        <span class="item-adicional"><i class="bi bi-plus-circle"></i> {{ item.adicionais.join(', ') }}</span>
-                      }
-                      @if (item.observacao) {
-                        <span class="item-obs"><i class="bi bi-chat-left-text"></i> {{ item.observacao }}</span>
-                      }
-                    </li>
-                  }
-                </ul>
-              </div>
-              <button type="button" class="barra-avancar" (click)="avancar(venda)" title="Avançar status">
-                <i class="bi bi-chevron-double-down"></i>
-              </button>
-            </div>
+          @for (comanda of aguardando(); track comanda.id) {
+            <ng-container *ngTemplateOutlet="cartao; context: { $implicit: comanda, acao: 'Iniciar preparo', icone: 'bi-play-fill' }"></ng-container>
           } @empty {
-            <p class="vazio">Nada por aqui</p>
+            <p class="vazio">Nenhum pedido aguardando</p>
           }
         </div>
       </section>
 
       <section class="coluna">
-        <div class="coluna-titulo preparando">Preparando <span>{{ preparando.length }}</span></div>
-
+        <div class="coluna-titulo preparando">Em preparo <span>{{ preparando().length }}</span></div>
         <div class="cartoes">
-          @for (venda of preparando; track venda.id) {
-            <div class="cartao">
-              <div class="cartao-conteudo">
-                <div class="cartao-topo">
-                  <strong>#{{ venda.id }}</strong>
-                  <span>{{ identificacao(venda) }}</span>
-                </div>
-                <ul>
-                  @for (item of itensResumo(venda); track item) {
-                    <li>
-                      <span class="item-nome">{{ item.texto }}</span>
-                      @if (item.removidos.length) {
-                        <span class="item-removido"><i class="bi bi-dash-circle"></i> Sem {{ item.removidos.join(', ') }}</span>
-                      }
-                      @if (item.adicionais.length) {
-                        <span class="item-adicional"><i class="bi bi-plus-circle"></i> {{ item.adicionais.join(', ') }}</span>
-                      }
-                      @if (item.observacao) {
-                        <span class="item-obs"><i class="bi bi-chat-left-text"></i> {{ item.observacao }}</span>
-                      }
-                    </li>
-                  }
-                </ul>
-              </div>
-              <button type="button" class="barra-avancar" (click)="avancar(venda)" title="Avançar status">
-                <i class="bi bi-chevron-double-down"></i>
-              </button>
-            </div>
+          @for (comanda of preparando(); track comanda.id) {
+            <ng-container *ngTemplateOutlet="cartao; context: { $implicit: comanda, acao: 'Finalizar', icone: 'bi-check-lg' }"></ng-container>
           } @empty {
-            <p class="vazio">Nada por aqui</p>
-          }
-        </div>
-      </section>
-
-      <section class="coluna">
-        <div class="coluna-titulo pronto">Pronto <span>{{ prontos.length }}</span></div>
-
-        <div class="cartoes">
-          @for (venda of prontos; track venda.id) {
-            <div class="cartao pronto">
-              <div class="cartao-conteudo">
-                <div class="cartao-topo">
-                  <strong>#{{ venda.id }}</strong>
-                  <span>{{ identificacao(venda) }}</span>
-                </div>
-                <ul>
-                  @for (item of itensResumo(venda); track item) {
-                    <li>
-                      <span class="item-nome">{{ item.texto }}</span>
-                      @if (item.removidos.length) {
-                        <span class="item-removido"><i class="bi bi-dash-circle"></i> Sem {{ item.removidos.join(', ') }}</span>
-                      }
-                      @if (item.adicionais.length) {
-                        <span class="item-adicional"><i class="bi bi-plus-circle"></i> {{ item.adicionais.join(', ') }}</span>
-                      }
-                      @if (item.observacao) {
-                        <span class="item-obs"><i class="bi bi-chat-left-text"></i> {{ item.observacao }}</span>
-                      }
-                    </li>
-                  }
-                </ul>
-              </div>
-              <button type="button" class="barra-avancar" (click)="avancar(venda)" title="Marcar como entregue">
-                <i class="bi bi-chevron-double-down"></i>
-              </button>
-            </div>
-          } @empty {
-            <p class="vazio">Nada por aqui</p>
+            <p class="vazio">Nenhum pedido em preparo</p>
           }
         </div>
       </section>
     </div>
   }
 </div>
+
+<ng-template #cartao let-comanda let-acao="acao" let-icone="icone">
+  <article class="cartao">
+    <div class="cartao-topo">
+      <strong>#{{ comanda.id }} · {{ identificacao(comanda) }}</strong>
+      <span>{{ comanda.dataCriacao ? (comanda.dataCriacao | date: 'HH:mm') : '' }}</span>
+    </div>
+    @if (comanda.nomeCliente && comanda.mesa) {
+      <span class="cartao-cliente"><i class="bi bi-person"></i> {{ comanda.nomeCliente }}</span>
+    }
+    <ul>
+      @for (item of comanda.itens; track $index) {
+        <li><strong>{{ item.quantidade }}×</strong> {{ item.produto.nome }}</li>
+      }
+    </ul>
+    <button
+      type="button"
+      class="btn btn-primario btn-bloco"
+      [disabled]="processandoId() !== null"
+      (click)="avancar(comanda)"
+    >
+      <i class="bi" [class]="icone"></i>
+      {{ processandoId() === comanda.id ? 'Atualizando...' : acao }}
+    </button>
+  </article>
+</ng-template>

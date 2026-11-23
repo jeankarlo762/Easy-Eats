@@ -1,23 +1,30 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection, importProvidersFrom } from '@angular/core';
+import {
+  ApplicationConfig,
+  LOCALE_ID,
+  provideBrowserGlobalErrorListeners,
+  provideZonelessChangeDetection,
+} from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localePt from '@angular/common/locales/pt';
 import { provideRouter, withViewTransitions } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './auth/auth.interceptor';
 
-// Explícito porque bootstrapApplication, no Angular 21, assume zoneless por
-// padrão quando nada é informado — e os componentes deste app atualizam
-// estado dentro de callbacks de subscribe() manuais (sem signals nem async
-// pipe), que a detecção de mudanças zoneless não observa sozinha. Sem isto,
-// telas como Novo Pedido ficam presas no spinner de carregamento mesmo com
-// a resposta da API já chegando.
+registerLocaleData(localePt);
+
+/*
+ * O app roda SEM zone.js (zoneless). A tela só é atualizada quando um signal
+ * lido no template muda (ou após um evento do próprio template). Por isso o
+ * estado das telas (carregando, erro, listas...) é mantido em signal().
+ */
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideZonelessChangeDetection(),
     provideRouter(routes, withViewTransitions()),
     provideHttpClient(withInterceptors([authInterceptor])),
-    importProvidersFrom(FormsModule)
-  ]
+    { provide: LOCALE_ID, useValue: 'pt-BR' },
+  ],
 };

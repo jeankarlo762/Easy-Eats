@@ -1,0 +1,154 @@
+<div class="pagina">
+  <header class="topo no-print">
+    <div>
+      <h1>Relatório de Fechamento</h1>
+      <p>Resumo do turno de caixa para conferência e impressão</p>
+    </div>
+    <div class="topo-acoes">
+      <a class="btn btn-secundario" routerLink="/caixa-historico"><i class="bi bi-arrow-left"></i> Voltar</a>
+      @if (relatorio()) {
+        <button type="button" class="btn btn-primario" (click)="imprimir()"><i class="bi bi-printer"></i> Imprimir</button>
+      }
+    </div>
+  </header>
+
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+    </div>
+  }
+
+  @if (carregando()) {
+    <app-carregando texto="Carregando relatório..."></app-carregando>
+  } @else if (relatorio(); as r) {
+    <section class="painel folha">
+      <div class="folha-titulo">
+        <h2>Easy Eats · Fechamento de caixa #{{ r.caixa.id }}</h2>
+        <span [class]="'badge ' + classeDiferenca(r.caixa.diferenca)">
+          {{ rotuloDiferenca(r.caixa.diferenca) }}
+        </span>
+      </div>
+
+      <dl class="dados-turno">
+        <div>
+          <dt>Aberto por</dt>
+          <dd>{{ r.caixa.usuarioAbertura }}</dd>
+        </div>
+        <div>
+          <dt>Abertura</dt>
+          <dd>{{ r.caixa.dataAbertura | date: 'dd/MM/yyyy HH:mm' }}</dd>
+        </div>
+        <div>
+          <dt>Fechado por</dt>
+          <dd>{{ r.caixa.usuarioFechamento || '—' }}</dd>
+        </div>
+        <div>
+          <dt>Fechamento</dt>
+          <dd>{{ r.caixa.dataFechamento ? (r.caixa.dataFechamento | date: 'dd/MM/yyyy HH:mm') : '—' }}</dd>
+        </div>
+      </dl>
+
+      <div class="grid-stats">
+        <div class="stat-card">
+          <div class="stat-icon azul"><i class="bi bi-cash-stack"></i></div>
+          <div>
+            <div class="stat-valor">{{ r.caixa.fundoCaixa | currency: 'BRL' }}</div>
+            <div class="stat-label">Fundo de caixa</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon verde"><i class="bi bi-plus-circle"></i></div>
+          <div>
+            <div class="stat-valor">{{ r.totalSuprimentos | currency: 'BRL' }}</div>
+            <div class="stat-label">Suprimentos</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon verde"><i class="bi bi-receipt"></i></div>
+          <div>
+            <div class="stat-valor">{{ r.totalVendas | currency: 'BRL' }}</div>
+            <div class="stat-label">Vendas em dinheiro</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon vermelho"><i class="bi bi-box-arrow-up"></i></div>
+          <div>
+            <div class="stat-valor">{{ r.totalSangrias | currency: 'BRL' }}</div>
+            <div class="stat-label">Sangrias</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon roxo"><i class="bi bi-calculator"></i></div>
+          <div>
+            <div class="stat-valor">{{ r.caixa.valorEsperado | currency: 'BRL' }}</div>
+            <div class="stat-label">Valor esperado</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon laranja"><i class="bi bi-cash-coin"></i></div>
+          <div>
+            <div class="stat-valor">{{ r.caixa.valorContado | currency: 'BRL' }}</div>
+            <div class="stat-label">Valor contado</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" [class.verde]="!r.caixa.diferenca" [class.amarelo]="(r.caixa.diferenca ?? 0) > 0" [class.vermelho]="(r.caixa.diferenca ?? 0) < 0">
+            <i class="bi bi-plus-slash-minus"></i>
+          </div>
+          <div>
+            <div class="stat-valor">{{ r.caixa.diferenca | currency: 'BRL' }}</div>
+            <div class="stat-label">Diferença</div>
+          </div>
+        </div>
+      </div>
+
+      @if (r.caixa.observacaoAbertura) {
+        <p class="observacao"><strong>Observação da abertura:</strong> {{ r.caixa.observacaoAbertura }}</p>
+      }
+      @if (r.caixa.observacaoFechamento) {
+        <p class="observacao"><strong>Justificativa do fechamento:</strong> {{ r.caixa.observacaoFechamento }}</p>
+      }
+
+      <h3>Lançamentos do turno</h3>
+      <div class="tabela-wrap">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Data/hora</th>
+              <th>Tipo</th>
+              <th>Descrição</th>
+              <th>Usuário</th>
+              <th class="num">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of r.movimentacoes; track m.id) {
+              <tr>
+                <td>{{ m.dataMovimentacao | date: 'dd/MM HH:mm' }}</td>
+                <td>{{ tipoLabel[m.tipo] }}</td>
+                <td>
+                  {{ m.descricao || '—' }}
+                  @if (m.vendaId) {
+                    <a class="link-venda" [routerLink]="['/conta', m.vendaId]" title="Ver a conta"><i class="bi bi-box-arrow-up-right"></i></a>
+                  }
+                </td>
+                <td>{{ m.usuario }}</td>
+                <td class="num" [class.valor-saida]="ehSaida(m.tipo)" [class.valor-entrada]="!ehSaida(m.tipo)">
+                  {{ ehSaida(m.tipo) ? '−' : '+' }} {{ m.valor | currency: 'BRL' }}
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="vazio">Nenhum lançamento neste turno.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="assinaturas">
+        <div><span>{{ r.caixa.usuarioAbertura }}</span><small>Operador (abertura)</small></div>
+        <div><span>{{ r.caixa.usuarioFechamento || '' }}</span><small>Responsável (fechamento)</small></div>
+      </div>
+    </section>
+  }
+</div>

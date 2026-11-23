@@ -2,24 +2,16 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService, Perfil } from './auth.service';
 
-export function roleGuard(rolesPermitidas: Perfil[]): CanActivateFn {
+/** Libera a rota apenas para os perfis informados; os demais voltam para a Home. */
+export function perfilGuard(perfis: Perfil[]): CanActivateFn {
   return () => {
     const authService = inject(AuthService);
     const router = inject(Router);
 
     if (!authService.isAuthenticated()) {
-      router.navigate(['/login']);
-      return false;
+      return router.createUrlTree(['/login']);
     }
 
-    const role = authService.usuario()?.role;
-    if (role && rolesPermitidas.includes(role)) {
-      return true;
-    }
-
-    router.navigate(['/home']);
-    return false;
+    return authService.temPerfil(perfis) ? true : router.createUrlTree(['/home']);
   };
 }
-
-export const superadminGuard: CanActivateFn = roleGuard(['SUPERADMIN']);

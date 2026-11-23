@@ -1,193 +1,117 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { CarregandoComponent } from '../../components/carregando/carregando';
-import { Produto, ProdutoService } from '../cadastro-produto/produto.service';
-import { Estoque, EstoqueService } from '../controle-estoque/estoque.service';
-import { Venda, VendaService } from '../novo-pedido/venda.service';
-import { Despesa, DespesaPayload, DespesaService } from './despesa.service';
+import { FiltroPeriodoComponent } from '../../components/filtro-periodo/filtro-periodo';
+import { PaginacaoComponent } from '../../components/paginacao/paginacao';
+import { Pagina } from '../caixa/caixa.service';
 import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
+import { Periodo } from '../utils/periodoUtil';
+import {
+  FORMA_PAGAMENTO_LABEL,
+  ResumoVendas,
+  TIPO_VENDA_LABEL,
+  VendaResumo,
+  VendaService,
+} from '../vendas/venda.service';
 
-const ICONE_POR_CATEGORIA: Record<string, string> = {
-  Lanches: 'bi-egg-fried',
-  Bebidas: 'bi-cup-straw',
-};
+const TAMANHO_PAGINA = 10;
 
+/** Faturamento por período: vendas finalizadas, pela data em que a conta foi fechada. */
 @Component({
   selector: 'app-financeiro',
+  standalone: true,
   templateUrl: './financeiro.html',
-  imports: [CommonModule, FormsModule, CarregandoComponent],
+  imports: [CurrencyPipe, DatePipe, DecimalPipe, RouterLink, CarregandoComponent, FiltroPeriodoComponent, PaginacaoComponent],
   styleUrls: ['./financeiro.scss'],
 })
-export class Financeiro implements OnInit {
-  private produtoService = inject(ProdutoService);
-  private estoqueService = inject(EstoqueService);
+export class Financeiro {
   private vendaService = inject(VendaService);
-  private despesaService = inject(DespesaService);
 
-  abaSelecionada: 'resumo' | 'vendas' | 'despesas' | 'produtos' = 'resumo';
-  filtroSelecionado: 'hoje' | 'semana' | 'periodo' = 'hoje';
+  readonly formaLabel = FORMA_PAGAMENTO_LABEL;
+  readonly tipoLabel = TIPO_VENDA_LABEL;
 
-  busca = '';
-  estoqueMinimoPadrao = 5;
+  carregando = signal(true);
+  erro = signal<string | null>(null);
+  periodo = signal<Periodo | null>(null);
+  resumo = signal<ResumoVendas | null>(null);
+  pagina = signal<Pagina<VendaResumo> | null>(null);
+  /** Soma das contas ainda abertas (mesas e retiradas), independente do período. */
+  emAberto = signal(0);
 
-  carregando = true;
-  erro: string | null = null;
-
-  produtos: Produto[] = [];
-  estoques: Estoque[] = [];
-  vendas: Venda[] = [];
-  despesas: Despesa[] = [];
-
-  produtosFiltrados: Produto[] = [];
-
-  novaDespesa: DespesaPayload = { descricao: '', categoria: '', valor: 0, dtDespesa: this.hoje() };
-  enviandoDespesa = false;
-  erroDespesa: string | null = null;
-
-  ngOnInit() {
-    this.carregando = true;
-
-    Promise.all([
-      this.aPromise(this.produtoService.listar()),
-      this.aPromise(this.estoqueService.listar()),
-      this.aPromise(this.vendaService.listar()),
-      this.aPromise(this.despesaService.listar()),
-    ])
-      .then(([produtos, estoques, vendas, despesas]) => {
-        this.produtos = produtos;
-        this.estoques = estoques;
-        this.vendas = vendas;
-        this.despesas = despesas;
-        this.produtosFiltrados = [...this.produtos];
-        this.carregando = false;
-      })
-      .catch((erro) => {
-        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar os dados financeiros.');
-        this.carregando = false;
-      });
+  /** O filtro de período emite o intervalo inicial ao montar, o que dispara a primeira carga. */
+  aplicarPeriodo(periodo: Periodo): void {
+    this.periodo.set(periodo);
+    this.carregar();
   }
 
-  private aPromise<T>(obs: Observable<T>): Promise<T> {
-    return new Promise((resolve, reject) => obs.subscribe({ next: resolve, error: reject }));
-  }
-
-  private hoje(): string {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  private dataDentroDoFiltro(data: string | null): boolean {
-    if (!data) return false;
-    const dia = data.slice(0, 10);
-    const hoje = this.hoje();
-
-    if (this.filtroSelecionado === 'hoje') {
-      return dia === hoje;
-    }
-    if (this.filtroSelecionado === 'semana') {
-      const seteDiasAtras = new Date();
-      seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-      return new Date(dia) >= seteDiasAtras;
-    }
-    return true;
-  }
-
-  get vendasFiltradas(): Venda[] {
-    return this.vendas.filter((v) => this.dataDentroDoFiltro(v.dt_criacao));
-  }
-
-  get despesasFiltradas(): Despesa[] {
-    return this.despesas.filter((d) => this.dataDentroDoFiltro(d.dtDespesa));
-  }
-
-  totalVenda(venda: Venda): number {
-    return (venda.itens ?? []).reduce((soma, item) => soma + (item.valor_total ?? 0), 0);
-  }
-
-  get vendasTotal(): number {
-    return this.vendasFiltradas.reduce((soma, v) => soma + this.totalVenda(v), 0);
-  }
-
-  get despesasTotal(): number {
-    return this.despesasFiltradas.reduce((soma, d) => soma + d.valor, 0);
-  }
-
-  get lucro(): number {
-    return this.vendasTotal - this.despesasTotal;
-  }
-
-  get resumo() {
-    const pedidos = this.vendasFiltradas.length;
-    return {
-      pedidos,
-      ticketMedio: pedidos > 0 ? this.vendasTotal / pedidos : 0,
-      despesasRegistradas: this.despesasFiltradas.length,
-      resultado: this.lucro,
-    };
-  }
-
-  estoqueDoProduto(produtoId: number): number {
-    return this.estoques.find((e) => e.produto.id === produtoId)?.quantidadeAtual ?? 0;
-  }
-
-  selecionarAba(aba: 'resumo' | 'vendas' | 'despesas' | 'produtos') {
-    this.abaSelecionada = aba;
-  }
-
-  selecionarFiltro(filtro: 'hoje' | 'semana' | 'periodo') {
-    this.filtroSelecionado = filtro;
-  }
-
-  filtrarProdutos() {
-    const termo = this.busca.toLowerCase().trim();
-
-    if (!termo) {
-      this.produtosFiltrados = [...this.produtos];
-    } else {
-      this.produtosFiltrados = this.produtos.filter((p) => p.nome.toLowerCase().includes(termo));
-    }
-  }
-
-  isEstoqueBaixo(p: Produto): boolean {
-    const estoque = this.estoques.find((e) => e.produto.id === p.id);
-    if (!estoque) return false;
-    return estoque.quantidadeAtual < estoque.estoqueMinimo;
-  }
-
-  iconeCategoria(categoria: string | null | undefined): string {
-    return (categoria && ICONE_POR_CATEGORIA[categoria]) ?? 'bi-box-seam';
-  }
-
-  registrarDespesa() {
-    if (!this.novaDespesa.descricao.trim() || !this.novaDespesa.categoria.trim() || this.novaDespesa.valor <= 0) {
-      this.erroDespesa = 'Preencha descrição, categoria e um valor maior que zero.';
+  carregar(): void {
+    const periodo = this.periodo();
+    if (!periodo) {
       return;
     }
-
-    this.enviandoDespesa = true;
-    this.erroDespesa = null;
-
-    this.despesaService.criar(this.novaDespesa).subscribe({
-      next: (despesa) => {
-        this.despesas = [despesa, ...this.despesas];
-        this.novaDespesa = { descricao: '', categoria: '', valor: 0, dtDespesa: this.hoje() };
-        this.enviandoDespesa = false;
+    this.carregando.set(true);
+    this.erro.set(null);
+    forkJoin({
+      resumo: this.vendaService.resumir(periodo.inicio, periodo.fim),
+      pagina: this.listarFinalizadas(periodo, 0),
+      abertas: this.vendaService.abertas(),
+    }).subscribe({
+      next: ({ resumo, pagina, abertas }) => {
+        this.resumo.set(resumo);
+        this.pagina.set(pagina);
+        this.emAberto.set(abertas.reduce((soma, venda) => soma + venda.valorTotal, 0));
+        this.carregando.set(false);
       },
       error: (erro) => {
-        this.erroDespesa = MensagemErroApiUtil.extrair(erro, 'Não foi possível registrar a despesa.');
-        this.enviandoDespesa = false;
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o faturamento do período.'));
+        this.carregando.set(false);
       },
     });
   }
 
-  excluirDespesa(despesa: Despesa) {
-    if (!confirm(`Excluir a despesa "${despesa.descricao}"?`)) {
+  /** Troca de página: o resumo do período não muda, então só a lista é buscada de novo. */
+  irParaPagina(numeroPagina: number): void {
+    const periodo = this.periodo();
+    if (!periodo) {
       return;
     }
-    this.despesaService.excluir(despesa.id).subscribe({
-      next: () => (this.despesas = this.despesas.filter((d) => d.id !== despesa.id)),
-      error: (erro) => (this.erroDespesa = MensagemErroApiUtil.extrair(erro, 'Não foi possível excluir a despesa.')),
+    this.carregando.set(true);
+    this.listarFinalizadas(periodo, numeroPagina).subscribe({
+      next: (pagina) => {
+        this.pagina.set(pagina);
+        this.carregando.set(false);
+      },
+      error: (erro) => {
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar as vendas.'));
+        this.carregando.set(false);
+      },
     });
+  }
+
+  /** Percentual de cada forma de pagamento no total faturado (para a coluna de participação). */
+  percentual(total: number): number {
+    const faturado = this.resumo()?.totalFaturado ?? 0;
+    return faturado > 0 ? (total / faturado) * 100 : 0;
+  }
+
+  dataDoDia(dia: string): Date {
+    return new Date(`${dia}T00:00:00`);
+  }
+
+  identificacao(venda: VendaResumo): string {
+    if (venda.tipo === 'MESA') {
+      return `Mesa ${venda.numeroMesa ?? ''}`.trim();
+    }
+    return `${this.tipoLabel[venda.tipo]}${venda.nomeCliente ? ' · ' + venda.nomeCliente : ''}`;
+  }
+
+  private listarFinalizadas(periodo: Periodo, numeroPagina: number) {
+    return this.vendaService.listar(
+      { status: 'FINALIZADA', inicio: periodo.inicio, fim: periodo.fim },
+      numeroPagina,
+      TAMANHO_PAGINA,
+    );
   }
 }

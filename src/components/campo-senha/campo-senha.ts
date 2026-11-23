@@ -1,4 +1,4 @@
-import { Component, Input, forwardRef } from '@angular/core';
+import { Component, Input, forwardRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
@@ -27,15 +27,16 @@ export class CampoSenhaComponent implements ControlValueAccessor {
   @Input() placeholder = '••••••••';
 
   readonly inputId = `campo-senha-${proximoId++}`;
-  valor = '';
+  // signals: o app é zoneless, então o reset/patch do formulário só aparece na tela via signal
+  valor = signal('');
   mostrarSenha = false;
-  desabilitado = false;
+  desabilitado = signal(false);
 
   private onChange: (valor: string) => void = () => {};
   private onTouched: () => void = () => {};
 
   writeValue(valor: string): void {
-    this.valor = valor ?? '';
+    this.valor.set(valor ?? '');
   }
 
   registerOnChange(fn: (valor: string) => void): void {
@@ -47,11 +48,11 @@ export class CampoSenhaComponent implements ControlValueAccessor {
   }
 
   setDisabledState(desabilitado: boolean): void {
-    this.desabilitado = desabilitado;
+    this.desabilitado.set(desabilitado);
   }
 
   aoDigitar(valor: string) {
-    this.valor = valor;
+    this.valor.set(valor);
     this.onChange(valor);
   }
 

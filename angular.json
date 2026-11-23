@@ -23,18 +23,10 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
-            "polyfills": ["zone.js"],
             "inlineStyleLanguage": "scss",
             "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              },
-              {
-                "glob": "**/*",
-                "input": "src/assets",
-                "output": "assets"
-              }
+              { "glob": "**/*", "input": "public" },
+              "src/assets"
             ],
             "styles": [
               "src/styles.scss"

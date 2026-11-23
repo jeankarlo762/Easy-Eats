@@ -1,76 +1,113 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Histórico de Vendas</h1>
-    <p>Consulte os pedidos realizados e filtre por status</p>
+    <div>
+      <h1>Histórico de Pedidos</h1>
+      <p>Consulte os pedidos realizados, filtre por status e acompanhe o andamento</p>
+    </div>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+    </div>
   </header>
 
-  @if (erro) {
-    <p class="vazio">{{ erro }}</p>
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
   }
 
-  <div class="grid-resumo">
-    <div class="resumo-card">
-      <div class="resumo-icon verde"><i class="bi bi-cash-stack"></i></div>
+  <div class="grid-stats">
+    <div class="stat-card">
+      <div class="stat-icon verde"><i class="bi bi-cash-stack"></i></div>
       <div>
-        <div class="resumo-valor">R$ {{ totalFiltrado.toFixed(2) }}</div>
-        <div class="resumo-label">Valor total</div>
+        <div class="stat-valor">{{ totalFiltrado() | currency: 'BRL' }}</div>
+        <div class="stat-label">Valor (sem cancelados)</div>
       </div>
     </div>
-
-    <div class="resumo-card">
-      <div class="resumo-icon azul"><i class="bi bi-receipt"></i></div>
+    <div class="stat-card">
+      <div class="stat-icon azul"><i class="bi bi-receipt"></i></div>
       <div>
-        <div class="resumo-valor">{{ totalPedidos }}</div>
-        <div class="resumo-label">Pedidos</div>
+        <div class="stat-valor">{{ comandasFiltradas().length }}</div>
+        <div class="stat-label">Pedidos listados</div>
       </div>
     </div>
   </div>
 
   <section class="painel">
     <input
-      type="text"
-      placeholder="Buscar por nome/mesa ou #pedido"
-      class="input-busca"
-      [(ngModel)]="busca"
+      type="search"
+      placeholder="Buscar por mesa, cliente ou nº do pedido"
+      class="input-padrao busca"
+      [ngModel]="busca()"
+      (ngModelChange)="busca.set($event)"
     />
 
     <div class="filtros">
-      @for (filtro of filtros; track filtro) {
-        <button
-          [class.ativo]="filtroSelecionado === filtro"
-          (click)="selecionarFiltro(filtro)"
-        >
-          {{ filtro }}
+      @for (filtro of filtros; track filtro.valor) {
+        <button type="button" [class.ativo]="filtroSelecionado() === filtro.valor" (click)="filtroSelecionado.set(filtro.valor)">
+          {{ filtro.label }}
         </button>
       }
     </div>
 
-    @if (carregando) {
-      <app-carregando texto="Carregando histórico..."></app-carregando>
+    @if (carregando()) {
+      <app-carregando texto="Carregando pedidos..."></app-carregando>
     } @else {
-      <div class="lista">
-        @for (venda of vendasFiltradas; track venda.id) {
-          <div class="card-pedido">
-            <div class="top">
-              <strong>#{{ venda.id }} {{ identificacao(venda) }}</strong>
-              <span class="status {{ venda.status.toLowerCase() }}">
-                {{ venda.status }}
-              </span>
+      <div class="lista-pedidos">
+        @for (comanda of comandasFiltradas(); track comanda.id) {
+          <article class="card-pedido">
+            <div class="card-pedido__topo">
+              <div>
+                <strong>#{{ comanda.id }} · {{ identificacao(comanda) }}</strong>
+                <span class="card-pedido__data">
+                  {{ comanda.dataCriacao ? (comanda.dataCriacao | date: 'dd/MM/yyyy HH:mm') : '—' }}
+                  @if (comanda.nomeCliente && comanda.mesa) {
+                    · {{ comanda.nomeCliente }}
+                  }
+                </span>
+              </div>
+              <span class="badge status-{{ comanda.status }}">{{ statusLabel[comanda.status] }}</span>
             </div>
 
-            <div class="itens">
-              @for (item of venda.itens; track item.id) {
-                <p>{{ item.produto.nome }} x{{ item.quantidade }}</p>
+            <ul class="card-pedido__itens">
+              @for (item of comanda.itens; track $index) {
+                <li>
+                  <span>{{ item.quantidade }}× {{ item.produto.nome }}</span>
+                  <span>{{ item.valor_total | currency: 'BRL' }}</span>
+                </li>
               }
-            </div>
+            </ul>
 
-            <div class="footer">
-              <span>{{ venda.dt_criacao ? (venda.dt_criacao | date: 'dd/MM HH:mm') : '—' }}</span>
-              <strong class="valor-pedido">
-                R$ {{ totalVenda(venda).toFixed(2) }}
-              </strong>
+            <div class="card-pedido__rodape">
+              <strong class="valor-pedido">{{ comanda.valorTotal | currency: 'BRL' }}</strong>
+
+              <div class="linha-acoes">
+                @if (podeCancelar(comanda)) {
+                  <button
+                    type="button"
+                    class="btn btn-perigo btn-sm"
+                    [disabled]="processandoId() === comanda.id"
+                    (click)="cancelar(comanda)"
+                  >
+                    Cancelar
+                  </button>
+                }
+                @if (proximoStatus(comanda); as proximo) {
+                  <button
+                    type="button"
+                    class="btn btn-primario btn-sm"
+                    [disabled]="processandoId() === comanda.id"
+                    (click)="avancar(comanda)"
+                  >
+                    {{ proximo === 'EM_PREPARO' ? 'Iniciar preparo' : 'Finalizar' }}
+                  </button>
+                }
+              </div>
             </div>
-          </div>
+          </article>
         } @empty {
           <p class="vazio">Nenhum pedido encontrado.</p>
         }

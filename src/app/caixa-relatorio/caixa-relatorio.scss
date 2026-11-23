@@ -1,0 +1,110 @@
+:host {
+  display: block;
+}
+
+.folha h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.folha h3 {
+  margin: 20px 0 12px;
+}
+
+.folha-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.dados-turno {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.dados-turno dt {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-subtle);
+}
+
+.dados-turno dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.observacao {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+}
+
+.valor-entrada {
+  color: var(--color-success-text);
+  font-weight: 600;
+}
+
+.valor-saida {
+  color: var(--color-danger-text);
+  font-weight: 600;
+}
+
+.assinaturas {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  margin-top: 56px;
+}
+
+.assinaturas div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-text);
+}
+
+.assinaturas span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.assinaturas small {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+@media print {
+  .assinaturas {
+    display: grid;
+  }
+}
+
+a.btn {
+  text-decoration: none;
+}
+
+.link-venda {
+  margin-left: 6px;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+@media print {
+  .link-venda {
+    display: none;
+  }
+}

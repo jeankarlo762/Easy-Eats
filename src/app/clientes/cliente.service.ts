@@ -8,7 +8,6 @@ export interface Cliente {
   nome: string;
   email: string;
   telefone: string;
-  cpf: string | null;
   endereco: string | null;
   saldoCashback: number | null;
 }
@@ -17,7 +16,6 @@ export interface ClientePayload {
   nome: string;
   email: string;
   telefone: string;
-  cpf: string | null;
   endereco: string | null;
 }
 
@@ -29,10 +27,6 @@ export class ClienteService {
 
   listar(): Observable<Cliente[]> {
     return this.http.get<Cliente[]>(API_URL);
-  }
-
-  buscarPorId(id: number): Observable<Cliente> {
-    return this.http.get<Cliente>(`${API_URL}/${id}`);
   }
 
   criar(cliente: ClientePayload): Observable<Cliente> {

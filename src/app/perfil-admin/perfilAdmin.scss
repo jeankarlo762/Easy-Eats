@@ -1,167 +1,55 @@
-@import url('https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css');
-@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css');
-
-
 :host {
   display: block;
-  min-height: 100vh;
-  padding: 24px 28px 60px;
-  box-sizing: border-box;
 }
-$bg-color: #fcfcfc;
-$card-bg: #ffffff;
-$border-light: #ececec;
-$text-dark: #1e293b;
-$text-muted: #64748b;
-$accent-orange: #f97316;
-$danger-red: #ef4444;
 
-.container {
-  width: 100%;
-  max-width: 700px;
+.pagina {
+  max-width: 760px;
+}
 
+.cartao-perfil {
   display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
 }
 
-.perfil-admin-box {
-  width: 100%;
-  max-width: 550px;
-
-  .main-title {
-    font-size: 20px;
-    color: $text-dark;
-    margin-bottom: 20px;
-    font-weight: 600;
-  }
-}
-
-// Estilo dos Cards
-.profile-card {
-  background: $card-bg;
-  border: 1px solid $border-light;
-  border-radius: 8px;
-  padding: 18px;
-  margin-bottom: 20px;
-  box-shadow: none;
-}
-
-// Cabeçalho com Logo
-.header-section {
-  text-align: center;
-  
-  .avatar-circle {
-    width: 75px;  // Aumentei levemente para destacar
-    height: 75px;
-    margin: 0 auto 15px;
-    border: 2px solid #fed7aa; // Borda um pouco mais grossa
-    border-radius: 50%;
-    overflow: hidden; // ESSENCIAL: Corta tudo que sair do círculo
-    background: #fff7ed;
-    display: flex;    // Centraliza a imagem caso ela seja menor
-    align-items: center;
-    justify-content: center;
-    
-    img { 
-      width: 100%;    // Ocupa toda a largura do círculo
-      height: 100%;   // Ocupa toda a altura do círculo
-      object-fit: cover; // A MÁGICA: Preenche o espaço cortando as bordas excedentes
-      object-position: center; // Garante que o corte seja centralizado
-    }
-  }
-  
-  h2 { 
-    font-size: 18px; 
-    margin: 0; 
-    span { font-weight: normal; font-size: 14px; color: $text-muted; }
-  }
-  .description { font-size: 13px; color: $text-muted; margin-top: 8px; }
-}
-
-// Lista de Informações - PADRÃO BALÃO
-.info-section {
-  h3 { font-size: 15px; margin-bottom: 20px; color: $text-dark; }
-  
-  .info-item {
-    display: flex;
-    flex-direction: column; 
-    gap: 6px;               // Espaço entre o label e o balão
-    padding: 10px 0;
-    border-bottom: none;    // REMOVIDO A LINHA para virar balão
-    
-    .label-title { 
-      font-size: 14px;      // Tamanho igual ao cadastro
-      color: $text-dark;    // Label mais escuro igual ao cadastro
-      font-weight: 600; 
-      text-transform: none; 
-      letter-spacing: normal;
-    }
-    
-    .value { 
-      font-size: 15px; 
-      color: $text-muted; 
-      font-weight: 500;
-      padding: 12px 15px;   // Alinhado com o padding do input
-    }
-  }
-}
-
-// Grid de Botões (Ações)
-.admin-actions {
+.identificacao {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-
-  .button-row {
-    display: flex;
-    gap: 12px;
-    
-    button { flex: 1; } // Faz os dois botões ocuparem 50% cada
-  }
+  align-items: flex-start;
+  gap: 6px;
 }
 
-// Estilo dos Botões
-.btn-red-outline {
-  width: 100%;
-  padding: 14px;
-  background: white;
-  border: 1px solid #fee2e2;
-  color: $danger-red;
+.identificacao h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--color-text);
+}
+
+.rotulo {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.linha strong {
+  color: var(--color-text);
   font-weight: 600;
-  border-radius: 7px;
-  cursor: pointer;
-  margin-top: 10px;
-
-  &:hover {
-    background: #fef2f2;
-    border-color: $danger-red;
-  }
+  text-align: right;
 }
 
-.input-edicao-discreto {
-  width: 100%;
-  padding: 12px 15px;       // Espaçamento interno do balão
-  background-color: #f8fafc; // Fundo cinza clarinho igual ao seu print
-  border: 1px solid #e2e8f0; // Borda completa do balão
-  border-radius: 7px;      // Arredondamento do balão
-  font-size: 14px;
-  font-weight: 500;
-  color: $text-dark;
-  outline: none;
-  transition: all 0.2s ease;
-
-  &:focus {
-    border-color: #ea580c;  // Laranja no foco
-    background-color: #ffffff;
-    box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.12);
-  }
-}
-
-// Pequeno ajuste para a canetinha não ficar desalinhada com os balões
-.btn-canetinha-corpo {
-  color: #ea580c;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2rem;
+.nota {
+  margin: 16px 0;
 }

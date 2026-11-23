@@ -1,149 +1,219 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { AuthService } from '../auth/auth.service';
-import { PeriodoUtil } from '../utils/periodoUtil';
-import { Caixa, CaixaService } from './caixa.service';
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { AuthService, PERFIS_GESTAO } from '../auth/auth.service';
 import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
+import {
+  Caixa,
+  CaixaService,
+  MovimentacaoCaixa,
+  TIPO_MOVIMENTACAO_LABEL,
+  TipoLancavel,
+  ehSaida,
+} from './caixa.service';
+
+/** Quantidade de lançamentos do turno exibidos na tela (o histórico completo fica em Lançamentos). */
+const LANCAMENTOS_DO_TURNO = 100;
 
 @Component({
   selector: 'app-caixa',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CurrencyPipe, DatePipe, ReactiveFormsModule, RouterLink, CarregandoComponent],
   templateUrl: './caixa.html',
   styleUrl: './caixa.scss',
 })
 export class CaixaComponent implements OnInit {
   private caixaService = inject(CaixaService);
-  protected authService = inject(AuthService);
 
-  caixa: Caixa | null = null;
-  carregando = true;
-  erro: string | null = null;
-  processando = false;
+  /** Sangria, fechamento e lista de lançamentos são restritos a Administrador e Gerente. */
+  readonly podeGerir = inject(AuthService).temPerfil(PERFIS_GESTAO);
+  readonly tipoLabel = TIPO_MOVIMENTACAO_LABEL;
+  readonly ehSaida = ehSaida;
 
-  mostrarHistorico = false;
-  carregandoHistorico = false;
-  historico: Caixa[] = [];
+  caixa = signal<Caixa | null>(null);
+  lancamentos = signal<MovimentacaoCaixa[]>([]);
+  /** Caixa recém-fechado, exibido como resumo até o operador dispensar ou abrir outro. */
+  fechado = signal<Caixa | null>(null);
 
-  valorInicial: number | null = null;
-  observacoesAbertura = '';
+  carregando = signal(true);
+  processando = signal(false);
+  erro = signal<string | null>(null);
+  sucesso = signal<string | null>(null);
+  erroModal = signal<string | null>(null);
+  modalMovimento = signal<TipoLancavel | null>(null);
+  modalFechamento = signal(false);
 
-  valorApuradoInformado: number | null = null;
-  observacoesFechamento = '';
+  formAbertura = new FormGroup({
+    fundoCaixa: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
+    observacao: new FormControl('', { nonNullable: true }),
+  });
 
-  valorMovimentacao: number | null = null;
-  descricaoMovimentacao = '';
+  formMovimento = new FormGroup({
+    valor: new FormControl<number | null>(null, [Validators.required, Validators.min(0.01)]),
+    descricao: new FormControl('', { nonNullable: true }),
+  });
 
-  get podeOperar(): boolean {
-    return this.authService.isAdministrador() || this.authService.isOperador();
-  }
+  formFechamento = new FormGroup({
+    valorContado: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
+    observacao: new FormControl('', { nonNullable: true }),
+  });
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.carregar();
   }
 
-  carregar() {
-    this.carregando = true;
-    this.caixaService.status().subscribe({
+  carregar(): void {
+    this.carregando.set(true);
+    this.erro.set(null);
+    this.caixaService.atual().subscribe({
       next: (caixa) => {
-        this.caixa = caixa;
-        this.carregando = false;
+        this.caixa.set(caixa);
+        this.carregando.set(false);
+        this.carregarLancamentos(caixa);
       },
-      error: () => {
-        this.erro = 'Não foi possível carregar o status do caixa.';
-        this.carregando = false;
+      error: (erro) => {
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar o caixa.'));
+        this.carregando.set(false);
       },
     });
   }
 
-  abrirCaixa() {
-    if (this.valorInicial === null || this.valorInicial < 0) {
-      this.erro = 'Informe o valor inicial do caixa.';
+  private carregarLancamentos(caixa: Caixa | null): void {
+    if (!caixa || !this.podeGerir) {
+      this.lancamentos.set([]);
       return;
     }
+    this.caixaService.listarMovimentacoes({ caixaId: caixa.id }, 0, LANCAMENTOS_DO_TURNO).subscribe({
+      next: (pagina) => this.lancamentos.set(pagina.itens),
+      error: () => this.lancamentos.set([]),
+    });
+  }
 
-    this.processando = true;
-    this.caixaService.abrir(this.valorInicial, this.observacoesAbertura).subscribe({
+  // ---------------------------------------------------------------- abertura
+
+  abrir(): void {
+    if (this.formAbertura.invalid) {
+      this.formAbertura.markAllAsTouched();
+      return;
+    }
+    const { fundoCaixa, observacao } = this.formAbertura.getRawValue();
+    this.processando.set(true);
+    this.erro.set(null);
+    this.caixaService.abrir(Number(fundoCaixa), observacao.trim() || null).subscribe({
       next: (caixa) => {
-        this.caixa = caixa;
-        this.processando = false;
-        this.valorInicial = null;
-        this.observacoesAbertura = '';
+        this.processando.set(false);
+        this.caixa.set(caixa);
+        this.fechado.set(null);
+        this.formAbertura.reset({ fundoCaixa: null, observacao: '' });
+        this.carregarLancamentos(caixa);
+        this.mostrarSucesso('Caixa aberto.');
       },
       error: (erro) => {
-        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível abrir o caixa.');
-        this.processando = false;
+        this.processando.set(false);
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível abrir o caixa.'));
       },
     });
   }
 
-  fecharCaixa() {
-    if (!this.caixa || this.valorApuradoInformado === null) {
-      this.erro = 'Informe o valor apurado para fechar o caixa.';
+  // ------------------------------------------------------ suprimento e sangria
+
+  abrirMovimento(tipo: TipoLancavel): void {
+    const descricao = this.formMovimento.controls.descricao;
+    // a sangria exige motivo; o suprimento aceita descrição vazia
+    descricao.setValidators(tipo === 'SANGRIA' ? [Validators.required] : []);
+    descricao.updateValueAndValidity();
+    this.formMovimento.reset({ valor: null, descricao: '' });
+    this.erroModal.set(null);
+    this.modalMovimento.set(tipo);
+  }
+
+  confirmarMovimento(): void {
+    const tipo = this.modalMovimento();
+    const caixa = this.caixa();
+    if (!tipo || !caixa) {
       return;
     }
-
-    this.processando = true;
-    this.caixaService.fechar(this.caixa.id, this.valorApuradoInformado, this.observacoesFechamento).subscribe({
-      next: () => {
-        // Recarrega o status (em vez de usar a sessão fechada retornada
-        // diretamente) para a tela voltar ao estado "nenhum caixa aberto".
-        this.carregar();
-        this.processando = false;
-        this.valorApuradoInformado = null;
-        this.observacoesFechamento = '';
-        this.historico = [];
-        if (this.mostrarHistorico) {
-          this.carregarHistorico();
-        }
-      },
-      error: (erro) => {
-        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível fechar o caixa.');
-        this.processando = false;
-      },
-    });
-  }
-
-  alternarHistorico() {
-    this.mostrarHistorico = !this.mostrarHistorico;
-    if (this.mostrarHistorico && this.historico.length === 0) {
-      this.carregarHistorico();
-    }
-  }
-
-  carregarHistorico() {
-    const { inicio, fim } = PeriodoUtil.resolver('mes');
-    this.carregandoHistorico = true;
-    this.caixaService.historico(inicio, fim).subscribe({
-      next: (historico) => {
-        this.historico = historico;
-        this.carregandoHistorico = false;
-      },
-      error: () => {
-        this.erro = 'Não foi possível carregar o histórico de fechamentos.';
-        this.carregandoHistorico = false;
-      },
-    });
-  }
-
-  registrarMovimentacao(tipo: 'SANGRIA' | 'SUPRIMENTO') {
-    if (!this.caixa || this.valorMovimentacao === null || this.valorMovimentacao <= 0) {
-      this.erro = 'Informe um valor maior que zero.';
+    if (this.formMovimento.invalid) {
+      this.formMovimento.markAllAsTouched();
       return;
     }
-
-    this.processando = true;
-    this.caixaService.registrarMovimentacao(this.caixa.id, tipo, this.valorMovimentacao, this.descricaoMovimentacao).subscribe({
+    const { valor, descricao } = this.formMovimento.getRawValue();
+    this.processando.set(true);
+    this.erroModal.set(null);
+    this.caixaService.lancar(caixa.id, tipo, Number(valor), descricao.trim() || null).subscribe({
       next: () => {
-        this.processando = false;
-        this.valorMovimentacao = null;
-        this.descricaoMovimentacao = '';
+        this.processando.set(false);
+        this.fecharModais();
+        this.carregarLancamentos(caixa);
+        this.mostrarSucesso(tipo === 'SANGRIA' ? 'Sangria registrada.' : 'Suprimento registrado.');
       },
       error: (erro) => {
-        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível registrar a movimentação.');
-        this.processando = false;
+        this.processando.set(false);
+        this.erroModal.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível registrar o lançamento.'));
       },
     });
+  }
+
+  // --------------------------------------------------------------- fechamento
+
+  abrirFechamento(): void {
+    this.formFechamento.reset({ valorContado: null, observacao: '' });
+    this.erroModal.set(null);
+    this.modalFechamento.set(true);
+  }
+
+  confirmarFechamento(): void {
+    const caixa = this.caixa();
+    if (!caixa) {
+      return;
+    }
+    if (this.formFechamento.invalid) {
+      this.formFechamento.markAllAsTouched();
+      return;
+    }
+    const { valorContado, observacao } = this.formFechamento.getRawValue();
+    this.processando.set(true);
+    this.erroModal.set(null);
+    this.caixaService.fechar(caixa.id, Number(valorContado), observacao.trim() || null).subscribe({
+      next: (fechado) => {
+        this.processando.set(false);
+        this.fecharModais();
+        this.caixa.set(null);
+        this.lancamentos.set([]);
+        this.fechado.set(fechado);
+      },
+      error: (erro) => {
+        this.processando.set(false);
+        this.erroModal.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível fechar o caixa.'));
+      },
+    });
+  }
+
+  fecharModais(): void {
+    this.modalMovimento.set(null);
+    this.modalFechamento.set(false);
+    this.erroModal.set(null);
+  }
+
+  rotuloDiferenca(diferenca: number | null): string {
+    if (!diferenca) {
+      return 'Sem diferença';
+    }
+    return diferenca > 0 ? 'Sobra' : 'Falta';
+  }
+
+  /** Verde sem diferença, amarelo com sobra, vermelho com falta. */
+  classeDiferenca(diferenca: number | null): string {
+    if (!diferenca) {
+      return 'sucesso';
+    }
+    return diferenca > 0 ? 'aviso' : 'erro';
+  }
+
+  private mostrarSucesso(mensagem: string): void {
+    this.sucesso.set(mensagem);
+    setTimeout(() => this.sucesso.set(null), 4000);
   }
 }

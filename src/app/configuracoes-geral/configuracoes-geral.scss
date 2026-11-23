@@ -1,4 +1,3 @@
-@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css');
 
 :host { display: block; width: 100%; font-family: Inter, 'Poppins', sans-serif; }
 .pagina { padding: 24px 28px 60px; box-sizing: border-box; }
@@ -15,11 +14,6 @@
 .campo input:focus, .campo select:focus { outline: none; border-color: #f97316; background: #fff; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12); }
 
 .erro { color: #dc2626; font-size: 12px; margin-top: 4px; }
-
-.alerta-erro { background: #fef2f2; color: #dc2626; padding: 10px 14px; border-radius: 7px; font-size: 13.5px; margin-bottom: 14px; }
-.alerta-sucesso { background: #ecfdf5; color: #16a34a; padding: 10px 14px; border-radius: 7px; font-size: 13.5px; margin-bottom: 14px; }
-
-.campo small.ajuda { color: #9ca3af; font-size: 11.5px; margin-top: 4px; }
 
 .acoes-form { display: flex; gap: 8px; margin-top: 6px; }
 

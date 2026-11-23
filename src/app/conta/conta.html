@@ -1,0 +1,308 @@
+<div class="pagina">
+  <header class="topo">
+    <div>
+      @if (venda(); as v) {
+        <h1>{{ titulo(v) }}</h1>
+        <p>
+          <span [class]="'badge ' + (v.status === 'ABERTA' ? 'laranja' : v.status === 'FINALIZADA' ? 'sucesso' : 'erro')">
+            {{ statusVendaLabel[v.status] }}
+          </span>
+          Aberta por {{ v.usuarioAbertura }} em {{ v.dataAbertura | date: 'dd/MM/yyyy HH:mm' }}
+        </p>
+      } @else {
+        <h1>Conta</h1>
+        <p>Comandas, pagamentos e fechamento da venda</p>
+      }
+    </div>
+    <div class="topo-acoes">
+      <a class="btn btn-secundario" routerLink="/mesas"><i class="bi bi-arrow-left"></i> Mesas</a>
+      @if (venda(); as v) {
+        @if (v.status === 'ABERTA') {
+          <a class="btn btn-secundario" routerLink="/novo-pedido" [queryParams]="novoPedidoParams(v)">
+            <i class="bi bi-plus-circle"></i> Novo pedido
+          </a>
+          @if (podeGerir) {
+            <button type="button" class="btn btn-perigo" (click)="abrirCancelamento()" [disabled]="processando()">
+              <i class="bi bi-x-circle"></i> Cancelar venda
+            </button>
+          }
+        }
+      }
+    </div>
+  </header>
+
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">
+        {{ erro() }}
+        @if (precisaAbrirCaixa()) {
+          <a routerLink="/caixa">Abrir o caixa</a>
+        }
+      </span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
+  }
+  @if (sucesso()) {
+    <div class="alerta alerta-sucesso"><i class="bi bi-check-circle"></i><span class="alerta-texto">{{ sucesso() }}</span></div>
+  }
+
+  @if (carregando()) {
+    <app-carregando texto="Carregando conta..."></app-carregando>
+  } @else if (venda(); as v) {
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-icon azul"><i class="bi bi-receipt"></i></div>
+        <div>
+          <div class="stat-valor">{{ v.valorTotal | currency: 'BRL' }}</div>
+          <div class="stat-label">Total da venda</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon verde"><i class="bi bi-cash-coin"></i></div>
+        <div>
+          <div class="stat-valor">{{ v.valorPago | currency: 'BRL' }}</div>
+          <div class="stat-label">Pago</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon laranja"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+          <div class="stat-valor" [class.critico]="v.valorRestante > 0 && v.status === 'ABERTA'">
+            {{ v.valorRestante | currency: 'BRL' }}
+          </div>
+          <div class="stat-label">Restante</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon roxo"><i class="bi bi-person"></i></div>
+        <div>
+          <div class="stat-valor stat-valor-texto">{{ v.nomeCliente || 'Sem nome' }}</div>
+          <div class="stat-label">Cliente</div>
+        </div>
+      </div>
+    </div>
+
+    @if (v.status === 'FINALIZADA') {
+      <div class="alerta alerta-sucesso">
+        <i class="bi bi-check-circle"></i>
+        <span class="alerta-texto">
+          Finalizada por {{ v.usuarioFechamento }} em {{ v.dataFechamento | date: 'dd/MM/yyyy HH:mm' }}
+          @if (v.caixaId) {
+            · caixa #{{ v.caixaId }}
+          }
+        </span>
+      </div>
+    }
+    @if (v.status === 'CANCELADA') {
+      <div class="alerta alerta-erro">
+        <i class="bi bi-x-circle"></i>
+        <span class="alerta-texto">
+          Cancelada por {{ v.usuarioFechamento }} em {{ v.dataFechamento | date: 'dd/MM/yyyy HH:mm' }}. Motivo: {{ v.motivoCancelamento }}
+        </span>
+      </div>
+    }
+
+    <div class="grid-duas-colunas">
+      <section class="painel">
+        <h3>Comandas</h3>
+        @for (comanda of v.comandas; track comanda.id) {
+          <article class="comanda" [class.cancelada]="comanda.status === 'CANCELADO'">
+            <div class="comanda__topo">
+              <strong>Comanda #{{ comanda.id }}</strong>
+              <span class="badge status-{{ comanda.status }}">{{ statusComandaLabel[comanda.status] }}</span>
+              <span class="comanda__hora">{{ comanda.dataCriacao | date: 'HH:mm' }}</span>
+            </div>
+            <ul class="comanda__itens">
+              @for (item of comanda.itens; track $index) {
+                <li>
+                  <span>{{ item.quantidade }}x {{ item.nome }}</span>
+                  <span>{{ item.subtotal | currency: 'BRL' }}</span>
+                </li>
+              }
+            </ul>
+            @if (comanda.observacao) {
+              <p class="comanda__observacao"><i class="bi bi-chat-left-text"></i> {{ comanda.observacao }}</p>
+            }
+            <div class="comanda__total">
+              <span>Subtotal</span>
+              <strong>{{ comanda.valorTotal | currency: 'BRL' }}</strong>
+            </div>
+          </article>
+        } @empty {
+          <p class="vazio">Nenhuma comanda nesta venda.</p>
+        }
+      </section>
+
+      <section class="painel">
+        <h3>Pagamentos</h3>
+        <div class="tabela-wrap">
+          <table class="tabela">
+            <thead>
+              <tr>
+                <th>Forma</th>
+                <th class="num">Valor</th>
+                <th class="num">Troco</th>
+                <th>Por</th>
+                <th class="acoes"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (pagamento of v.pagamentos; track pagamento.id) {
+                <tr>
+                  <td>{{ formaLabel[pagamento.forma] }}</td>
+                  <td class="num">{{ pagamento.valor | currency: 'BRL' }}</td>
+                  <td class="num">{{ pagamento.troco ? (pagamento.troco | currency: 'BRL') : '—' }}</td>
+                  <td>{{ pagamento.usuario }}</td>
+                  <td class="acoes">
+                    <div>
+                      @if (aberta()) {
+                        <button
+                          type="button"
+                          class="btn-icone perigo"
+                          (click)="removerPagamento(pagamento)"
+                          [disabled]="processando()"
+                          title="Remover pagamento"
+                          aria-label="Remover pagamento"
+                        >
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="vazio">Nenhum pagamento registrado.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (aberta()) {
+          <form class="novo-pagamento" (ngSubmit)="registrarPagamento()">
+            <h4>Registrar pagamento</h4>
+            <div class="campo-linha">
+              <div class="campo">
+                <label for="conta-forma">Forma de pagamento</label>
+                <select id="conta-forma" name="forma" [ngModel]="forma()" (ngModelChange)="forma.set($event)">
+                  @for (f of formas; track f) {
+                    <option [value]="f">{{ formaLabel[f] }}</option>
+                  }
+                </select>
+              </div>
+              <div class="campo">
+                <label for="conta-valor">Valor (R$)</label>
+                <input
+                  id="conta-valor"
+                  name="valor"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  [ngModel]="valorPagamento()"
+                  (ngModelChange)="valorPagamento.set($event)"
+                />
+              </div>
+            </div>
+            @if (forma() === 'DINHEIRO') {
+              <div class="campo-linha">
+                <div class="campo">
+                  <label for="conta-recebido">Valor recebido (R$)</label>
+                  <input
+                    id="conta-recebido"
+                    name="recebido"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="Opcional"
+                    [ngModel]="valorRecebido()"
+                    (ngModelChange)="valorRecebido.set($event)"
+                  />
+                </div>
+                <div class="campo">
+                  <label>Troco</label>
+                  <div class="troco">{{ troco() | currency: 'BRL' }}</div>
+                </div>
+              </div>
+            }
+            <div class="acoes-form">
+              <button type="submit" class="btn btn-secundario" [disabled]="processando() || valorPagamento() === null">
+                <i class="bi bi-plus-lg"></i> Adicionar pagamento
+              </button>
+              <button type="button" class="btn btn-primario" [disabled]="!podeFinalizar()" (click)="finalizar()">
+                <i class="bi bi-check2-circle"></i> {{ processando() ? 'Processando...' : 'Finalizar venda' }}
+              </button>
+            </div>
+            @if (!podeFinalizar() && comandasAtivas().length > 0 && v.valorRestante > 0) {
+              <small class="ajuda-campo">Para finalizar, o total pago precisa ser igual ao total da venda.</small>
+            }
+            @if (comandasAtivas().length === 0) {
+              <small class="ajuda-campo">Não há comandas ativas para finalizar.</small>
+            }
+          </form>
+        }
+      </section>
+    </div>
+  }
+</div>
+
+@if (modalCancelamento()) {
+  <div class="modal-fundo" (click)="fecharCancelamento()">
+    <div class="modal-caixa" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h3>Cancelar venda</h3>
+      <p>Todas as comandas desta venda serão canceladas e a mesa será liberada.</p>
+      @if (erroModal()) {
+        <div class="alerta alerta-erro" role="alert">
+          <i class="bi bi-exclamation-circle"></i>
+          <span class="alerta-texto">{{ erroModal() }}</span>
+        </div>
+      }
+      <form (ngSubmit)="confirmarCancelamento()">
+        <div class="campo">
+          <label for="cancel-motivo">Motivo</label>
+          <input
+            id="cancel-motivo"
+            name="motivo"
+            type="text"
+            maxlength="255"
+            placeholder="Ex: Cliente desistiu"
+            [ngModel]="motivo()"
+            (ngModelChange)="motivo.set($event)"
+          />
+        </div>
+        <div class="campo campo-checkbox">
+          <label for="cancel-estoque">
+            <input
+              id="cancel-estoque"
+              name="devolverEstoque"
+              type="checkbox"
+              [ngModel]="devolverEstoque()"
+              (ngModelChange)="devolverEstoque.set($event)"
+            />
+            Devolver ao estoque os itens que entraram em preparo mas ainda não foram usados
+          </label>
+          <small class="ajuda-campo">Itens de comandas já prontas não voltam ao estoque.</small>
+        </div>
+        @if (devolverEstoque()) {
+          <div class="campo">
+            <label for="cancel-senha">Senha do gerente</label>
+            <input
+              id="cancel-senha"
+              name="senhaGerente"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Digite sua senha para confirmar"
+              [ngModel]="senhaGerente()"
+              (ngModelChange)="senhaGerente.set($event)"
+            />
+          </div>
+        }
+        <div class="acoes-form">
+          <button type="button" class="btn btn-secundario" (click)="fecharCancelamento()">Voltar</button>
+          <button type="submit" class="btn btn-perigo" [disabled]="processando()">
+            {{ processando() ? 'Cancelando...' : 'Cancelar venda' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

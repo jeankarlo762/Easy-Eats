@@ -1,41 +1,40 @@
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CarregandoComponent } from '../../components/carregando/carregando';
-import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 import { Fornecedor, FornecedorService } from './fornecedor.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 @Component({
   selector: 'app-fornecedores',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CarregandoComponent],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './fornecedores.html',
   styleUrl: './fornecedores.scss',
 })
 export class Fornecedores implements OnInit {
-  private fb = inject(FormBuilder);
-  private fornecedorService = inject(FornecedorService);
-
-  editandoId: number | null = null;
+  private fb = new FormBuilder();
 
   fornecedores: Fornecedor[] = [];
   carregando = true;
-  enviando = false;
+  salvando = false;
   erro: string | null = null;
-  sucesso = false;
+  editandoId: number | null = null;
 
   form = this.fb.group({
     nome: ['', Validators.required],
     cnpj: ['', Validators.required],
     telefone: [''],
     email: ['', Validators.email],
+    flAtivo: [true],
   });
+
+  constructor(private fornecedorService: FornecedorService) {}
 
   ngOnInit() {
     this.carregar();
   }
 
-  private carregar() {
+  carregar() {
     this.carregando = true;
     this.fornecedorService.listar().subscribe({
       next: (fornecedores) => {
@@ -50,67 +49,56 @@ export class Fornecedores implements OnInit {
   }
 
   salvar() {
-    if (this.form.invalid || this.enviando) {
+    if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const { nome, cnpj, telefone, email } = this.form.getRawValue();
+    const { nome, cnpj, telefone, email, flAtivo } = this.form.value;
     const payload = {
-      nome: nome!.trim(),
-      cnpj: cnpj!.trim(),
-      telefone: telefone?.trim() || null,
-      email: email?.trim() || null,
-      flAtivo: true,
+      nome: nome!,
+      cnpj: cnpj!,
+      telefone: telefone || null,
+      email: email || null,
+      flAtivo: flAtivo ?? true,
     };
 
-    this.enviando = true;
+    this.salvando = true;
     this.erro = null;
 
-    const operacao =
+    const requisicao =
       this.editandoId !== null
         ? this.fornecedorService.atualizar(this.editandoId, payload)
         : this.fornecedorService.criar(payload);
 
-    operacao.subscribe({
-      next: (fornecedor) => {
-        this.enviando = false;
-        this.sucesso = true;
-        setTimeout(() => (this.sucesso = false), 4000);
-
-        if (this.editandoId !== null) {
-          const indice = this.fornecedores.findIndex((f) => f.id === fornecedor.id);
-          if (indice !== -1) this.fornecedores[indice] = fornecedor;
-        } else {
-          this.fornecedores = [fornecedor, ...this.fornecedores];
-        }
-
-        this.cancelarEdicao();
+    requisicao.subscribe({
+      next: () => {
+        this.salvando = false;
+        this.editandoId = null;
+        this.form.reset({ flAtivo: true });
+        this.carregar();
       },
       error: (erro) => {
-        this.enviando = false;
-        this.erro = MensagemErroApiUtil.extrair(
-          erro,
-          'Não foi possível salvar o fornecedor. Verifique os dados e tente novamente.',
-        );
+        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível salvar o fornecedor.');
+        this.salvando = false;
       },
     });
   }
 
   editar(fornecedor: Fornecedor) {
     this.editandoId = fornecedor.id;
-    this.erro = null;
     this.form.setValue({
       nome: fornecedor.nome,
       cnpj: fornecedor.cnpj,
       telefone: fornecedor.telefone ?? '',
       email: fornecedor.email ?? '',
+      flAtivo: fornecedor.flAtivo ?? true,
     });
   }
 
   cancelarEdicao() {
     this.editandoId = null;
-    this.form.reset({ nome: '', cnpj: '', telefone: '', email: '' });
+    this.form.reset({ flAtivo: true });
   }
 
   excluir(fornecedor: Fornecedor) {
@@ -118,14 +106,8 @@ export class Fornecedores implements OnInit {
       return;
     }
 
-    this.erro = null;
     this.fornecedorService.excluir(fornecedor.id).subscribe({
-      next: () => {
-        this.fornecedores = this.fornecedores.filter((f) => f.id !== fornecedor.id);
-        if (this.editandoId === fornecedor.id) {
-          this.cancelarEdicao();
-        }
-      },
+      next: () => this.carregar(),
       error: (erro) => {
         this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível excluir o fornecedor.');
       },

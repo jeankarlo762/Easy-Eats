@@ -1,0 +1,109 @@
+:host {
+  display: block;
+}
+
+a.btn {
+  text-decoration: none;
+}
+
+.topo p .badge {
+  margin-right: 6px;
+}
+
+.stat-valor-texto {
+  font-size: 16px;
+}
+
+.comanda {
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-muted);
+}
+
+.comanda.cancelada {
+  opacity: 0.6;
+}
+
+.comanda__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.comanda__hora {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.comanda__itens {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.comanda__itens li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+}
+
+.comanda__observacao {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.comanda__total {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+}
+
+.comanda__total strong {
+  color: var(--color-text);
+}
+
+.novo-pagamento {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.novo-pagamento h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.troco {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-muted);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ajuda-campo {
+  display: block;
+  margin-top: 8px;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+}
+
+.modal-caixa .alerta {
+  margin-bottom: 12px;
+}

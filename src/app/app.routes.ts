@@ -1,176 +1,152 @@
-import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
-import { LandingPage } from './landing-page/landingPage';
 import { Login } from './login/login';
-import { CardapioPublicoPage } from './cardapio-publico/cardapio-publico';
 import { AppLayout } from './layout/app-layout';
-import { authGuard } from './auth/auth.guard';
-import { superadminGuard } from './auth/role.guard';
-import { funcionalidadeGuard } from './auth/funcionalidade.guard';
-import { garcomAreaGuard } from './auth/garcom-area.guard';
-import { cozinheiroAreaGuard } from './auth/cozinheiro-area.guard';
-import { Home } from './home/home';
-import { DashboardComponent } from './dashboard/dashboard';
-import { ComponentFila } from './fila/component.fila';
-import { TelaCozinha } from './tela-cozinha/tela-cozinha';
-import { RelatorioCozinha } from './relatorio-cozinha/relatorio-cozinha';
-import { RelatorioPedidos } from './relatorio-pedidos/relatorio-pedidos';
-import { ControleEstoque } from './controle-estoque/controle-estoque';
-import { HistoricoVendasComponent } from './historico-vendas/historico-vendas';
-import { Financeiro } from './financeiro/financeiro';
-import { NovoPedido } from './novo-pedido/novo-pedido';
-import { PerfilAdmin } from './perfil-admin/perfilAdmin';
-import { PerfilGarcom } from './perfil-garcom/perfilGarcom';
-import { CadastroProdutoComponent } from './cadastro-produto/cadastroProduto';
-import { CardapioAdmin } from './cardapio-admin/cardapio-admin';
-//import { CaixaComponent } from './caixa/caixa';//
-import { CuponsCashback } from './cupons-cashback/cupons-cashback';
-import { Mesas } from './mesas/mesas';
-import { Comandas } from './comandas/comandas';
-import { Fornecedores } from './fornecedores/fornecedores';
-import { RelatorioEstoque } from './relatorio-estoque/relatorio-estoque';
-import { PedidosCompra } from './pedidos-compra/pedidos-compra';
-import { GestaoFinanceira } from './gestao-financeira/gestao-financeira';
-import { FichaTecnica } from './ficha-tecnica/ficha-tecnica';
-import { Clientes } from './clientes/clientes';
-import { Fidelidade } from './fidelidade/fidelidade';
-import { Usuarios } from './usuarios/usuarios';
-import { GruposAcesso } from './grupos-acesso/grupos-acesso';
-import { ConfiguracoesGeral } from './configuracoes-geral/configuracoes-geral';
-import { ConfiguracoesIntegracoes } from './configuracoes-integracoes/configuracoes-integracoes';
-import { DeliveryDashboard } from './delivery-dashboard/delivery-dashboard';
-import { DeliveryRelatorios } from './delivery-relatorios/delivery-relatorios';
-import { Categorias } from './categorias/categorias';
-import { SuperadminDashboard } from './superadmin-dashboard/superadmin-dashboard';
-import { SuperadminEmpresas } from './superadmin-empresas/superadmin-empresas';
-import { SuperadminSegmentos } from './superadmin-segmentos/superadmin-segmentos';
-import { SuperadminUsuarios } from './superadmin-usuarios/superadmin-usuarios';
-import { SuperadminConfiguracoes } from './superadmin-configuracoes/superadmin-configuracoes';
-import { ProdutosModulo, primeiraAbaPermitida } from './produtos/produtos';
-import { AuthService } from './auth/auth.service';
+import { authGuard, loginGuard } from './auth/auth.guard';
+import { perfilGuard } from './auth/role.guard';
+import { PERFIS_GESTAO } from './auth/auth.service';
 
+/*
+ * Apenas telas com endpoints existentes no backend (Easy-Eats-Api-2):
+ *   /auth, /usuarios, /mesa, /pedido, /item-pedido, /produto, /preco,
+ *   /categorias, /ingredientes, /estoques, /produto-ingrediente, /caixa.
+ *
+ * Telas sem API (comandas, clientes, fidelidade, cupons, fornecedores,
+ * pedidos de compra, cardápio digital, grupos de acesso, configurações,
+ * confirmar pedido, delivery e superadmin) continuam
+ * no projeto, mas fora das rotas até o backend expor os respectivos endpoints.
+ */
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
 
-  // Página pública de apresentação do projeto. Fica fora do layout autenticado
-  // e do authGuard de propósito: é a vitrine, acessível sem login.
-  // Para torná-la a porta de entrada do sistema, troque o redirect acima por
-  // { path: '', redirectTo: '/landing-page', pathMatch: 'full' }.
-  {
-    path: 'landing-page',
-    component: LandingPage,
-  },
-
-  {
-    path: 'login',
-    component: Login,
-  },
-
-  // Cardápio aberto pelo QR Code do Novo Pedido: o cliente final pede sem login.
-  {
-    path: 'cardapio/:slug',
-    component: CardapioPublicoPage,
-  },
+  { path: 'login', component: Login, canActivate: [loginGuard] },
 
   {
     path: '',
     component: AppLayout,
     canActivate: [authGuard],
-    canActivateChild: [garcomAreaGuard, cozinheiroAreaGuard],
+    canActivateChild: [authGuard],
     children: [
-      { path: 'home', component: Home },
-      { path: 'dashboard', component: DashboardComponent },
-
-      { path: 'mesas', component: Mesas, canActivate: [funcionalidadeGuard(['OPERACAO'])] },
-      { path: 'comandas', component: Comandas, canActivate: [funcionalidadeGuard(['OPERACAO'])] },
-      //{ path: 'caixa', component: CaixaComponent, canActivate: [funcionalidadeGuard(['CAIXA'])] },//
-
-      { path: 'novo-pedido', component: NovoPedido, canActivate: [funcionalidadeGuard(['PEDIDO'])] },
-      { path: 'historico-vendas', component: HistoricoVendasComponent, canActivate: [funcionalidadeGuard(['PEDIDO'])] },
-      { path: 'relatorio-pedidos', component: RelatorioPedidos, canActivate: [funcionalidadeGuard(['PEDIDO'])] },
-
-      { path: 'fila', component: ComponentFila, canActivate: [funcionalidadeGuard(['COZINHA'])] },
-      { path: 'tela-cozinha', component: TelaCozinha, canActivate: [funcionalidadeGuard(['COZINHA'])] },
-      { path: 'relatorio-cozinha', component: RelatorioCozinha, canActivate: [funcionalidadeGuard(['COZINHA'])] },
-
-      { path: 'delivery-dashboard', component: DeliveryDashboard, canActivate: [funcionalidadeGuard(['DELIVERY'])] },
-      { path: 'delivery-relatorios', component: DeliveryRelatorios, canActivate: [funcionalidadeGuard(['DELIVERY'])] },
-
-
-      { path: 'pedidos-compra', component: PedidosCompra, canActivate: [funcionalidadeGuard(['COMPRAS'])] },
-      { path: 'fornecedores', component: Fornecedores, canActivate: [funcionalidadeGuard(['COMPRAS'])] },
-
-      { path: 'financeiro', component: Financeiro, canActivate: [funcionalidadeGuard(['FINANCEIRO'])] },
-      { path: 'gestao-financeira', component: GestaoFinanceira, canActivate: [funcionalidadeGuard(['FINANCEIRO'])] },
-
-      // Módulo Produto: o antigo módulo Estoque foi incorporado aqui, em abas.
-      // Quem só tem ESTOQUE no segmento continua entrando (abas Estoque e Relatório).
+      // Todos os perfis
+      { path: 'home', title: 'Início', loadComponent: () => import('./home/home').then((m) => m.Home) },
+      { path: 'mesas', title: 'Mesas', loadComponent: () => import('./mesas/mesas').then((m) => m.Mesas) },
       {
-        path: 'produtos',
-        component: ProdutosModulo,
-        canActivate: [funcionalidadeGuard(['PRODUTOS', 'ESTOQUE'])],
-        children: [
-          {
-            path: '',
-            pathMatch: 'full',
-            redirectTo: () => {
-              const auth = inject(AuthService);
-              return `/produtos/${primeiraAbaPermitida((f) => auth.temFuncionalidade(f))}`;
-            },
-          },
-          { path: 'cadastros', pathMatch: 'full', redirectTo: 'cadastros/insumos' },
-          {
-            path: 'cadastros/insumos',
-            component: CadastroProdutoComponent,
-            data: { tipoCadastro: 'INSUMO' },
-            canActivate: [funcionalidadeGuard(['PRODUTOS'])],
-          },
-          {
-            path: 'cadastros/produtos',
-            component: CadastroProdutoComponent,
-            data: { tipoCadastro: 'PRODUTO' },
-            canActivate: [funcionalidadeGuard(['PRODUTOS'])],
-          },
-          { path: 'cadastros/categorias', component: Categorias, canActivate: [funcionalidadeGuard(['PRODUTOS', 'ESTOQUE'])] },
-          { path: 'ficha-tecnica', component: FichaTecnica, canActivate: [funcionalidadeGuard(['PRODUTOS'])] },
-          { path: 'estoque', component: ControleEstoque, canActivate: [funcionalidadeGuard(['PRODUTOS', 'ESTOQUE'])] },
-          { path: 'cardapio', component: CardapioAdmin, canActivate: [funcionalidadeGuard(['PRODUTOS'])] },
-          { path: 'relatorio', component: RelatorioEstoque, canActivate: [funcionalidadeGuard(['PRODUTOS', 'ESTOQUE'])] },
-        ],
+        path: 'novo-pedido',
+        title: 'Novo Pedido',
+        loadComponent: () => import('./novo-pedido/novo-pedido').then((m) => m.NovoPedido),
+      },
+      {
+        path: 'historico-vendas',
+        title: 'Histórico de Pedidos',
+        loadComponent: () =>
+          import('./historico-vendas/historico-vendas').then((m) => m.HistoricoVendasComponent),
+      },
+      {
+        path: 'fila',
+        title: 'Fila da Cozinha',
+        loadComponent: () => import('./fila/component.fila').then((m) => m.ComponentFila),
+      },
+      {
+        path: 'tela-cozinha',
+        title: 'Tela Cozinha',
+        loadComponent: () => import('./tela-cozinha/tela-cozinha').then((m) => m.TelaCozinha),
+      },
+      {
+        path: 'perfil',
+        title: 'Meu Perfil',
+        loadComponent: () => import('./perfil-admin/perfilAdmin').then((m) => m.PerfilAdmin),
       },
 
-      // Rotas antigas (menus Estoque e Produtos de antes), mantidas como redirect
-      // para não quebrar favoritos e links salvos.
-      { path: 'cadastro-produto', redirectTo: 'produtos/cadastros/produtos' },
-      { path: 'ficha-tecnica', redirectTo: 'produtos/ficha-tecnica' },
-      { path: 'cardapio-admin', redirectTo: 'produtos/cardapio' },
-      { path: 'controle-estoque', redirectTo: 'produtos/estoque' },
-      { path: 'categorias', redirectTo: 'produtos/cadastros/categorias' },
-      { path: 'relatorio-estoque', redirectTo: 'produtos/relatorio' },
+      { path: 'conta/:id', title: 'Conta', loadComponent: () => import('./conta/conta').then((m) => m.Conta) },
+      // Caixa: qualquer perfil abre o caixa e lança suprimento; sangria e fechamento são validados pela API
+      { path: 'caixa', title: 'Caixa', loadComponent: () => import('./caixa/caixa').then((m) => m.CaixaComponent) },
+      // Administrador e Gerente
+      {
+        path: 'dashboard',
+        title: 'Dashboard',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () => import('./dashboard/dashboard').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'relatorio-pedidos',
+        title: 'Relatório de Pedidos',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () =>
+          import('./relatorio-pedidos/relatorio-pedidos').then((m) => m.RelatorioPedidos),
+      },
+      {
+        path: 'relatorio-cozinha',
+        title: 'Relatório da Cozinha',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () =>
+          import('./relatorio-cozinha/relatorio-cozinha').then((m) => m.RelatorioCozinha),
+      },
+      {
+        path: 'controle-estoque',
+        title: 'Estoque',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () =>
+          import('./controle-estoque/controle-estoque').then((m) => m.ControleEstoque),
+      },
+      {
+        path: 'relatorio-estoque',
+        title: 'Relatório de Estoque',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () =>
+          import('./relatorio-estoque/relatorio-estoque').then((m) => m.RelatorioEstoque),
+      },
+      {
+        path: 'cadastro-produto',
+        title: 'Produtos',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () =>
+          import('./cadastro-produto/cadastroProduto').then((m) => m.CadastroProdutoComponent),
+      },
+      {
+        path: 'categorias',
+        title: 'Categorias',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () => import('./categorias/categorias').then((m) => m.Categorias),
+      },
+      {
+        path: 'ficha-tecnica',
+        title: 'Ficha Técnica',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () => import('./ficha-tecnica/ficha-tecnica').then((m) => m.FichaTecnica),
+      },
+      {
+        path: 'financeiro',
+        title: 'Financeiro',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () => import('./financeiro/financeiro').then((m) => m.Financeiro),
+      },
 
-      { path: 'clientes', component: Clientes, canActivate: [funcionalidadeGuard(['CLIENTES'])] },
-      { path: 'fidelidade', component: Fidelidade, canActivate: [funcionalidadeGuard(['CLIENTES'])] },
-      { path: 'cupons-cashback', component: CuponsCashback, canActivate: [funcionalidadeGuard(['CUPONS'])] },
-
-      { path: 'usuarios', component: Usuarios, canActivate: [funcionalidadeGuard(['USUARIOS'])] },
-      { path: 'grupos-acesso', component: GruposAcesso, canActivate: [funcionalidadeGuard(['USUARIOS'])] },
-
-      { path: 'configuracoes-geral', component: ConfiguracoesGeral, canActivate: [funcionalidadeGuard(['CONFIGURACOES'])] },
-      { path: 'configuracoes-integracoes', component: ConfiguracoesIntegracoes, canActivate: [funcionalidadeGuard(['CONFIGURACOES'])] },
-
-      { path: 'superadmin-dashboard', component: SuperadminDashboard, canActivate: [superadminGuard] },
-      { path: 'superadmin-empresas', component: SuperadminEmpresas, canActivate: [superadminGuard] },
-      { path: 'superadmin-segmentos', component: SuperadminSegmentos, canActivate: [superadminGuard] },
-      { path: 'superadmin-usuarios', component: SuperadminUsuarios, canActivate: [superadminGuard] },
-      { path: 'superadmin-configuracoes', component: SuperadminConfiguracoes, canActivate: [superadminGuard] },
-
-      { path: 'perfil-admin', component: PerfilAdmin },
-      { path: 'perfil-garcom', component: PerfilGarcom },
+      {
+        path: 'caixa-historico',
+        title: 'Histórico de Caixas',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () => import('./caixa-historico/caixa-historico').then((m) => m.CaixaHistorico),
+      },
+      {
+        path: 'caixa-relatorio/:id',
+        title: 'Relatório de Fechamento',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () => import('./caixa-relatorio/caixa-relatorio').then((m) => m.CaixaRelatorio),
+      },
+      {
+        path: 'gestao-financeira',
+        title: 'Lançamentos do Caixa',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () => import('./gestao-financeira/gestao-financeira').then((m) => m.GestaoFinanceira),
+      },
+      // Somente Administrador
+      {
+        path: 'usuarios',
+        title: 'Usuários',
+        canActivate: [perfilGuard(['ADMINISTRADOR'])],
+        loadComponent: () => import('./usuarios/usuarios').then((m) => m.Usuarios),
+      },
     ],
   },
 
-  // Sem esta rota qualquer URL desconhecida (link antigo, digitação, refresh em
-  // caminho inválido) estourava NG04002 no console e deixava a tela em branco.
-  // O authGuard da rota '' decide o destino real: /home se logado, /login se não.
   { path: '**', redirectTo: '/home' },
 ];

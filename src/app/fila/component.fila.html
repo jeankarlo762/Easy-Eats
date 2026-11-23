@@ -1,90 +1,81 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Fila da Cozinha</h1>
-    <p>Acompanhe o preparo dos pedidos em andamento</p>
+    <div>
+      <h1>Fila da Cozinha</h1>
+      <p>Pedidos em andamento por ordem de chegada. Atualiza sozinha a cada 15 segundos.</p>
+    </div>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+    </div>
   </header>
 
-  @if (erro) {
-    <p class="vazio">{{ erro }}</p>
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
   }
 
-  @if (carregando) {
-    <app-carregando texto="Carregando fila..."></app-carregando>
-  } @else {
-    <div class="grid-resumo">
-      <div class="resumo-card">
-        <div class="resumo-icon aguardando"><i class="bi bi-hourglass-split"></i></div>
-        <div>
-          <div class="resumo-valor">{{ totalAguardando }}</div>
-          <div class="resumo-label">Aguardando</div>
-        </div>
-      </div>
-
-      <div class="resumo-card">
-        <div class="resumo-icon preparando"><i class="bi bi-egg-fried"></i></div>
-        <div>
-          <div class="resumo-valor">{{ totalPreparando }}</div>
-          <div class="resumo-label">Em Preparo</div>
-        </div>
-      </div>
-
-      <div class="resumo-card">
-        <div class="resumo-icon pronto"><i class="bi bi-check-circle"></i></div>
-        <div>
-          <div class="resumo-valor">{{ readyOrders.length }}</div>
-          <div class="resumo-label">Prontos</div>
-        </div>
+  <div class="grid-stats">
+    <div class="stat-card">
+      <div class="stat-icon azul"><i class="bi bi-hourglass-split"></i></div>
+      <div>
+        <div class="stat-valor">{{ totalAguardando() }}</div>
+        <div class="stat-label">Aguardando</div>
       </div>
     </div>
+    <div class="stat-card">
+      <div class="stat-icon laranja"><i class="bi bi-fire"></i></div>
+      <div>
+        <div class="stat-valor">{{ totalPreparando() }}</div>
+        <div class="stat-label">Em preparo</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon verde"><i class="bi bi-check-circle"></i></div>
+      <div>
+        <div class="stat-valor">{{ finalizadosHoje().length }}</div>
+        <div class="stat-label">Finalizados hoje</div>
+      </div>
+    </div>
+  </div>
 
+  @if (carregando()) {
+    <app-carregando texto="Carregando fila..."></app-carregando>
+  } @else {
     <section class="painel">
-      <h3>Pedidos em Andamento</h3>
+      <h3>Pedidos em andamento</h3>
 
-      <div class="lista-pedidos">
-        @for (pedido of activeOrders; track pedido.id) {
-          <div class="card-pedido">
-            <div class="card-topo">
-              <span class="id-cliente">#{{ pedido.id }} <strong>{{ pedido.nomeProduto }}</strong></span>
+      <div class="lista">
+        @for (pedido of emAndamento(); track pedido.id; let i = $index) {
+          <div class="linha linha-pedido" [class.atrasado]="atrasado(pedido)">
+            <span class="posicao">{{ i + 1 }}º</span>
 
-              @if (pedido.status === statusEnum.PREPARANDO) {
-                <span class="status preparando">Preparando</span>
-              }
-              @if (pedido.status === statusEnum.AGUARDANDO) {
-                <span class="status aguardando">Aguardando</span>
-              }
+            <div class="linha-info">
+              <strong>#{{ pedido.id }} · {{ identificacao(pedido) }}</strong>
+              <span>
+                @for (item of pedido.itens; track $index; let ultimo = $last) {
+                  {{ item.quantidade }}× {{ item.produto.nome }}{{ ultimo ? '' : ', ' }}
+                }
+              </span>
             </div>
 
-            <div class="itens-pedido">
-              <div class="item">
-                <span>Quantidade</span>
-                <span>{{ pedido.quantidadeProduto }}</span>
-              </div>
-            </div>
-
-            <div class="card-acoes">
-              <span class="total">{{ pedido.dataCriacao | date: 'HH:mm' }}</span>
-
-              @if (pedido.status === statusEnum.AGUARDANDO) {
-                <button
-                  type="button"
-                  [disabled]="atualizandoId === pedido.id"
-                  (click)="iniciarPreparo(pedido)"
-                  class="btn-preparar"
-                >
-                  <i class="bi bi-play-fill"></i> Iniciar Preparo
-                </button>
-              }
-
-              @if (pedido.status === statusEnum.PREPARANDO) {
-                <button
-                  type="button"
-                  [disabled]="atualizandoId === pedido.id"
-                  (click)="marcarPronto(pedido)"
-                  class="btn-concluir"
-                >
-                  <i class="bi bi-check-lg"></i> Marcar Pronto
-                </button>
-              }
+            <div class="linha-acoes">
+              <span class="espera" [title]="'Criado às ' + (pedido.dataCriacao | date: 'HH:mm')">
+                <i class="bi bi-clock"></i> {{ minutosEspera(pedido) }} min
+              </span>
+              <span class="badge status-{{ pedido.status }}">{{ statusLabel[pedido.status] }}</span>
+              <button
+                type="button"
+                class="btn btn-primario btn-sm"
+                [disabled]="processandoId() === pedido.id"
+                (click)="avancar(pedido)"
+              >
+                {{ processandoId() === pedido.id ? 'Atualizando...' : rotuloAcao(pedido) }}
+              </button>
             </div>
           </div>
         } @empty {
@@ -94,16 +85,19 @@
     </section>
 
     <section class="painel">
-      <h3>Prontos para Entrega</h3>
+      <h3>Finalizados hoje</h3>
 
-      <div class="lista-prontos">
-        @for (pedido of readyOrders; track pedido.id) {
-          <div class="linha-pronto">
-            <span><i class="bi bi-check-circle-fill"></i> #{{ pedido.id }} <strong>{{ pedido.nomeProduto }}</strong> ({{ pedido.quantidadeProduto }})</span>
-            <strong>{{ pedido.dtPronto | date: 'HH:mm' }}</strong>
+      <div class="lista">
+        @for (pedido of finalizadosHoje(); track pedido.id) {
+          <div class="linha">
+            <div class="linha-info">
+              <strong><i class="bi bi-check-circle-fill finalizado"></i> #{{ pedido.id }} · {{ identificacao(pedido) }}</strong>
+              <span>{{ pedido.dataAlteracao ? 'Finalizado às ' + (pedido.dataAlteracao | date: 'HH:mm') : '' }}</span>
+            </div>
+            <strong>{{ pedido.valorTotal | currency: 'BRL' }}</strong>
           </div>
         } @empty {
-          <p class="vazio">Nenhum pedido pronto no momento.</p>
+          <p class="vazio">Nenhum pedido finalizado hoje.</p>
         }
       </div>
     </section>
