@@ -9,6 +9,7 @@ import { ModalProdutoComponent } from '../../components/modal-produto/modalProdu
 import { CarregandoComponent } from '../../components/carregando/carregando';
 import { AuthService } from '../auth/auth.service';
 import { Produto, ProdutoService } from '../cadastro-produto/produto.service';
+import { Cliente, ClienteService } from '../clientes/cliente.service';
 import { ItemComandaPayload, Comanda, ComandaService } from '../comandas/comanda.service';
 import { Mesa, MesaService } from '../mesas/mesa.service';
 import { CustomizacaoProduto, customizacaoVazia, mesmaCustomizacao } from './carrinho.model';
@@ -44,6 +45,7 @@ export class NovoPedido implements OnInit {
   private vendaService = inject(VendaService);
   private itemVendaService = inject(ItemVendaService);
   private comandaService = inject(ComandaService);
+  private clienteService = inject(ClienteService);
   private route = inject(ActivatedRoute);
   private cardapioPublicoService = inject(CardapioPublicoService);
   protected authService = inject(AuthService);
@@ -53,6 +55,24 @@ export class NovoPedido implements OnInit {
 
   produtos: Produto[] = [];
   mesas: Mesa[] = [];
+
+  // Cliente cadastrado (opcional) e cupom só se aplicam ao fluxo de venda
+  // avulsa (balcão/retirada) — pedidos de mesa passam pelo módulo de
+  // Comandas, que ainda não tem vínculo com Cliente (ver relatório do
+  // módulo Financeiro).
+  clientes: Cliente[] = [];
+  clienteSelecionadoId: number | null = null;
+  codigoCupom = '';
+  valorCashbackResgate: number | null = null;
+  avisoPosPedido: string | null = null;
+
+  get clienteSelecionado(): Cliente | null {
+    return this.clientes.find((c) => c.id === this.clienteSelecionadoId) ?? null;
+  }
+
+  get vaiPorComanda(): boolean {
+    return this.usaMesa && this.mesaSelecionada !== null && this.comandaPorMesa.has(this.mesaSelecionada);
+  }
 
   // Mesa -> comanda aberta, para lançar o pedido nela em vez de criar uma
   // Venda solta (ver mesas.ts, que já abre a comanda antes de chegar aqui).
@@ -108,6 +128,11 @@ export class NovoPedido implements OnInit {
         }
       });
     }
+
+    this.clienteService.listar().subscribe({
+      next: (clientes) => (this.clientes = clientes),
+      error: () => {}, // opcional: pedido continua funcionando sem a lista de clientes
+    });
   }
 
   selecionarCategoria(cat: string) {
@@ -208,6 +233,7 @@ export class NovoPedido implements OnInit {
     }
 
     const mesa = this.usaMesa && this.mesaSelecionada ? { id: this.mesaSelecionada } : null;
+    const clienteId = this.clienteSelecionadoId;
 
     this.vendaService
       .criar({
@@ -215,6 +241,7 @@ export class NovoPedido implements OnInit {
         tipo: mesa ? 'Mesa' : 'Balcão',
         mesa,
         nomeCliente: this.cliente.trim() || null,
+        cliente: clienteId ? { id: clienteId } : null,
         usuario: { id: usuarioId },
       })
       .subscribe({
@@ -235,7 +262,7 @@ export class NovoPedido implements OnInit {
     );
 
     forkJoin(chamadas).subscribe({
-      next: () => this.finalizarComSucesso(),
+      next: () => this.aplicarCupomEFinalizar(vendaId),
       error: (erro) => {
         this.enviando = false;
         this.erro = MensagemErroApiUtil.extrair(
@@ -261,13 +288,57 @@ export class NovoPedido implements OnInit {
     };
   }
 
+  /**
+   * Cupom e resgate de cashback só se aplicam depois que a venda já tem
+   * itens (o valor mínimo do cupom e o teto do resgate dependem do total).
+   * Nenhum dos dois é obrigatório: falhas aqui só geram um aviso, o pedido
+   * já foi criado e enviado para a cozinha de qualquer forma.
+   */
+  private aplicarCupomEFinalizar(vendaId: number) {
+    const codigo = this.codigoCupom.trim();
+    if (!codigo) {
+      this.resgatarCashbackEFinalizar(vendaId);
+      return;
+    }
+
+    this.vendaService.aplicarCupom(vendaId, codigo).subscribe({
+      next: () => this.resgatarCashbackEFinalizar(vendaId),
+      error: (erro) => {
+        this.avisoPosPedido = MensagemErroApiUtil.extrair(erro, 'Não foi possível aplicar o cupom.');
+        this.resgatarCashbackEFinalizar(vendaId);
+      },
+    });
+  }
+
+  private resgatarCashbackEFinalizar(vendaId: number) {
+    const valor = this.valorCashbackResgate;
+    if (!this.clienteSelecionadoId || !valor || valor <= 0) {
+      this.finalizarComSucesso();
+      return;
+    }
+
+    this.vendaService.resgatarCashback(vendaId, valor).subscribe({
+      next: () => this.finalizarComSucesso(),
+      error: (erro) => {
+        this.avisoPosPedido =
+          (this.avisoPosPedido ? this.avisoPosPedido + ' ' : '') +
+          MensagemErroApiUtil.extrair(erro, 'Não foi possível usar o cashback.');
+        this.finalizarComSucesso();
+      },
+    });
+  }
+
   private finalizarComSucesso() {
     this.enviando = false;
     this.sucesso = true;
     this.carrinho = [];
     this.cliente = '';
     this.mesaSelecionada = null;
+    this.clienteSelecionadoId = null;
+    this.codigoCupom = '';
+    this.valorCashbackResgate = null;
     setTimeout(() => (this.sucesso = false), 4000);
+    setTimeout(() => (this.avisoPosPedido = null), 8000);
   }
 
   /**
