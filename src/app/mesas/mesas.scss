@@ -63,3 +63,21 @@
 a.btn {
   text-decoration: none;
 }
+
+.selo-tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-bg-hover);
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.selo-qr {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}

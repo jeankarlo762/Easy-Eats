@@ -83,6 +83,20 @@
       </div>
     </div>
 
+    @if (v.origem === 'CARDAPIO_DIGITAL' || v.telefoneCliente || v.enderecoEntrega) {
+      <div class="alerta alerta-info dados-cardapio">
+        <i class="bi bi-qr-code"></i>
+        <span class="alerta-texto">
+          @if (v.origem === 'CARDAPIO_DIGITAL') {<strong>Pedido feito pelo cardápio digital.</strong>}
+          @if (v.telefoneCliente) { <i class="bi bi-whatsapp"></i> {{ v.telefoneCliente }}}
+          @if (v.enderecoEntrega) { · <i class="bi bi-geo-alt"></i> {{ v.enderecoEntrega }}}
+          @if (v.formaPagamentoPrevista) {
+            · Vai pagar com {{ formaLabel[v.formaPagamentoPrevista] }}@if (v.trocoPara) { (troco para {{ v.trocoPara | currency: 'BRL' }})}
+          }
+        </span>
+      </div>
+    }
+
     @if (v.status === 'FINALIZADA') {
       <div class="alerta alerta-sucesso">
         <i class="bi bi-check-circle"></i>

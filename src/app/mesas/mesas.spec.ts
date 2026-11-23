@@ -77,8 +77,26 @@ describe('Mesas', () => {
     await criar();
 
     expect(component.retiradas().map((r) => r.nomeCliente)).toEqual(['Maria']);
-    expect(texto()).toContain('Retiradas em aberto');
+    expect(texto()).toContain('Retiradas e delivery em aberto');
     expect(texto()).toContain('Maria');
+  });
+
+  it('lista o delivery do cardápio digital com telefone, endereço e pagamento', async () => {
+    const delivery: VendaResumo = {
+      id: 12, tipo: 'DELIVERY', mesaId: null, numeroMesa: null, status: 'ABERTA', nomeCliente: 'João', usuarioAbertura: 'cardapio-digital',
+      dataAbertura: '2026-03-10T13:00:00', usuarioFechamento: null, dataFechamento: null, valorTotal: 40,
+      telefoneCliente: '11977776666', enderecoEntrega: 'Rua A, 10, Centro', formaPagamentoPrevista: 'PIX', trocoPara: null,
+      origem: 'CARDAPIO_DIGITAL',
+    };
+    await criar();
+    vendaService.abertas.mockReturnValue(of([...ABERTAS, delivery]));
+    component.carregar();
+    fixture.detectChanges();
+
+    expect(component.retiradas().map((r) => r.nomeCliente)).toEqual(['Maria', 'João']);
+    expect(texto()).toContain('Cardápio digital');
+    expect(texto()).toContain('Rua A, 10, Centro');
+    expect(texto()).toContain('Paga com Pix');
   });
 
   it('sem retiradas abertas o painel não aparece', async () => {

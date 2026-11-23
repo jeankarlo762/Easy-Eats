@@ -1,0 +1,195 @@
+<div class="pagina">
+  @if (carregando()) {
+    <app-carregando texto="Carregando cardápio..."></app-carregando>
+  } @else if (!cardapio()) {
+    <div class="estado-vazio">
+      <i class="bi bi-emoji-frown"></i>
+      <p>{{ erro() || 'Cardápio indisponível no momento.' }}</p>
+    </div>
+  } @else if (etapa() === 'confirmado' && pedidoCriado(); as pedido) {
+    <div class="confirmacao">
+      <i class="bi bi-check-circle-fill"></i>
+      <h2>Pedido recebido!</h2>
+      <p>Seu pedido <strong>#{{ pedido.numeroPedido }}</strong> já está na fila da cozinha.</p>
+      <p class="total-confirmacao">
+        Total: {{ pedido.total | currency: 'BRL' }} · {{ formaLabel[pedido.formaPagamento] }}
+      </p>
+      <p class="dica-whats">
+        <i class="bi bi-whatsapp"></i>
+        Enviamos a confirmação para o seu WhatsApp.
+        {{ pedido.tipoEntrega === 'DELIVERY' ? 'O pagamento é feito na entrega.' : 'O pagamento é feito na retirada.' }}
+      </p>
+      <button type="button" class="botao-principal" (click)="novoPedido()">Fazer outro pedido</button>
+    </div>
+  } @else {
+    @let c = cardapio()!;
+    <header class="topo">
+      @if (etapa() === 'checkout') {
+        <button type="button" class="voltar" (click)="voltarAoCardapio()" aria-label="Voltar ao cardápio">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+      }
+      <div>
+        <h1>{{ c.nomeEstabelecimento }}</h1>
+        <p>{{ etapa() === 'checkout' ? 'Finalize seu pedido' : 'Escolha seus produtos e peça pelo celular' }}</p>
+      </div>
+    </header>
+
+    @if (erro()) {
+      <div class="alerta-erro" role="alert">{{ erro() }}</div>
+    }
+
+    @if (etapa() === 'cardapio') {
+      <div class="filtros">
+        <button type="button" [class.ativo]="categoriaSelecionada() === null" (click)="categoriaSelecionada.set(null)">
+          Todos
+        </button>
+        @for (cat of categorias(); track cat.id) {
+          <button type="button" [class.ativo]="categoriaSelecionada() === cat.id" (click)="categoriaSelecionada.set(cat.id)">
+            {{ cat.nome }}
+          </button>
+        }
+      </div>
+
+      @for (cat of produtosVisiveis(); track cat.id) {
+        <h2 class="titulo-categoria">{{ cat.nome }}</h2>
+        <div class="produtos">
+          @for (produto of cat.produtos; track produto.id) {
+            <div class="produto-card">
+              <div class="info">
+                <h4>{{ produto.nome }}</h4>
+                @if (produto.descricao) {
+                  <small>{{ produto.descricao }}</small>
+                }
+                <span class="preco">{{ produto.preco | currency: 'BRL' }}</span>
+              </div>
+              @if (qtdNaSacola(produto) > 0) {
+                <div class="qtd">
+                  <button type="button" (click)="diminuir(produto)" aria-label="Diminuir">−</button>
+                  <span>{{ qtdNaSacola(produto) }}</span>
+                  <button type="button" (click)="adicionar(produto)" aria-label="Aumentar">+</button>
+                </div>
+              } @else {
+                <button type="button" class="adicionar" (click)="adicionar(produto)" [attr.aria-label]="'Adicionar ' + produto.nome">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="vazio">Nenhum produto disponível no momento.</p>
+      }
+
+      @if (totalItens() > 0) {
+        <div class="barra-sacola">
+          <button type="button" class="botao-principal" (click)="irParaCheckout()">
+            <span><i class="bi bi-bag"></i> Ver sacola ({{ totalItens() }})</span>
+            <strong>{{ total() | currency: 'BRL' }}</strong>
+          </button>
+        </div>
+      }
+    } @else {
+      <section class="bloco">
+        <h3><i class="bi bi-bag"></i> Sua sacola</h3>
+        @for (item of sacola(); track item.produto.id) {
+          <div class="item">
+            <div class="linha">
+              <span class="nome">{{ item.produto.nome }}</span>
+              <div class="qtd">
+                <button type="button" (click)="diminuir(item.produto)" aria-label="Diminuir">−</button>
+                <span>{{ item.qtd }}</span>
+                <button type="button" (click)="adicionar(item.produto)" aria-label="Aumentar">+</button>
+              </div>
+              <span class="preco-item">{{ item.produto.preco * item.qtd | currency: 'BRL' }}</span>
+            </div>
+          </div>
+        }
+        <button type="button" class="link" (click)="voltarAoCardapio()"><i class="bi bi-plus"></i> Adicionar mais itens</button>
+      </section>
+
+      <section class="bloco">
+        <h3><i class="bi bi-person"></i> Seus dados</h3>
+        <label>Nome *
+          <input type="text" maxlength="80" autocomplete="name" [(ngModel)]="nome" placeholder="Como podemos te chamar?" />
+        </label>
+        <label>WhatsApp *
+          <input type="tel" inputmode="tel" autocomplete="tel" [ngModel]="telefone" (ngModelChange)="formatarTelefone($event)" placeholder="(11) 99999-8888" />
+        </label>
+      </section>
+
+      <section class="bloco">
+        <h3><i class="bi bi-geo-alt"></i> Entrega</h3>
+        <div class="opcoes">
+          @if (c.aceitaDelivery) {
+            <button type="button" [class.ativo]="tipoEntrega === 'DELIVERY'" (click)="tipoEntrega = 'DELIVERY'">
+              <i class="bi bi-scooter"></i> Entregar
+            </button>
+          }
+          @if (c.aceitaRetirada) {
+            <button type="button" [class.ativo]="tipoEntrega === 'RETIRADA'" (click)="tipoEntrega = 'RETIRADA'">
+              <i class="bi bi-shop"></i> Retirar no local
+            </button>
+          }
+        </div>
+
+        @if (tipoEntrega === 'DELIVERY') {
+          <div class="grade">
+            <label class="largo">Rua *
+              <input type="text" maxlength="150" autocomplete="address-line1" [(ngModel)]="endereco.rua" />
+            </label>
+            <label>Número *
+              <input type="text" maxlength="20" [(ngModel)]="endereco.numero" />
+            </label>
+            <label>Complemento
+              <input type="text" maxlength="80" [(ngModel)]="endereco.complemento" placeholder="Apto, bloco..." />
+            </label>
+            <label>Bairro *
+              <input type="text" maxlength="80" [(ngModel)]="endereco.bairro" />
+            </label>
+            <label>Cidade
+              <input type="text" maxlength="80" autocomplete="address-level2" [(ngModel)]="endereco.cidade" />
+            </label>
+            <label>CEP
+              <input type="text" inputmode="numeric" maxlength="9" autocomplete="postal-code" [(ngModel)]="endereco.cep" />
+            </label>
+            <label class="largo">Ponto de referência
+              <input type="text" maxlength="120" [(ngModel)]="endereco.referencia" />
+            </label>
+          </div>
+        } @else {
+          <p class="nota">Avisaremos pelo WhatsApp quando estiver pronto para retirar.</p>
+        }
+      </section>
+
+      <section class="bloco">
+        <h3><i class="bi bi-credit-card"></i> Pagamento</h3>
+        <p class="nota">O pagamento é feito {{ tipoEntrega === 'DELIVERY' ? 'na entrega' : 'na retirada' }}.</p>
+        <div class="opcoes">
+          @for (forma of c.formasPagamento; track forma) {
+            <button type="button" [class.ativo]="formaPagamento === forma" (click)="formaPagamento = forma">
+              {{ formaLabel[forma] }}
+            </button>
+          }
+        </div>
+        @if (formaPagamento === 'DINHEIRO') {
+          <label>Troco para quanto? (opcional)
+            <input type="number" min="0" step="0.01" inputmode="decimal" [(ngModel)]="trocoPara" placeholder="Ex.: 100" />
+          </label>
+        }
+        <label>Observação
+          <input type="text" maxlength="255" [(ngModel)]="observacao" placeholder="Ex.: sem cebola, interfone quebrado" />
+        </label>
+      </section>
+
+      <div class="total">
+        <span>Total</span>
+        <strong>{{ total() | currency: 'BRL' }}</strong>
+      </div>
+
+      <button type="button" class="botao-principal" [disabled]="enviando()" (click)="enviarPedido()">
+        {{ enviando() ? 'Enviando...' : 'Fazer pedido' }}
+      </button>
+    }
+  }
+</div>

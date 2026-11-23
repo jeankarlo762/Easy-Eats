@@ -6,7 +6,7 @@ import { forkJoin } from 'rxjs';
 import { CarregandoComponent } from '../../components/carregando/carregando';
 import { AuthService, PERFIS_GESTAO } from '../auth/auth.service';
 import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
-import { OcupacaoMesa, VendaResumo, VendaService } from '../vendas/venda.service';
+import { FORMA_PAGAMENTO_LABEL, OcupacaoMesa, VendaResumo, VendaService } from '../vendas/venda.service';
 import { MesaService } from './mesa.service';
 
 @Component({
@@ -22,6 +22,7 @@ export class Mesas implements OnInit {
   private router = inject(Router);
 
   readonly podeGerenciar = inject(AuthService).temPerfil(PERFIS_GESTAO);
+  readonly formaLabel = FORMA_PAGAMENTO_LABEL;
 
   carregando = signal(true);
   salvando = signal(false);
@@ -50,7 +51,7 @@ export class Mesas implements OnInit {
     }).subscribe({
       next: ({ mesas, abertas }) => {
         this.mesas.set(mesas);
-        this.retiradas.set(abertas.filter((venda) => venda.tipo === 'RETIRADA'));
+        this.retiradas.set(abertas.filter((venda) => venda.tipo === 'RETIRADA' || venda.tipo === 'DELIVERY'));
         this.carregando.set(false);
       },
       error: (erro) => {

@@ -20,6 +20,13 @@ export const routes: Routes = [
 
   { path: 'login', component: Login, canActivate: [loginGuard] },
 
+  // Cardápio digital aberto pelo QR Code: público, sem login
+  {
+    path: 'cardapio',
+    title: 'Cardápio',
+    loadComponent: () => import('./cardapio-publico/cardapio-publico').then((m) => m.CardapioPublicoPage),
+  },
+
   {
     path: '',
     component: AppLayout,

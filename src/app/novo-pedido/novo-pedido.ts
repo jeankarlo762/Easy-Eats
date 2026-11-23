@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, switchMap } from 'rxjs';
+import QRCode from 'qrcode';
 import { CarregandoComponent } from '../../components/carregando/carregando';
 import { Produto, ProdutoService } from '../cadastro-produto/produto.service';
 import { CaixaService } from '../caixa/caixa.service';
@@ -130,6 +131,27 @@ export class NovoPedido implements OnInit {
   });
 
   podeConfirmar = computed(() => this.pendenciaDoModal() === null && !this.enviando());
+
+  // QR Code do cardápio digital (rota pública /cardapio)
+  qrCodeAberto = signal(false);
+  qrCodeImagem = signal<string | null>(null);
+  qrCodeErro = signal<string | null>(null);
+  linkCopiado = signal(false);
+  readonly linkCardapio = `${window.location.origin}/cardapio`;
+
+  abrirQrCode(): void {
+    this.qrCodeAberto.set(true);
+    this.linkCopiado.set(false);
+    if (this.qrCodeImagem()) return;
+    this.qrCodeErro.set(null);
+    QRCode.toDataURL(this.linkCardapio, { width: 480, margin: 2 })
+      .then((imagem) => this.qrCodeImagem.set(imagem))
+      .catch(() => this.qrCodeErro.set('Não foi possível gerar o QR Code.'));
+  }
+
+  copiarLink(): void {
+    navigator.clipboard?.writeText(this.linkCardapio).then(() => this.linkCopiado.set(true));
+  }
 
   ngOnInit(): void {
     forkJoin({
