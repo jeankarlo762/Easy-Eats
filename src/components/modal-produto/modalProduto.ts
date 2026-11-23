@@ -39,23 +39,8 @@ export class ModalProdutoComponent implements OnChanges {
     return (nomeCategoria && ICONE_POR_CATEGORIA[nomeCategoria]) || 'bi-basket3';
   }
 
-  /** Só produtos preparados/montados têm composição editável (tirar queijo etc.). */
   get ehPreparado(): boolean {
     return this.produto?.natureza === 'PREPARADO';
-  }
-
-  /**
-   * Adicionais valem também para REVENDA — é exatamente a regra que a tela de
-   * cadastro usa (`cadastroProduto.exibeAdicionais`). Antes o modal só olhava
-   * PREPARADO, então adicionais cadastrados em itens de revenda nunca chegavam
-   * ao carrinho.
-   */
-  get ehRevenda(): boolean {
-    return this.produto?.natureza === 'REVENDA';
-  }
-
-  get permiteCustomizacao(): boolean {
-    return this.ehPreparado || this.ehRevenda;
   }
 
   get totalAdicionais(): number {
@@ -73,7 +58,7 @@ export class ModalProdutoComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['produto']) {
       this.resetarCustomizacao();
-      if (this.produto && this.permiteCustomizacao) {
+      if (this.produto && this.ehPreparado) {
         this.carregarComposicaoEAdicionais(this.produto.id);
       }
     }
@@ -89,22 +74,15 @@ export class ModalProdutoComponent implements OnChanges {
 
   private carregarComposicaoEAdicionais(produtoId: number) {
     this.carregandoDetalhes = true;
-
-    if (this.ehPreparado) {
-      this.composicaoItemService.listar(produtoId).subscribe({
-        next: (itens) => {
-          this.composicao = itens;
-          this.carregandoDetalhes = false;
-        },
-        error: () => (this.carregandoDetalhes = false),
-      });
-    } else {
-      this.carregandoDetalhes = false;
-    }
-
+    this.composicaoItemService.listar(produtoId).subscribe({
+      next: (itens) => {
+        this.composicao = itens;
+        this.carregandoDetalhes = false;
+      },
+      error: () => (this.carregandoDetalhes = false),
+    });
     this.adicionalService.listar(produtoId).subscribe({
       next: (adicionais) => (this.adicionaisDisponiveis = adicionais),
-      error: () => (this.adicionaisDisponiveis = []),
     });
   }
 

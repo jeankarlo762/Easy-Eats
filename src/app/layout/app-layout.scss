@@ -1,4 +1,3 @@
-@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css');
 
 :host {
   display: block;
@@ -320,16 +319,27 @@
   letter-spacing: 0.03em;
 }
 
-.badge-perfil.operador {
+.badge-perfil.gerente {
   color: #2563eb;
 }
 
-.badge-perfil.superadmin {
-  color: #dc2626;
+.badge-perfil.funcionario {
+  color: #ea580c;
 }
 
-.badge-perfil.garcom {
-  color: #ea580c;
+.notificacao.clicavel {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border-soft);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.notificacao.clicavel:hover {
+  background: rgba(234, 88, 12, 0.06);
 }
 
 .btn-sair {

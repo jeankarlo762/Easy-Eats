@@ -4,23 +4,29 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ItemVendaPayload {
-  venda: { id: number };
-  produto: { id: number };
+  produtoId: number;
   quantidade: number;
-  preco_unitario: number;
-  valor_total: number;
-  observacao?: string | null;
-  composicaoRemovida?: { composicaoItem: { id: number } }[];
-  adicionais?: { adicional: { id: number }; quantidade: number }[];
 }
 
-const API_URL = `${environment.apiUrl}/item-venda`;
+export interface ItemPedidoResposta {
+  id: number;
+  pedidoId: number;
+  produtoId: number;
+  quantidade: number;
+  valorUnitario: number;
+}
+
+const API_URL = `${environment.apiUrl}/item-pedido`;
 
 @Injectable({ providedIn: 'root' })
 export class ItemVendaService {
   constructor(private http: HttpClient) {}
 
-  criar(item: ItemVendaPayload): Observable<unknown> {
-    return this.http.post(API_URL, item);
+  criar(pedidoId: number, item: ItemVendaPayload): Observable<ItemPedidoResposta> {
+    return this.http.post<ItemPedidoResposta>(`${API_URL}/pedido/${pedidoId}`, item);
+  }
+
+  listarPorPedido(pedidoId: number): Observable<ItemPedidoResposta[] | null> {
+    return this.http.get<ItemPedidoResposta[] | null>(`${API_URL}/pedido/${pedidoId}`);
   }
 }

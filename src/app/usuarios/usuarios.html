@@ -1,115 +1,109 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Usuários</h1>
-    <p>Gerencie os usuários com acesso ao sistema</p>
+    <div>
+      <h1>Usuários</h1>
+      <p>Cadastre quem pode acessar o sistema e defina o perfil de cada um</p>
+    </div>
   </header>
 
-  @if (erro) {
-    <div class="alerta-erro">{{ erro }}</div>
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
+  }
+  @if (sucesso()) {
+    <div class="alerta alerta-sucesso"><i class="bi bi-check-circle"></i><span class="alerta-texto">{{ sucesso() }}</span></div>
   }
 
-  <div class="grid-duas-colunas">
+  <div class="grid-form-lista">
     <section class="painel">
-      <h3>Novo Usuário</h3>
-
-      @if (sucesso) {
-        <div class="alerta-sucesso">
-          <i class="bi bi-check-circle"></i> Usuário cadastrado com sucesso!
-        </div>
-      }
+      <h3>Novo usuário</h3>
 
       <form [formGroup]="form" (ngSubmit)="adicionar()">
         <div class="campo">
-          <label [attr.for]="campoNomeUsuario.inputId">Nome</label>
-          <app-campo-texto #campoNomeUsuario placeholder="Ex: Maria da Silva" autocomplete="name" formControlName="nome"></app-campo-texto>
-          @if (form.controls.nome.touched && form.controls.nome.invalid) {
-            <small class="erro">Informe o nome do usuário.</small>
+          <label [attr.for]="campoUsuario.inputId">Usuário (login)</label>
+          <app-campo-texto
+            #campoUsuario
+            icone="bi-person"
+            placeholder="Ex: maria.silva"
+            autocomplete="off"
+            formControlName="username"
+          ></app-campo-texto>
+          @if (form.controls.username.touched && form.controls.username.errors?.['required']) {
+            <small class="erro-campo">Informe o usuário.</small>
+          }
+          @if (form.controls.username.touched && form.controls.username.errors?.['minlength']) {
+            <small class="erro-campo">Use pelo menos 3 caracteres.</small>
+          }
+          @if (form.controls.username.errors?.['espacos']) {
+            <small class="erro-campo">O usuário não pode ter espaços.</small>
           }
         </div>
 
         <div class="campo">
-          <label [attr.for]="campoEmailUsuario.inputId">E-mail</label>
-          <app-campo-texto #campoEmailUsuario type="email" placeholder="Ex: maria@easyeats.com" autocomplete="email" formControlName="email"></app-campo-texto>
-          @if (form.controls.email.touched && form.controls.email.errors?.['required']) {
-            <small class="erro">Informe o e-mail do usuário.</small>
-          }
-          @if (form.controls.email.touched && form.controls.email.errors?.['email']) {
-            <small class="erro">Informe um e-mail válido.</small>
-          }
-        </div>
-
-        <div class="campo">
-          <label [attr.for]="campoSenhaUsuario.inputId">Senha</label>
-          <app-campo-senha #campoSenhaUsuario formControlName="senha"></app-campo-senha>
+          <label [attr.for]="campoSenha.inputId">Senha</label>
+          <app-campo-senha #campoSenha formControlName="senha"></app-campo-senha>
           @if (form.controls.senha.touched && form.controls.senha.errors?.['required']) {
-            <small class="erro">Crie uma senha para o usuário.</small>
+            <small class="erro-campo">Crie uma senha para o usuário.</small>
           }
           @if (form.controls.senha.touched && form.controls.senha.errors?.['minlength']) {
-            <small class="erro">A senha deve ter pelo menos 6 caracteres.</small>
+            <small class="erro-campo">A senha deve ter pelo menos 6 caracteres.</small>
           }
         </div>
 
         <div class="campo">
-          <label>Perfil</label>
-          <div class="grade-perfis" role="radiogroup" aria-label="Perfil do usuário">
+          <label id="rotulo-perfil">Perfil</label>
+          <div class="grade-perfis" role="radiogroup" aria-labelledby="rotulo-perfil">
             @for (opcao of opcoesPerfil; track opcao.valor) {
               <button
                 type="button"
                 class="cartao-perfil"
-                [class.selecionado]="form.controls.role.value === opcao.valor"
+                [class.selecionado]="form.controls.perfil.value === opcao.valor"
                 role="radio"
-                [attr.aria-checked]="form.controls.role.value === opcao.valor"
-                (click)="selecionarPerfil(opcao.valor)"
+                [attr.aria-checked]="form.controls.perfil.value === opcao.valor"
+                (click)="form.controls.perfil.setValue(opcao.valor)"
               >
-                <i class="bi" [ngClass]="opcao.icone"></i>
-                <span class="cartao-perfil__label">{{ opcao.label }}</span>
-                <span class="cartao-perfil__descricao">{{ opcao.descricao }}</span>
+                <i class="bi" [class]="opcao.icone"></i>
+                <span class="cartao-perfil__texto">
+                  <strong>{{ perfilLabel[opcao.valor] }}</strong>
+                  <span>{{ opcao.descricao }}</span>
+                </span>
               </button>
             }
           </div>
         </div>
 
         <div class="acoes-form">
-          <button type="submit" class="btn-salvar" [disabled]="form.invalid || enviando">
-            {{ enviando ? 'Salvando...' : 'Adicionar Usuário' }}
+          <button type="submit" class="btn btn-primario" [disabled]="enviando()">
+            {{ enviando() ? 'Salvando...' : 'Adicionar usuário' }}
           </button>
         </div>
       </form>
     </section>
 
     <section class="painel">
-      <h3>Usuários Cadastrados</h3>
+      <h3>Usuários cadastrados ({{ usuarios().length }})</h3>
 
-      @if (carregando) {
+      @if (carregando()) {
         <app-carregando texto="Carregando usuários..."></app-carregando>
       } @else {
         <div class="lista">
-          @for (usuario of usuarios; track usuario.id) {
+          @for (usuario of usuarios(); track usuario.username) {
             <div class="linha">
-              <div class="info">
-                <strong>{{ usuario.nome }}</strong>
-                <span>{{ usuario.email }}</span>
+              <div class="linha-info">
+                <strong><i class="bi bi-person-circle"></i> {{ usuario.username }}</strong>
               </div>
-
-              <div class="direita">
-                <span
-                  class="badge"
-                  [class.roxo]="usuario.role === 'ADMINISTRADOR'"
-                  [class.azul]="usuario.role === 'OPERADOR'"
-                  [class.laranja]="usuario.role === 'GARCOM'"
-                  [class.verde]="usuario.role === 'COZINHEIRO'"
-                >
-                  {{ labelPerfil(usuario.role) }}
-                </span>
-                <span class="badge" [class.sucesso]="usuario.flAtivo !== false" [class.neutro]="usuario.flAtivo === false">
-                  {{ usuario.flAtivo === false ? 'Inativo' : 'Ativo' }}
-                </span>
+              <div class="linha-acoes">
+                <span class="badge" [class]="corPerfil(usuario.perfil)">{{ perfilLabel[usuario.perfil] }}</span>
               </div>
             </div>
           } @empty {
             <p class="vazio">Nenhum usuário cadastrado.</p>
           }
         </div>
+        <p class="ajuda nota">A API atual não oferece edição, troca de senha ou exclusão de usuários.</p>
       }
     </section>
   </div>

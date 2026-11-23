@@ -1,237 +1,146 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { CurrencyPipe } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ToggleSwitchComponent } from '../../components/toggle-switch/toggle-switch';
+import { RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { CarregandoComponent } from '../../components/carregando/carregando';
-import { ModalCadastroProduto } from '../../components/modal-cadastro-produto/modal-cadastro-produto';
-import { Adicional, AdicionalService } from './adicional.service';
 import { Categoria, CategoriaService } from '../categorias/categoria.service';
-import { ComposicaoItem, ComposicaoItemService } from './composicao-item.service';
-import { NaturezaProduto, Produto, ProdutoService } from './produto.service';
 import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
-
-const NATUREZAS: { valor: NaturezaProduto; label: string }[] = [
-  { valor: 'PREPARADO', label: 'Preparado/montado (ex.: X-Burger)' },
-  { valor: 'REVENDA', label: 'Revenda (ex.: refrigerante lacrado)' },
-  { valor: 'INSUMO', label: 'Insumo/matéria-prima (ex.: pão, queijo)' },
-];
-
-/**
- * A mesma tela atende as duas sub-abas de Produtos > Cadastros, escolhida
- * pelo `data.tipoCadastro` da rota: INSUMO (matéria-prima, natureza fixa)
- * ou PRODUTO (o que é vendido: preparado ou revenda).
- */
-export type TipoCadastro = 'INSUMO' | 'PRODUTO';
+import { Produto, ProdutoService } from './produto.service';
 
 @Component({
   selector: 'app-cadastro-produto',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    FormsModule,
-    RouterLink,
-    ToggleSwitchComponent,
-    CarregandoComponent,
-    ModalCadastroProduto,
-  ],
+  imports: [CurrencyPipe, FormsModule, ReactiveFormsModule, RouterLink, CarregandoComponent],
   templateUrl: './cadastroProduto.html',
   styleUrls: ['./cadastroProduto.scss'],
 })
 export class CadastroProdutoComponent implements OnInit {
-  readonly tipoCadastro: TipoCadastro =
-    inject(ActivatedRoute).snapshot.data['tipoCadastro'] === 'INSUMO' ? 'INSUMO' : 'PRODUTO';
-  readonly ehInsumo = this.tipoCadastro === 'INSUMO';
+  private produtoService = inject(ProdutoService);
+  private categoriaService = inject(CategoriaService);
 
-  naturezas = NATUREZAS.filter((n) => (this.ehInsumo ? n.valor === 'INSUMO' : n.valor !== 'INSUMO'));
-  categorias: Categoria[] = [];
-  /** Itens da sub-aba atual (só insumos ou só produtos de venda). */
-  produtos: Produto[] = [];
+  categorias = signal<Categoria[]>([]);
+  produtos = signal<Produto[]>([]);
+  carregando = signal(true);
+  enviando = signal(false);
+  erro = signal<string | null>(null);
+  sucesso = signal<string | null>(null);
+  editando = signal<Produto | null>(null);
+  busca = signal('');
 
-  carregando = true;
-  enviando = false;
-  erro: string | null = null;
+  categoriasAtivas = computed(() => this.categorias().filter((c) => c.ativa));
 
-  produtoParaConfirmar: Produto | null = null;
+  produtosFiltrados = computed(() => {
+    const termo = this.busca().trim().toLowerCase();
+    return this.produtos().filter(
+      (p) => !termo || p.nome.toLowerCase().includes(termo) || (p.categoria?.nome ?? '').toLowerCase().includes(termo),
+    );
+  });
 
   form = new FormGroup({
     nome: new FormControl('', { nonNullable: true, validators: Validators.required }),
     descricao: new FormControl('', { nonNullable: true }),
     categoriaId: new FormControl<number | null>(null, Validators.required),
-    natureza: new FormControl<NaturezaProduto | null>(this.ehInsumo ? 'INSUMO' : null, Validators.required),
-    preco: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
-    custo: new FormControl<number | null>(null, Validators.min(0)),
-    flAtivo: new FormControl(true, { nonNullable: true }),
+    preco: new FormControl<number | null>(null, [Validators.required, Validators.min(0.01)]),
   });
 
-  produtoExpandidoId: number | null = null;
-  composicaoPorProduto: Record<number, ComposicaoItem[]> = {};
-  adicionaisPorProduto: Record<number, Adicional[]> = {};
-  carregandoDetalhes = false;
-
-  novoItemComposicaoNome = '';
-  novoAdicionalNome = '';
-  novoAdicionalPreco: number | null = null;
-
-  constructor(
-    private produtoService: ProdutoService,
-    private categoriaService: CategoriaService,
-    private composicaoItemService: ComposicaoItemService,
-    private adicionalService: AdicionalService,
-  ) {}
-
-  ngOnInit() {
-    this.categoriaService.listar().subscribe({
-      next: (categorias) => (this.categorias = categorias),
-      error: () => {},
-    });
-    this.carregarProdutos();
+  ngOnInit(): void {
+    this.carregar();
   }
 
-  private carregarProdutos() {
-    this.carregando = true;
-    this.produtoService.listar().subscribe({
-      next: (produtos) => {
-        this.produtos = produtos.filter((p) => this.pertenceAoTipo(p));
-        this.carregando = false;
+  carregar(): void {
+    this.carregando.set(true);
+    forkJoin({
+      categorias: this.categoriaService.listar(),
+      produtos: this.produtoService.listar(),
+    }).subscribe({
+      next: ({ categorias, produtos }) => {
+        this.categorias.set(categorias);
+        this.produtos.set(produtos);
+        this.carregando.set(false);
       },
-      error: () => {
-        this.erro = `Não foi possível carregar os ${this.ehInsumo ? 'insumos' : 'produtos'} cadastrados.`;
-        this.carregando = false;
+      error: (erro) => {
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar produtos e categorias.'));
+        this.carregando.set(false);
       },
     });
   }
 
-  private pertenceAoTipo(produto: Produto): boolean {
-    return this.ehInsumo ? produto.natureza === 'INSUMO' : produto.natureza !== 'INSUMO';
-  }
-
-  get rotulo(): string {
-    return this.ehInsumo ? 'Insumo' : 'Produto';
-  }
-
-  salvar() {
-    if (this.form.invalid || this.enviando) {
+  salvar(): void {
+    if (this.form.invalid || this.enviando()) {
       this.form.markAllAsTouched();
       return;
     }
 
     const valores = this.form.getRawValue();
-    this.enviando = true;
-    this.erro = null;
+    const payload = {
+      nome: valores.nome.trim(),
+      descricao: valores.descricao.trim() || null,
+      preco: Number(valores.preco),
+      categoriaId: valores.categoriaId!,
+    };
+    const editando = this.editando();
 
-    this.produtoService
-      .criar({
-        nome: valores.nome,
-        descricao: valores.descricao || null,
-        preco: valores.preco!,
-        custo: valores.custo,
-        flAtivo: valores.flAtivo,
-        natureza: valores.natureza!,
-        categoria: { id: valores.categoriaId! },
-      })
-      .subscribe({
-        next: (produtoCriado) => {
-          this.enviando = false;
-          this.produtos = [produtoCriado, ...this.produtos];
-          this.produtoParaConfirmar = produtoCriado;
-          this.form.reset({ flAtivo: true, descricao: '', natureza: this.ehInsumo ? 'INSUMO' : null });
-        },
-        error: (erro) => {
-          this.enviando = false;
-          this.erro = MensagemErroApiUtil.extrair(
-            erro,
-            'Não foi possível cadastrar o produto. Verifique os dados e tente novamente.',
-          );
-        },
-      });
+    this.enviando.set(true);
+    this.erro.set(null);
+
+    const requisicao = editando
+      ? this.produtoService.atualizar(editando.id, payload)
+      : this.produtoService.criar(payload);
+
+    requisicao.subscribe({
+      next: (produto) => {
+        this.enviando.set(false);
+        this.produtos.update((lista) =>
+          (editando ? lista.map((p) => (p.id === produto.id ? produto : p)) : [...lista, produto]).sort((a, b) =>
+            a.nome.localeCompare(b.nome),
+          ),
+        );
+        this.mostrarSucesso(editando ? `"${produto.nome}" atualizado.` : `"${produto.nome}" cadastrado.`);
+        this.cancelarEdicao();
+      },
+      error: (erro) => {
+        this.enviando.set(false);
+        this.erro.set(
+          MensagemErroApiUtil.extrair(erro, 'Não foi possível salvar o produto. Verifique os dados e tente novamente.'),
+        );
+      },
+    });
   }
 
-  fecharModalConfirmacao() {
-    this.produtoParaConfirmar = null;
+  editar(produto: Produto): void {
+    this.editando.set(produto);
+    this.form.setValue({
+      nome: produto.nome,
+      descricao: produto.descricao ?? '',
+      categoriaId: produto.categoria?.id ?? null,
+      preco: produto.preco || null,
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  get exibeComposicao(): boolean {
-    const produto = this.produtos.find((p) => p.id === this.produtoExpandidoId);
-    return produto?.natureza === 'PREPARADO';
+  cancelarEdicao(): void {
+    this.editando.set(null);
+    this.form.reset({ nome: '', descricao: '', categoriaId: null, preco: null });
   }
 
-  get exibeAdicionais(): boolean {
-    const produto = this.produtos.find((p) => p.id === this.produtoExpandidoId);
-    return produto?.natureza === 'PREPARADO' || produto?.natureza === 'REVENDA';
-  }
-
-  alternarExpandir(produto: Produto) {
-    if (this.produtoExpandidoId === produto.id) {
-      this.produtoExpandidoId = null;
+  excluir(produto: Produto): void {
+    if (!confirm(`Excluir o produto "${produto.nome}"? Ele deixará de aparecer no cardápio.`)) {
       return;
     }
 
-    this.produtoExpandidoId = produto.id;
-    this.novoItemComposicaoNome = '';
-    this.novoAdicionalNome = '';
-    this.novoAdicionalPreco = null;
-    this.carregarDetalhes(produto.id);
-  }
-
-  private carregarDetalhes(produtoId: number) {
-    this.carregandoDetalhes = true;
-    this.composicaoItemService.listar(produtoId).subscribe({
-      next: (itens) => {
-        this.composicaoPorProduto[produtoId] = itens;
-        this.carregandoDetalhes = false;
-      },
-      error: () => (this.carregandoDetalhes = false),
-    });
-    this.adicionalService.listar(produtoId).subscribe({
-      next: (adicionais) => (this.adicionaisPorProduto[produtoId] = adicionais),
-      error: () => {},
-    });
-  }
-
-  adicionarItemComposicao(produtoId: number) {
-    const nome = this.novoItemComposicaoNome.trim();
-    if (!nome) return;
-
-    this.composicaoItemService.criar(produtoId, { nome, removivel: true }).subscribe({
-      next: (item) => {
-        this.composicaoPorProduto[produtoId] = [...(this.composicaoPorProduto[produtoId] ?? []), item];
-        this.novoItemComposicaoNome = '';
-      },
-    });
-  }
-
-  excluirItemComposicao(produtoId: number, itemId: number) {
-    this.composicaoItemService.excluir(produtoId, itemId).subscribe({
+    this.produtoService.excluir(produto.id).subscribe({
       next: () => {
-        this.composicaoPorProduto[produtoId] = (this.composicaoPorProduto[produtoId] ?? []).filter(
-          (i) => i.id !== itemId,
-        );
+        this.produtos.update((lista) => lista.filter((p) => p.id !== produto.id));
+        if (this.editando()?.id === produto.id) this.cancelarEdicao();
+        this.mostrarSucesso(`"${produto.nome}" excluído.`);
       },
+      error: (erro) => this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível excluir o produto.')),
     });
   }
 
-  adicionarAdicional(produtoId: number) {
-    const nome = this.novoAdicionalNome.trim();
-    if (!nome || this.novoAdicionalPreco === null || this.novoAdicionalPreco < 0) return;
-
-    this.adicionalService.criar(produtoId, { nome, preco: this.novoAdicionalPreco }).subscribe({
-      next: (adicional) => {
-        this.adicionaisPorProduto[produtoId] = [...(this.adicionaisPorProduto[produtoId] ?? []), adicional];
-        this.novoAdicionalNome = '';
-        this.novoAdicionalPreco = null;
-      },
-    });
-  }
-
-  excluirAdicional(produtoId: number, adicionalId: number) {
-    this.adicionalService.excluir(produtoId, adicionalId).subscribe({
-      next: () => {
-        this.adicionaisPorProduto[produtoId] = (this.adicionaisPorProduto[produtoId] ?? []).filter(
-          (a) => a.id !== adicionalId,
-        );
-      },
-    });
+  private mostrarSucesso(mensagem: string): void {
+    this.sucesso.set(mensagem);
+    setTimeout(() => this.sucesso.set(null), 4000);
   }
 }

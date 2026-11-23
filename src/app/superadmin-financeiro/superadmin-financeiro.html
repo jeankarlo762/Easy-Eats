@@ -1,0 +1,93 @@
+<div class="pagina">
+  <header class="topo topo-acao">
+    <div>
+      <h1>Financeiro da Plataforma</h1>
+      <p>Receita de assinaturas do Easy Eats, consolidada de todas as empresas clientes</p>
+    </div>
+
+    <button type="button" class="btn-salvar" (click)="exportarRelatorio()">
+      <i class="bi bi-download"></i> Exportar Relatório
+    </button>
+  </header>
+
+  <div class="grid-stats">
+    <div class="stat-card">
+      <div class="stat-label">MRR (Receita Recorrente Mensal)</div>
+      <div class="stat-valor sucesso">R$ {{ mrr.toFixed(2) }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Churn Rate</div>
+      <div class="stat-valor alerta">{{ churnRate }}%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Ticket Médio por Empresa</div>
+      <div class="stat-valor">R$ {{ ticketMedio.toFixed(2) }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Empresas Ativas</div>
+      <div class="stat-valor">{{ empresasAtivas }}</div>
+    </div>
+  </div>
+
+  <div class="grid-duas-colunas">
+    <section class="painel">
+      <h3>Receita Mensal (MRR)</h3>
+
+      <div class="barras-dia">
+        @for (linha of receitaMensal; track linha.mes) {
+          <div class="barra-item">
+            <div class="barra" [style.height.%]="(linha.valor / maiorReceitaMensal) * 100"></div>
+            <span>{{ linha.mes.slice(0, 3) }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="painel">
+      <h3>Receita por Plano</h3>
+
+      <div class="lista">
+        @for (linha of receitaPorPlano; track linha.plano) {
+          <div class="linha">
+            <div class="info-plano">
+              <strong>{{ linha.plano }}</strong>
+              <span>{{ linha.empresas }} empresa(s)</span>
+            </div>
+            <span class="valor-plano">R$ {{ linha.valor.toFixed(2) }}</span>
+          </div>
+        } @empty {
+          <p class="vazio">Nenhum dado de receita disponível.</p>
+        }
+      </div>
+    </section>
+  </div>
+
+  <section class="painel">
+    <h3>Cobranças por Empresa</h3>
+
+    <div class="tabela-wrap">
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Plano</th>
+            <th>Valor Mensal</th>
+            <th>Próxima Cobrança</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of cobrancasPorEmpresa; track c.empresa) {
+            <tr>
+              <td class="celula-nome">{{ c.empresa }}</td>
+              <td class="celula-muted">{{ c.plano }}</td>
+              <td class="celula-muted">R$ {{ c.valorMensal.toFixed(2) }}</td>
+              <td class="celula-muted">{{ c.proximaCobranca }}</td>
+              <td><span class="badge" [ngClass]="badgeStatusCobranca(c.status)">{{ c.status }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

@@ -18,36 +18,39 @@
 
   <section class="painel-form">
     <div class="auth-card">
-      @if (!modoRecuperarSenha) {
+      @if (!modoRecuperarSenha()) {
         <div class="cabecalho-form">
           <h2>Bem-vindo de volta</h2>
           <p>Entre com sua conta para continuar</p>
         </div>
 
-        @if (erro) {
-          <div class="alerta-erro">
-            <i class="bi bi-exclamation-circle"></i> {{ erro }}
+        @if (aviso()) {
+          <div class="alerta alerta-aviso">
+            <i class="bi bi-clock-history"></i> <span class="alerta-texto">{{ aviso() }}</span>
+          </div>
+        }
+
+        @if (erro()) {
+          <div class="alerta alerta-erro" role="alert">
+            <i class="bi bi-exclamation-circle"></i> <span class="alerta-texto">{{ erro() }}</span>
           </div>
         }
 
         <form [formGroup]="form" (ngSubmit)="handleLogin()">
           <div class="form-group">
-            <label [attr.for]="campoEmailLogin.inputId">Email</label>
+            <label [attr.for]="campoEmailLogin.inputId">Usuário</label>
             <app-campo-texto
               #campoEmailLogin
-              type="email"
-              icone="bi-envelope"
-              placeholder="seu@email.com"
-              autocomplete="email"
+              type="text"
+              icone="bi-person"
+              placeholder="seu usuário"
+              autocomplete="username"
               formControlName="email"
             ></app-campo-texto>
 
             <small *ngIf="form.get('email')?.touched && form.get('email')?.errors">
               <span *ngIf="form.get('email')?.errors?.['required']">
                 <p class="msg-validacoes">{{ mensagensValidacoes.email.required }}</p>
-              </span>
-              <span *ngIf="form.get('email')?.errors?.['email']">
-                <p class="msg-validacoes">{{ mensagensValidacoes.email.email }}</p>
               </span>
             </small>
           </div>
@@ -67,8 +70,8 @@
             </small>
           </div>
 
-          <button type="submit" class="btn-entrar" [disabled]="enviando">
-            {{ enviando ? 'Entrando...' : 'Entrar' }} <i class="bi bi-arrow-right"></i>
+          <button type="submit" class="btn-entrar" [disabled]="enviando()">
+            {{ enviando() ? 'Entrando...' : 'Entrar' }} <i class="bi bi-arrow-right"></i>
           </button>
         </form>
       } @else {

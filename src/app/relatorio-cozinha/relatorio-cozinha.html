@@ -1,65 +1,85 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Relatório da Cozinha</h1>
-    <p>Desempenho de preparo dos pedidos de hoje</p>
+    <div>
+      <h1>Relatório da Cozinha</h1>
+      <p>Desempenho de preparo calculado a partir dos pedidos finalizados</p>
+    </div>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+    </div>
   </header>
 
-  @if (erro) {
-    <p class="vazio">{{ erro }}</p>
+  <app-filtro-periodo (periodoChange)="periodo.set($event)"></app-filtro-periodo>
+
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+    </div>
   }
 
-  @if (carregando) {
-    <app-carregando texto="Carregando relatório..."></app-carregando>
-  } @else if (relatorio) {
+  @if (carregando()) {
+    <app-carregando texto="Carregando pedidos..."></app-carregando>
+  } @else {
     <div class="grid-stats">
       <div class="stat-card">
-        <div class="stat-label">Preparados Hoje</div>
-        <div class="stat-valor">{{ relatorio.pedidosPreparadosHoje }}</div>
+        <div class="stat-icon verde"><i class="bi bi-check2-all"></i></div>
+        <div>
+          <div class="stat-valor">{{ preparados() }}</div>
+          <div class="stat-label">Pedidos finalizados</div>
+        </div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Tempo Médio de Preparo</div>
-        <div class="stat-valor">{{ relatorio.tempoMedioPreparoMinutos | number: '1.0-1' }} min</div>
+        <div class="stat-icon azul"><i class="bi bi-stopwatch"></i></div>
+        <div>
+          <div class="stat-valor">
+            {{ tempoMedio() === null ? '—' : (tempoMedio() | number: '1.0-1') + ' min' }}
+          </div>
+          <div class="stat-label">Tempo médio (criação → finalização)</div>
+        </div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Pedidos Atrasados</div>
-        <div class="stat-valor" [class.alerta]="relatorio.pedidosAtrasados > 0">{{ relatorio.pedidosAtrasados }}</div>
+        <div class="stat-icon vermelho"><i class="bi bi-alarm"></i></div>
+        <div>
+          <div class="stat-valor" [class.critico]="atrasados() > 0">{{ atrasados() }}</div>
+          <div class="stat-label">Em andamento há {{ minutosAtraso }}+ min (agora)</div>
+        </div>
       </div>
     </div>
 
     <div class="grid-duas-colunas">
       <section class="painel">
-        <h3>Tempo Médio por Horário</h3>
-
-        @if (tempoPorHorario.length === 0) {
-          <p class="vazio">Nenhum pedido finalizado hoje ainda.</p>
-        } @else {
-          <div class="barras-dia">
-            @for (linha of tempoPorHorario; track linha.hora) {
+        <h3>Tempo médio por horário do pedido</h3>
+        @if (tempoPorHorario().length > 0) {
+          <div class="grafico-barras">
+            @for (linha of tempoPorHorario(); track linha.hora) {
               <div class="barra-item">
-                <div class="barra" [style.height.%]="(linha.minutos / maiorTempo) * 100"></div>
-                <span>{{ linha.hora }}</span>
+                <span class="barra-valor">{{ linha.minutos | number: '1.0-0' }}</span>
+                <div class="barra" [style.height.%]="linha.altura"></div>
+                <span class="barra-rotulo">{{ linha.hora }}</span>
               </div>
             }
           </div>
+        } @else {
+          <p class="vazio">Nenhum pedido finalizado no período.</p>
         }
       </section>
 
       <section class="painel">
-        <h3>Itens Mais Preparados Hoje</h3>
-
-        @if (itensMaisPreparados.length === 0) {
-          <p class="vazio">Nenhum item preparado hoje ainda.</p>
-        } @else {
-          <div class="lista-ranking">
-            @for (item of itensMaisPreparados; track item.nome; let i = $index) {
-              <div class="linha-ranking">
-                <span class="posicao">{{ i + 1 }}º</span>
-                <span class="nome">{{ item.nome }}</span>
-                <span class="qtd">{{ item.quantidade }}</span>
-              </div>
-            }
-          </div>
-        }
+        <h3>Itens mais preparados</h3>
+        <ul class="lista-ranking">
+          @for (item of itensMaisPreparados(); track item.nome; let i = $index) {
+            <li>
+              <span class="posicao">{{ i + 1 }}º</span>
+              <span class="nome">{{ item.nome }}</span>
+              <span class="qtd">{{ item.quantidade }}</span>
+            </li>
+          } @empty {
+            <li class="vazio">Nenhum item preparado no período.</li>
+          }
+        </ul>
       </section>
     </div>
   }

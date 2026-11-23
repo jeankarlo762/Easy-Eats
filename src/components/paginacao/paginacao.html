@@ -1,0 +1,22 @@
+@if (total() > 0) {
+  <div class="paginacao">
+    <span class="paginacao-info">
+      Página {{ pagina() + 1 }} de {{ totalPaginas() }} · {{ total() }} registro(s)
+    </span>
+    @if (totalPaginas() > 1) {
+      <div class="paginacao-botoes">
+        <button type="button" class="btn btn-secundario btn-sm" [disabled]="desabilitado() || pagina() === 0" (click)="anterior()">
+          <i class="bi bi-chevron-left"></i> Anterior
+        </button>
+        <button
+          type="button"
+          class="btn btn-secundario btn-sm"
+          [disabled]="desabilitado() || pagina() + 1 >= totalPaginas()"
+          (click)="proxima()"
+        >
+          Próxima <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    }
+  </div>
+}

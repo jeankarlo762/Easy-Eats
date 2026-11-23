@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CampoSenhaComponent } from '../../components/campo-senha/campo-senha';
 import { CampoTextoComponent } from '../../components/campo-texto/campo-texto';
 import { AuthService } from '../auth/auth.service';
@@ -15,71 +16,76 @@ import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
   standalone: true,
 })
 export class Login {
-  modoRecuperarSenha = false;
+  modoRecuperarSenha = signal(false);
   currentYear: number = new Date().getFullYear();
 
-  enviando = false;
-  erro: string | null = null;
+  enviando = signal(false);
+  erro = signal<string | null>(null);
 
   private fb = inject(FormBuilder);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private authService = inject(AuthService);
 
+  aviso = signal<string | null>(
+    this.route.snapshot.queryParamMap.get('sessao') === 'expirada'
+      ? 'Sua sessão expirou. Entre novamente para continuar.'
+      : null,
+  );
+
   form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', Validators.required],
     password: ['', Validators.required],
   });
 
   mensagensValidacoes = {
-    email: { required: 'Email é obrigatório.', email: 'Email inválido.' },
+    email: { required: 'Usuário é obrigatório.' },
     password: { required: 'Senha obrigatória.' },
   };
 
   abrirRecuperarSenha() {
-    this.modoRecuperarSenha = true;
-    this.erro = null;
+    this.modoRecuperarSenha.set(true);
+    this.erro.set(null);
   }
 
   voltarParaLogin() {
-    this.modoRecuperarSenha = false;
+    this.modoRecuperarSenha.set(false);
   }
 
-  handleLogin() {
+
+  handleLogin(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const { email, password } = this.form.value;
-    this.enviando = true;
-    this.erro = null;
+    const { email, password } = this.form.getRawValue();
 
-    this.authService.login(email!, password!).subscribe({
+    if (!email || !password) {
+      return;
+    }
+
+    this.enviando.set(true);
+    this.erro.set(null);
+    this.aviso.set(null);
+
+    this.authService.login(email.trim(), password).subscribe({
       next: () => {
-        this.enviando = false;
-        let rota = '/home';
-        if (this.authService.isSuperadmin()) {
-          rota = '/superadmin-dashboard';
-        } else if (this.authService.isGarcom()) {
-          rota = '/novo-pedido';
-        } else if (this.authService.isCozinheiro()) {
-          rota = '/tela-cozinha';
-        }
-        this.router.navigate([rota]);
+        this.enviando.set(false);
+        this.router.navigate(['/home']);
       },
-      error: (erro) => {
-        this.enviando = false;
-        // Antes qualquer falha virava "e-mail ou senha inválidos" — inclusive
-        // API fora do ar ou erro 500, o que mandava o usuário conferir a senha
-        // sem motivo. A mensagem do backend só é usada quando ele de fato
-        // responde (401 traz "E-mail ou senha inválidos").
-        this.erro = MensagemErroApiUtil.extrair(
-          erro,
-          erro?.status === 0
-            ? 'Não foi possível conectar ao servidor. Verifique se a API está no ar.'
-            : 'Não foi possível entrar. Tente novamente.',
+      error: (erro: unknown) => {
+        this.enviando.set(false);
+        // Credencial errada chega como 401/403 (o Spring encaminha a exceção para /error).
+        const credencialInvalida =
+          erro instanceof HttpErrorResponse && [400, 401, 403, 500].includes(erro.status);
+        this.erro.set(
+          credencialInvalida
+            ? 'Usuário ou senha inválidos.'
+            : MensagemErroApiUtil.extrair(erro, 'Não foi possível entrar. Tente novamente.'),
         );
       },
     });
   }
+
 }

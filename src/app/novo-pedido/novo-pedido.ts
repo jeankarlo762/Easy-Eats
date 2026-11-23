@@ -1,388 +1,318 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { CurrencyPipe } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { forkJoin } from 'rxjs';
-import QRCode from 'qrcode';
-import { CardapioPublicoService } from '../cardapio-publico/cardapio-publico.service';
-import { ModalProdutoComponent } from '../../components/modal-produto/modalProduto';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { forkJoin, switchMap } from 'rxjs';
 import { CarregandoComponent } from '../../components/carregando/carregando';
-import { AuthService } from '../auth/auth.service';
 import { Produto, ProdutoService } from '../cadastro-produto/produto.service';
-import { Cliente, ClienteService } from '../clientes/cliente.service';
-import { ItemComandaPayload, Comanda, ComandaService } from '../comandas/comanda.service';
+import { CaixaService } from '../caixa/caixa.service';
+import { Comanda, ComandaService } from '../comandas/comanda.service';
 import { Mesa, MesaService } from '../mesas/mesa.service';
-import { CustomizacaoProduto, customizacaoVazia, mesmaCustomizacao } from './carrinho.model';
-import { ItemVendaService } from './item-venda.service';
-import { STATUS_PEDIDO, VendaService } from './venda.service';
 import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
+import { FORMAS_PAGAMENTO, FORMA_PAGAMENTO_LABEL, FormaPagamento, TipoVenda, VendaService } from '../vendas/venda.service';
 
 const ICONE_POR_CATEGORIA: Record<string, string> = {
   Lanches: 'bi-egg-fried',
   Acompanhamentos: 'bi-basket3',
   Bebidas: 'bi-cup-straw',
+  Sobremesas: 'bi-cake2',
 };
 
 interface ItemCarrinho {
-  id: number;
   produto: Produto;
   qtd: number;
-  customizacao: CustomizacaoProduto;
 }
 
-let proximoIdCarrinho = 0;
+/** Resultado exibido depois de enviar o pedido. */
+interface Confirmacao {
+  mensagem: string;
+  vendaId: number | null;
+  aviso: boolean;
+}
+
+/** Arredonda para centavos: o backend aceita no máximo 2 casas decimais. */
+function centavos(valor: number): number {
+  return Math.round(valor * 100) / 100;
+}
 
 @Component({
   selector: 'app-novo-pedido',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalProdutoComponent, CarregandoComponent],
+  imports: [CurrencyPipe, FormsModule, RouterLink, CarregandoComponent],
   templateUrl: './novo-pedido.html',
   styleUrls: ['./novo-pedido.scss'],
 })
 export class NovoPedido implements OnInit {
   private produtoService = inject(ProdutoService);
   private mesaService = inject(MesaService);
-  private vendaService = inject(VendaService);
-  private itemVendaService = inject(ItemVendaService);
   private comandaService = inject(ComandaService);
-  private clienteService = inject(ClienteService);
+  private vendaService = inject(VendaService);
+  private caixaService = inject(CaixaService);
   private route = inject(ActivatedRoute);
-  private cardapioPublicoService = inject(CardapioPublicoService);
-  protected authService = inject(AuthService);
 
-  cliente = '';
-  mesaSelecionada: number | null = null;
+  readonly formasPagamento = FORMAS_PAGAMENTO;
+  readonly formaLabel = FORMA_PAGAMENTO_LABEL;
 
-  produtos: Produto[] = [];
-  mesas: Mesa[] = [];
+  busca = signal('');
+  categoriaSelecionada = signal('Todos');
+  produtos = signal<Produto[]>([]);
+  mesas = signal<Mesa[]>([]);
+  carrinho = signal<ItemCarrinho[]>([]);
+  carregando = signal(true);
+  enviando = signal(false);
+  erro = signal<string | null>(null);
+  confirmacao = signal<Confirmacao | null>(null);
 
-  // Cliente cadastrado (opcional) e cupom só se aplicam ao fluxo de venda
-  // avulsa (balcão/retirada) — pedidos de mesa passam pelo módulo de
-  // Comandas, que ainda não tem vínculo com Cliente (ver relatório do
-  // módulo Financeiro).
-  clientes: Cliente[] = [];
-  clienteSelecionadoId: number | null = null;
-  codigoCupom = '';
-  valorCashbackResgate: number | null = null;
-  avisoPosPedido: string | null = null;
+  // dados do modal de finalização
+  modalAberto = signal(false);
+  tipoAtendimento = signal<TipoVenda>('MESA');
+  mesaSelecionada = signal<number | null>(null);
+  cliente = signal('');
+  observacao = signal('');
+  /** null = pagar depois (na conta da mesa ou na retirada). */
+  formaPagamento = signal<FormaPagamento | null>(null);
+  valorRecebido = signal<number | null>(null);
+  /** Retirada já aberta em que este pedido será incluído (vem da conta). */
+  vendaDaRetirada = signal<number | null>(null);
+  /** null enquanto não se sabe; usado para avisar quando o pagamento imediato exige caixa aberto. */
+  caixaAberto = signal<boolean | null>(null);
 
-  get clienteSelecionado(): Cliente | null {
-    return this.clientes.find((c) => c.id === this.clienteSelecionadoId) ?? null;
-  }
+  categorias = computed(() => {
+    const nomes = new Set(
+      this.produtos()
+        .map((produto) => produto.categoria?.nome)
+        .filter((nome): nome is string => !!nome),
+    );
+    return ['Todos', ...nomes];
+  });
 
-  get vaiPorComanda(): boolean {
-    return this.usaMesa && this.mesaSelecionada !== null && this.comandaPorMesa.has(this.mesaSelecionada);
-  }
+  produtosFiltrados = computed(() => {
+    const termo = this.busca().trim().toLowerCase();
+    const categoria = this.categoriaSelecionada();
+    return this.produtos().filter(
+      (produto) =>
+        (categoria === 'Todos' || produto.categoria?.nome === categoria) &&
+        (!termo || produto.nome.toLowerCase().includes(termo)),
+    );
+  });
 
-  // Mesa -> comanda aberta, para lançar o pedido nela em vez de criar uma
-  // Venda solta (ver mesas.ts, que já abre a comanda antes de chegar aqui).
-  private comandaPorMesa = new Map<number, Comanda>();
+  total = computed(() => this.carrinho().reduce((soma, item) => soma + item.produto.preco * item.qtd, 0));
+  quantidadeItens = computed(() => this.carrinho().reduce((soma, item) => soma + item.qtd, 0));
 
-  categorias: string[] = ['Todos'];
-  categoriaSelecionada = 'Todos';
+  /** Retirada paga na hora exige caixa aberto, porque a venda é finalizada em seguida. */
+  pagaAgoraNaRetirada = computed(() => this.tipoAtendimento() === 'RETIRADA' && this.formaPagamento() !== null);
+  caixaFechado = computed(() => this.pagaAgoraNaRetirada() && this.caixaAberto() === false);
 
-  carregando = true;
-  enviando = false;
-  erro: string | null = null;
-  sucesso = false;
-
-  carrinho: ItemCarrinho[] = [];
-  produtoSelecionado: Produto | null = null;
-
-  qrCodeAberto = false;
-  qrCodeImagem: string | null = null;
-  qrCodeErro: string | null = null;
-  linkPedido = '';
-  linkCopiado = false;
-  mesaDoQrCode: Mesa | null = null;
-
-  get usaMesa(): boolean {
-    return this.authService.temFuncionalidade('OPERACAO');
-  }
-
-  ngOnInit() {
-    this.produtoService.listar().subscribe({
-      next: (produtos) => {
-        this.produtos = produtos.filter((p) => p.flAtivo !== false);
-        const nomesCategorias = new Set(
-          this.produtos.map((p) => p.categoria?.nome).filter((nome): nome is string => !!nome),
-        );
-        this.categorias = ['Todos', ...nomesCategorias];
-        this.carregando = false;
-      },
-      error: () => {
-        this.erro = 'Não foi possível carregar os produtos.';
-        this.carregando = false;
-      },
-    });
-
-    if (this.usaMesa) {
-      this.mesaService.listar().subscribe((mesas) => (this.mesas = mesas));
-
-      this.comandaService.listar('ABERTA').subscribe((comandas) => {
-        this.comandaPorMesa = new Map(comandas.map((comanda) => [comanda.mesa.id, comanda]));
-
-        const mesaDaRota = Number(this.route.snapshot.queryParamMap.get('mesa'));
-        if (mesaDaRota) {
-          this.mesaSelecionada = mesaDaRota;
-        }
-      });
+  troco = computed(() => {
+    const recebido = this.valorRecebido();
+    if (this.formaPagamento() !== 'DINHEIRO' || recebido === null) {
+      return 0;
     }
+    return Math.max(0, centavos(recebido - this.total()));
+  });
 
-    this.clienteService.listar().subscribe({
-      next: (clientes) => (this.clientes = clientes),
-      error: () => {}, // opcional: pedido continua funcionando sem a lista de clientes
+  /** O que falta para o modal poder confirmar, ou null quando está tudo certo. */
+  pendenciaDoModal = computed<string | null>(() => {
+    const tipo = this.tipoAtendimento();
+    if (tipo === 'DELIVERY') {
+      return 'O delivery estará disponível em breve.';
+    }
+    if (tipo === 'MESA' && this.mesaSelecionada() === null) {
+      return 'Selecione a mesa.';
+    }
+    if (tipo === 'RETIRADA' && !this.cliente().trim()) {
+      return 'Informe o nome do cliente da retirada.';
+    }
+    if (this.caixaFechado()) {
+      return 'Abra o caixa para receber o pagamento agora, ou escolha pagar depois.';
+    }
+    return null;
+  });
+
+  podeConfirmar = computed(() => this.pendenciaDoModal() === null && !this.enviando());
+
+  ngOnInit(): void {
+    forkJoin({
+      produtos: this.produtoService.listar(),
+      mesas: this.mesaService.listar(),
+    }).subscribe({
+      next: ({ produtos, mesas }) => {
+        this.produtos.set(produtos);
+        this.mesas.set(mesas);
+        this.aplicarParametrosDaRota(mesas);
+        this.carregando.set(false);
+      },
+      error: (erro) => {
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar produtos e mesas.'));
+        this.carregando.set(false);
+      },
     });
   }
 
-  selecionarCategoria(cat: string) {
-    this.categoriaSelecionada = cat;
+  /** ?mesa=ID abre direto na mesa; ?tipo=retirada (e opcionalmente &venda=ID&cliente=Nome) na retirada. */
+  private aplicarParametrosDaRota(mesas: Mesa[]): void {
+    const parametros = this.route.snapshot.queryParamMap;
+    const mesaDaRota = Number(parametros.get('mesa'));
+    if (mesaDaRota && mesas.some((mesa) => mesa.id === mesaDaRota)) {
+      this.mesaSelecionada.set(mesaDaRota);
+    }
+    if (parametros.get('tipo') === 'retirada') {
+      this.tipoAtendimento.set('RETIRADA');
+      const vendaId = Number(parametros.get('venda'));
+      this.vendaDaRetirada.set(vendaId > 0 ? vendaId : null);
+      this.cliente.set(parametros.get('cliente') ?? '');
+    }
   }
 
   iconeCategoria(nomeCategoria?: string | null): string {
-    if (!nomeCategoria) return 'bi-basket3';
-    return ICONE_POR_CATEGORIA[nomeCategoria] ?? 'bi-basket3';
+    return (nomeCategoria && ICONE_POR_CATEGORIA[nomeCategoria]) || 'bi-basket3';
   }
 
-  produtosFiltrados(): Produto[] {
-    if (this.categoriaSelecionada === 'Todos') return this.produtos;
-    return this.produtos.filter((p) => p.categoria?.nome === this.categoriaSelecionada);
+  semPreco(produto: Produto): boolean {
+    return !(produto.preco > 0);
   }
 
-  adicionarAoCarrinho(produto: Produto, customizacao: CustomizacaoProduto = customizacaoVazia()) {
-    const itemExistente = this.carrinho.find(
-      (item) => item.produto.id === produto.id && mesmaCustomizacao(item.customizacao, customizacao),
+  quantidadeNoCarrinho(produto: Produto): number {
+    return this.carrinho().find((item) => item.produto.id === produto.id)?.qtd ?? 0;
+  }
+
+  adicionarAoCarrinho(produto: Produto): void {
+    if (this.semPreco(produto)) return;
+    this.carrinho.update((itens) => {
+      const existente = itens.find((item) => item.produto.id === produto.id);
+      return existente
+        ? itens.map((item) => (item === existente ? { ...item, qtd: item.qtd + 1 } : item))
+        : [...itens, { produto, qtd: 1 }];
+    });
+  }
+
+  alterarQtd(item: ItemCarrinho, delta: number): void {
+    this.carrinho.update((itens) =>
+      itens
+        .map((atual) => (atual === item ? { ...atual, qtd: atual.qtd + delta } : atual))
+        .filter((atual) => atual.qtd > 0),
     );
+  }
 
-    if (itemExistente) {
-      itemExistente.qtd++;
-    } else {
-      this.carrinho.push({ id: proximoIdCarrinho++, produto, qtd: 1, customizacao });
+  remover(item: ItemCarrinho): void {
+    this.carrinho.update((itens) => itens.filter((atual) => atual !== item));
+  }
+
+  limparCarrinho(): void {
+    this.carrinho.set([]);
+  }
+
+  // ------------------------------------------------------------------ modal de finalização
+
+  abrirModal(): void {
+    if (this.carrinho().length === 0) return;
+    this.erro.set(null);
+    this.modalAberto.set(true);
+    this.consultarCaixa();
+  }
+
+  fecharModal(): void {
+    if (!this.enviando()) {
+      this.modalAberto.set(false);
     }
   }
 
-  aoAdicionarDoModal(evento: { produto: Produto; customizacao: CustomizacaoProduto }) {
-    this.adicionarAoCarrinho(evento.produto, evento.customizacao);
+  selecionarAtendimento(tipo: TipoVenda): void {
+    if (tipo === 'DELIVERY' || this.vendaDaRetirada() !== null) return;
+    this.tipoAtendimento.set(tipo);
+    this.valorRecebido.set(null);
   }
 
-  precoUnitario(item: ItemCarrinho): number {
-    const totalAdicionais = item.customizacao.adicionaisSelecionados.reduce(
-      (soma, sel) => soma + sel.adicional.preco * sel.quantidade,
-      0,
-    );
-    return item.produto.preco + totalAdicionais;
+  selecionarForma(forma: FormaPagamento | null): void {
+    this.formaPagamento.set(forma);
+    this.valorRecebido.set(null);
   }
 
-  aumentarQtd(index: number) {
-    this.carrinho[index].qtd++;
+  /** Só interessa saber se o caixa está aberto quando a retirada vai ser paga na hora. */
+  private consultarCaixa(): void {
+    this.caixaService.atual().subscribe({
+      next: (caixa) => this.caixaAberto.set(caixa !== null),
+      error: () => this.caixaAberto.set(null),
+    });
   }
 
-  diminuirQtd(index: number) {
-    if (this.carrinho[index].qtd > 1) {
-      this.carrinho[index].qtd--;
-    } else {
-      this.carrinho.splice(index, 1);
-    }
-  }
-
-  total(): number {
-    return this.carrinho.reduce((soma, item) => soma + this.precoUnitario(item) * item.qtd, 0);
-  }
-
-  /**
-   * O backend exige identificação do pedido: mesa OU nome do cliente
-   * (VendaService.criar rejeita quando os dois faltam). Antes, para empresas
-   * sem a funcionalidade OPERACAO (sem mesas), o botão ficava habilitado sem
-   * nenhum dos dois e o pedido morria com 400 na API.
-   */
-  podeFinalizar(): boolean {
-    if (this.carrinho.length === 0) return false;
-    return this.mesaSelecionada !== null || !!this.cliente.trim();
-  }
-
-  confirmarPedido() {
-    if (!this.podeFinalizar() || this.enviando) {
-      return;
-    }
-
-    const usuarioId = this.authService.usuario()?.id;
-    if (!usuarioId) {
-      this.erro = 'Sessão inválida, faça login novamente.';
-      return;
-    }
-
-    this.enviando = true;
-    this.erro = null;
-
-    const comandaAberta = this.mesaSelecionada ? this.comandaPorMesa.get(this.mesaSelecionada) : undefined;
-
-    if (comandaAberta) {
-      this.comandaService
-        .adicionarItens(comandaAberta.id, usuarioId, this.carrinho.map((item) => this.paraPayloadComanda(item)))
-        .subscribe({
-          next: () => this.finalizarComSucesso(),
-          error: (erro) => {
-            this.enviando = false;
-            this.erro = MensagemErroApiUtil.extrair(
-              erro,
-              'Não foi possível lançar os itens na comanda. Tente novamente.',
-            );
-          },
-        });
-      return;
-    }
-
-    const mesa = this.usaMesa && this.mesaSelecionada ? { id: this.mesaSelecionada } : null;
-    const clienteId = this.clienteSelecionadoId;
-
-    this.vendaService
+  confirmarPedido(): void {
+    if (!this.podeConfirmar()) return;
+    const tipo = this.tipoAtendimento();
+    this.enviando.set(true);
+    this.erro.set(null);
+    this.comandaService
       .criar({
-        status: STATUS_PEDIDO.AGUARDANDO,
-        tipo: mesa ? 'Mesa' : 'Balcão',
-        mesa,
-        nomeCliente: this.cliente.trim() || null,
-        cliente: clienteId ? { id: clienteId } : null,
-        usuario: { id: usuarioId },
+        status: 'ABERTO',
+        tipoVenda: tipo,
+        mesaId: tipo === 'MESA' ? this.mesaSelecionada() : null,
+        vendaId: this.vendaDaRetirada(),
+        cliente: this.cliente().trim() || null,
+        observacao: this.observacao().trim() || null,
+        itens: this.carrinho().map((item) => ({ produtoId: item.produto.id, quantidade: item.qtd })),
       })
       .subscribe({
-        next: (venda) => this.enviarItens(venda.id),
+        next: (comanda) => this.depoisDeCriar(comanda),
         error: (erro) => {
-          this.enviando = false;
-          this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível criar o pedido. Tente novamente.');
+          this.enviando.set(false);
+          this.erro.set(
+            MensagemErroApiUtil.extrair(
+              erro,
+              'Não foi possível criar o pedido. Confira a mesa, o estoque dos ingredientes e tente novamente.',
+            ),
+          );
+          this.modalAberto.set(false);
         },
       });
   }
 
-  private enviarItens(vendaId: number) {
-    const chamadas = this.carrinho.map((item) =>
-      this.itemVendaService.criar({
-        venda: { id: vendaId },
-        ...this.paraPayloadComanda(item),
-      }),
-    );
-
-    forkJoin(chamadas).subscribe({
-      next: () => this.aplicarCupomEFinalizar(vendaId),
-      error: (erro) => {
-        this.enviando = false;
-        this.erro = MensagemErroApiUtil.extrair(
-          erro,
-          'O pedido foi criado, mas houve um problema ao salvar os itens.',
-        );
-      },
-    });
-  }
-
-  private paraPayloadComanda(item: ItemCarrinho): ItemComandaPayload {
-    return {
-      produto: { id: item.produto.id },
-      quantidade: item.qtd,
-      preco_unitario: this.precoUnitario(item),
-      valor_total: this.precoUnitario(item) * item.qtd,
-      observacao: item.customizacao.observacao || null,
-      composicaoRemovida: item.customizacao.composicaoRemovidaIds.map((id) => ({ composicaoItem: { id } })),
-      adicionais: item.customizacao.adicionaisSelecionados.map((sel) => ({
-        adicional: { id: sel.adicional.id },
-        quantidade: sel.quantidade,
-      })),
-    };
-  }
-
   /**
-   * Cupom e resgate de cashback só se aplicam depois que a venda já tem
-   * itens (o valor mínimo do cupom e o teto do resgate dependem do total).
-   * Nenhum dos dois é obrigatório: falhas aqui só geram um aviso, o pedido
-   * já foi criado e enviado para a cozinha de qualquer forma.
+   * A comanda já foi criada. Se uma forma de pagamento foi escolhida, registra o pagamento do valor da
+   * comanda; na retirada a venda é finalizada em seguida (a mesa só libera ao finalizar a conta).
    */
-  private aplicarCupomEFinalizar(vendaId: number) {
-    const codigo = this.codigoCupom.trim();
-    if (!codigo) {
-      this.resgatarCashbackEFinalizar(vendaId);
+  private depoisDeCriar(comanda: Comanda): void {
+    const forma = this.formaPagamento();
+    const vendaId = comanda.vendaId;
+    if (!forma || vendaId === null) {
+      this.concluir(comanda, 'enviado para a cozinha');
       return;
     }
-
-    this.vendaService.aplicarCupom(vendaId, codigo).subscribe({
-      next: () => this.resgatarCashbackEFinalizar(vendaId),
-      error: (erro) => {
-        this.avisoPosPedido = MensagemErroApiUtil.extrair(erro, 'Não foi possível aplicar o cupom.');
-        this.resgatarCashbackEFinalizar(vendaId);
-      },
+    const recebido = this.valorRecebido();
+    const pagamento$ = this.vendaService.registrarPagamento(vendaId, {
+      forma,
+      valor: centavos(comanda.valorTotal),
+      valorRecebido: forma === 'DINHEIRO' && recebido !== null ? centavos(recebido) : null,
+    });
+    const retirada = this.tipoAtendimento() === 'RETIRADA';
+    (retirada ? pagamento$.pipe(switchMap(() => this.vendaService.finalizar(vendaId))) : pagamento$).subscribe({
+      next: () =>
+        this.concluir(
+          comanda,
+          retirada ? 'enviado para a cozinha, pago e finalizado' : 'enviado para a cozinha e pago (a conta da mesa continua aberta)',
+        ),
+      error: (erro) =>
+        this.concluir(
+          comanda,
+          `enviado para a cozinha, mas o pagamento não foi concluído: ${MensagemErroApiUtil.extrair(erro, 'erro ao registrar o pagamento')}. Conclua na conta`,
+          true,
+        ),
     });
   }
 
-  private resgatarCashbackEFinalizar(vendaId: number) {
-    const valor = this.valorCashbackResgate;
-    if (!this.clienteSelecionadoId || !valor || valor <= 0) {
-      this.finalizarComSucesso();
-      return;
+  private concluir(comanda: Comanda, situacao: string, aviso = false): void {
+    this.enviando.set(false);
+    this.modalAberto.set(false);
+    this.carrinho.set([]);
+    this.observacao.set('');
+    this.formaPagamento.set(null);
+    this.valorRecebido.set(null);
+    if (this.vendaDaRetirada() === null) {
+      this.cliente.set('');
     }
-
-    this.vendaService.resgatarCashback(vendaId, valor).subscribe({
-      next: () => this.finalizarComSucesso(),
-      error: (erro) => {
-        this.avisoPosPedido =
-          (this.avisoPosPedido ? this.avisoPosPedido + ' ' : '') +
-          MensagemErroApiUtil.extrair(erro, 'Não foi possível usar o cashback.');
-        this.finalizarComSucesso();
-      },
-    });
-  }
-
-  private finalizarComSucesso() {
-    this.enviando = false;
-    this.sucesso = true;
-    this.carrinho = [];
-    this.cliente = '';
-    this.mesaSelecionada = null;
-    this.clienteSelecionadoId = null;
-    this.codigoCupom = '';
-    this.valorCashbackResgate = null;
-    setTimeout(() => (this.sucesso = false), 4000);
-    setTimeout(() => (this.avisoPosPedido = null), 8000);
-  }
-
-  /**
-   * Gera o QR Code do link público (/cardapio/:slug). Com uma mesa
-   * selecionada, o link já leva a mesa, e o pedido do cliente entra nela.
-   */
-  abrirQrCode() {
-    this.qrCodeAberto = true;
-    this.qrCodeErro = null;
-    this.qrCodeImagem = null;
-    this.linkCopiado = false;
-    this.mesaDoQrCode = this.mesas.find((m) => m.id === this.mesaSelecionada) ?? null;
-
-    this.cardapioPublicoService.meuLink().subscribe({
-      next: ({ slug }) => {
-        const mesa = this.mesaDoQrCode ? `?mesa=${this.mesaDoQrCode.id}` : '';
-        this.linkPedido = `${window.location.origin}/cardapio/${encodeURIComponent(slug)}${mesa}`;
-        QRCode.toDataURL(this.linkPedido, { width: 320, margin: 2 })
-          .then((imagem) => (this.qrCodeImagem = imagem))
-          .catch(() => (this.qrCodeErro = 'Não foi possível gerar o QR Code.'));
-      },
-      error: (erro) => {
-        this.qrCodeErro = MensagemErroApiUtil.extrair(erro, 'Não foi possível obter o link de pedido.');
-      },
-    });
-  }
-
-  fecharQrCode() {
-    this.qrCodeAberto = false;
-  }
-
-  abrirPaginaPedido() {
-    window.open(this.linkPedido, '_blank', 'noopener');
-  }
-
-  copiarLink() {
-    navigator.clipboard?.writeText(this.linkPedido).then(() => (this.linkCopiado = true));
-  }
-
-  abrirDetalhes(produto: Produto) {
-    this.produtoSelecionado = produto;
-  }
-
-  fecharModal() {
-    this.produtoSelecionado = null;
+    if (this.tipoAtendimento() === 'MESA') {
+      this.mesaSelecionada.set(null);
+    }
+    this.confirmacao.set({ mensagem: `Pedido #${comanda.id} ${situacao}.`, vendaId: comanda.vendaId, aviso });
+    setTimeout(() => this.confirmacao.set(null), aviso ? 12000 : 7000);
   }
 }

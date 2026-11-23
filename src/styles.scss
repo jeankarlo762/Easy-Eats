@@ -1,29 +1,31 @@
-/* You can add global styles to this file, and also import other style files */
-@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&display=swap');
-
 /* ==========================================================================
-   TOKENS DE DESIGN
-   Início de centralização das cores/raios/sombras repetidos em cada .scss
-   de tela (ex.: #ea580c, #f97316, raio 7-8px, sombra de foco). Hoje só os
-   componentes novos/recentes (campo-senha, toggle-switch, app-input,
-   app-carregando, login, usuarios, cadastro-produto, modal-produto)
-   consomem essas variáveis — o restante do app ainda usa valores fixos por
-   tela. Migrar o restante é trabalho futuro, não feito aqui para não mexer
-   em telas fora do escopo desta tarefa.
+   EASY EATS — ESTILOS GLOBAIS / DESIGN SYSTEM
+   Todas as telas usam as classes padrão abaixo (.pagina, .topo, .painel,
+   .stat-card, .btn, .alerta, .badge, .campo...). Os .scss de cada tela
+   devem conter apenas o que é específico daquela tela.
+   As cores vêm de variáveis, então o modo noturno funciona automaticamente.
    ========================================================================== */
+
+/* -------------------------------------------------------------- TOKENS -- */
 :root {
   --color-primary: #ea580c;
   --color-primary-hover: #c2410c;
-  --color-primary-focus-ring: rgba(249, 115, 22, 0.12);
+  --color-primary-soft: #fff7ed;
+  --color-primary-focus-ring: rgba(249, 115, 22, 0.14);
   --color-focus-border: #f97316;
 
   --color-text: #111827;
+  --color-text-secondary: #374151;
   --color-text-muted: #6b7280;
   --color-text-subtle: #9ca3af;
 
-  --color-border: #e5e7eb;
-  --color-bg-input: #fafafa;
+  --color-bg-page: #f7f8fa;
   --color-bg-surface: #ffffff;
+  --color-bg-muted: #f9fafb;
+  --color-bg-hover: #f3f4f6;
+  --color-bg-input: #fafafa;
+  --color-border: #e5e7eb;
+  --color-border-soft: #f3f4f6;
 
   --color-danger-bg: #fef2f2;
   --color-danger-border: #fecaca;
@@ -33,40 +35,79 @@
   --color-success-border: #bbf7d0;
   --color-success-text: #16a34a;
 
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-warning-text: #b45309;
+
+  --color-info-bg: #eff6ff;
+  --color-info-border: #bfdbfe;
+  --color-info-text: #2563eb;
+
+  --color-purple-bg: #f5f3ff;
+  --color-purple-text: #7c3aed;
+
   --radius-sm: 6px;
   --radius-md: 7px;
   --radius-lg: 8px;
+  --radius-xl: 12px;
 }
 
 :root[data-theme='escuro'] {
+  color-scheme: dark;
+
+  --color-primary-soft: rgba(234, 88, 12, 0.14);
+
   --color-text: #f3f4f6;
+  --color-text-secondary: #d1d5db;
   --color-text-muted: #9ca3af;
   --color-text-subtle: #6b7280;
 
-  --color-border: #2b2f38;
-  --color-bg-input: #14161a;
+  --color-bg-page: #14161a;
   --color-bg-surface: #1c1f26;
+  --color-bg-muted: #191c22;
+  --color-bg-hover: #23262d;
+  --color-bg-input: #14161a;
+  --color-border: #2b2f38;
+  --color-border-soft: #252830;
+
+  --color-danger-bg: rgba(220, 38, 38, 0.12);
+  --color-danger-border: rgba(220, 38, 38, 0.35);
+  --color-danger-text: #f87171;
+
+  --color-success-bg: rgba(22, 163, 74, 0.12);
+  --color-success-border: rgba(22, 163, 74, 0.35);
+  --color-success-text: #4ade80;
+
+  --color-warning-bg: rgba(217, 119, 6, 0.12);
+  --color-warning-border: rgba(217, 119, 6, 0.35);
+  --color-warning-text: #fbbf24;
+
+  --color-info-bg: rgba(37, 99, 235, 0.14);
+  --color-info-border: rgba(37, 99, 235, 0.35);
+  --color-info-text: #60a5fa;
+
+  --color-purple-bg: rgba(124, 58, 237, 0.14);
+  --color-purple-text: #a78bfa;
 }
 
-:host {
-  display: flex;
-  min-height: calc(100vh - 70px);
-  width: 100%;
-  padding: 30px 15px;
+/* ---------------------------------------------------------------- BASE -- */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-  padding-bottom: 120px;
-  padding-top: 20px;
-  background-image: url('./assets/images/background-easy-eats.png');
 }
 
-body {
-  margin: 0;
-}
 * {
   font-family: 'Poppins', sans-serif;
 }
 
-/* Transição suave entre rotas (ex.: Entrar <-> Cadastrar), via View Transitions API do Router */
+body {
+  margin: 0;
+  background: var(--color-bg-page);
+  color: var(--color-text);
+}
+
+/* Transição suave entre rotas, via View Transitions API do Router */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 180ms;
@@ -98,111 +139,746 @@ body {
   }
 }
 
-//container padrão
-.container-padrao {
+/* -------------------------------------------------------------- PÁGINA -- */
+.pagina {
   width: 100%;
-  max-width: 700px;
-  margin: auto;
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box;
-  min-height: 500px;
+  padding: 24px 28px 80px;
+  color: var(--color-text);
 }
 
+.topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.topo h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topo p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.topo-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 680px) {
+  .pagina {
+    padding: 20px 16px 80px;
+  }
+
+  .topo h1 {
+    font-size: 22px;
+  }
+}
+
+/* -------------------------------------------------------------- PAINEL -- */
+.painel {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+.painel h3 {
+  margin: 0 0 16px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.painel-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.painel-cabecalho h3 {
+  margin: 0;
+}
+
+.texto-apoio {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------- GRIDS -- */
+.grid-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.grid-duas-colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.grid-duas-colunas > .painel {
+  margin-bottom: 0;
+}
+
+.grid-duas-colunas + .grid-duas-colunas,
+.grid-duas-colunas + .painel {
+  margin-top: 16px;
+}
+
+.grid-form-lista {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 1.5fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.grid-form-lista > .painel {
+  margin-bottom: 0;
+}
+
+@media (max-width: 960px) {
+  .grid-duas-colunas,
+  .grid-form-lista {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------------------------------------------------- STAT CARDS -- */
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.stat-valor {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.stat-valor.critico {
+  color: var(--color-danger-text);
+}
+
+.stat-label {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* Cores de ícone reutilizáveis */
+.stat-icon.verde, .acao-icon.verde { background: var(--color-success-bg); color: var(--color-success-text); }
+.stat-icon.azul, .acao-icon.azul { background: var(--color-info-bg); color: var(--color-info-text); }
+.stat-icon.roxo, .acao-icon.roxo { background: var(--color-purple-bg); color: var(--color-purple-text); }
+.stat-icon.laranja, .acao-icon.laranja { background: var(--color-primary-soft); color: var(--color-primary); }
+.stat-icon.vermelho, .acao-icon.vermelho { background: var(--color-danger-bg); color: var(--color-danger-text); }
+.stat-icon.amarelo, .acao-icon.amarelo { background: var(--color-warning-bg); color: var(--color-warning-text); }
+
+/* -------------------------------------------------------------- BOTÕES -- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primario {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primario:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn-secundario {
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+.btn-secundario:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+}
+
+.btn-perigo {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border-color: var(--color-danger-border);
+}
+
+.btn-perigo:hover:not(:disabled) {
+  background: var(--color-danger-text);
+  color: #fff;
+}
+
+.btn-sucesso {
+  background: var(--color-success-text);
+  color: #fff;
+}
+
+.btn-sucesso:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 12.5px;
+}
+
+.btn-bloco {
+  width: 100%;
+}
+
+.btn-icone {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn-icone:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  color: var(--color-text);
+}
+
+.btn-icone.perigo:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border-color: var(--color-danger-border);
+}
+
+.btn-icone:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.acoes-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.acoes-form .btn-primario {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------- ALERTAS -- */
+.alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid;
+  font-size: 13.5px;
+  margin-bottom: 16px;
+}
+
+.alerta i {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.alerta-texto {
+  flex: 1;
+}
+
+.alerta-fechar {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.alerta-fechar:hover {
+  opacity: 1;
+}
+
+.alerta-erro {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-text);
+}
+
+.alerta-sucesso {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success-text);
+}
+
+.alerta-aviso {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+
+.alerta-info {
+  background: var(--color-info-bg);
+  border-color: var(--color-info-border);
+  color: var(--color-info-text);
+}
+
+/* -------------------------------------------------------------- BADGES -- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  background: var(--color-bg-hover);
+  color: var(--color-text-muted);
+}
+
+.badge.sucesso { background: var(--color-success-bg); color: var(--color-success-text); }
+.badge.erro { background: var(--color-danger-bg); color: var(--color-danger-text); }
+.badge.aviso { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.badge.info { background: var(--color-info-bg); color: var(--color-info-text); }
+.badge.roxo { background: var(--color-purple-bg); color: var(--color-purple-text); }
+.badge.laranja { background: var(--color-primary-soft); color: var(--color-primary); }
+.badge.neutro { background: var(--color-bg-hover); color: var(--color-text-muted); }
+
+/* Status de pedido (mesmos nomes do enum do backend) */
+.badge.status-ABERTO { background: var(--color-info-bg); color: var(--color-info-text); }
+.badge.status-EM_PREPARO { background: var(--color-primary-soft); color: var(--color-primary); }
+.badge.status-FINALIZADO { background: var(--color-success-bg); color: var(--color-success-text); }
+.badge.status-CANCELADO { background: var(--color-danger-bg); color: var(--color-danger-text); }
+
+/* --------------------------------------------------------- FORMULÁRIOS -- */
+.campo {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+.campo label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.campo input,
+.campo select,
+.campo textarea,
+.input-padrao {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  background: var(--color-bg-input);
+  color: var(--color-text);
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus,
+.input-padrao:focus {
+  outline: none;
+  border-color: var(--color-focus-border);
+  background: var(--color-bg-surface);
+  box-shadow: 0 0 0 3px var(--color-primary-focus-ring);
+}
+
+.campo input[readonly],
+.campo input:disabled,
+.campo select:disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
+.campo-linha {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.campo-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.campo-checkbox input {
+  width: auto;
+}
+
+.erro-campo {
+  color: var(--color-danger-text);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.ajuda {
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  margin: 0 0 14px;
+}
+
+/* ------------------------------------------------------- LISTAS/LINHAS -- */
+.lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border-soft);
+  font-size: 14px;
+}
+
+.linha:first-child {
+  padding-top: 0;
+}
+
+.linha:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.linha-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.linha-info strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.linha-info span {
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+}
+
+.linha-acoes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.vazio {
+  text-align: center;
+  color: var(--color-text-subtle);
+  font-size: 13px;
+  padding: 20px 0;
+  margin: 0;
+}
+
+/* ------------------------------------------------------ FILTROS (CHIPS) -- */
+.filtros {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filtros button {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.filtros button:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.filtros button.ativo {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+/* -------------------------------------------------------------- TABELA -- */
+.tabela-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.tabela thead th {
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-subtle);
+  padding: 0 10px 10px;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.tabela tbody td {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--color-border-soft);
+  color: var(--color-text-secondary);
+  vertical-align: middle;
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela tbody tr:hover {
+  background: var(--color-bg-muted);
+}
+
+.tabela .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tabela .acoes {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.tabela .acoes > div {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ------------------------------------------------- RANKING E BARRAS -- */
+.lista-ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lista-ranking li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.lista-ranking li:last-child {
+  border-bottom: none;
+}
+
+.lista-ranking .posicao {
+  width: 26px;
+  color: var(--color-text-subtle);
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.lista-ranking .nome {
+  flex: 1;
+  color: var(--color-text-secondary);
+}
+
+.lista-ranking .qtd {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.grafico-barras {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 160px;
+}
+
+.grafico-barras .barra-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  height: 100%;
+  min-width: 0;
+}
+
+.grafico-barras .barra {
+  width: 100%;
+  max-width: 28px;
+  border-radius: 4px 4px 1px 1px;
+  background: var(--color-primary);
+  min-height: 3px;
+}
+
+.grafico-barras .barra-valor {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.grafico-barras .barra-rotulo {
+  font-size: 11.5px;
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- MODAL -- */
+.modal-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modal-caixa {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  color: var(--color-text);
+}
+
+.modal-caixa h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.modal-caixa p {
+  margin: 0 0 16px;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+}
+
+.modal-caixa .acoes-form {
+  justify-content: flex-end;
+}
+
+.modal-caixa .acoes-form .btn-primario {
+  flex: 0 0 auto;
+}
+
+/* ===================================================== LEGADO (login etc.) */
 .msg-validacoes {
-  color: #d32f2f;
+  color: var(--color-danger-text);
   padding: 8px 12px;
   font-size: 14px;
   font-weight: 500;
-  margin:0;
-}
-
-// botões
-.btn-mostrar-senha {
-  background-color: transparent;
-  border: none;
-  padding: 0;
-
-  cursor: pointer;
-
-  color: #ff6b00;
-  font-weight: bold;
-
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.btn-mostrar-senha:hover {
-  text-decoration: underline;
+  margin: 0;
 }
 
 .btn-padrao {
   width: 100%;
   padding: 14px;
-  background: #ff6b00;
+  background: var(--color-primary);
   border: none;
   color: white;
   font-size: 16px;
   font-weight: bold;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition: background 0.3s;
   margin-top: 15px;
 }
 
 .btn-padrao:hover {
-  background: #e65a00;
-}
-
-/* Status das tags */
-.status {
-  padding: 5px 10px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: bold;
-}
-
-.status.preparando {
-  background: #ffe0b2;
-  color: #e67e22;
-}
-
-.status.aguardando {
-  background: #e0f7fa;
-  color: #0097a7;
-}
-
-.status.pronto {
-  background: #d4edda;
-  color: #28a745;
-}
-
-.status.entregue {
-  background: #e8eaf6;
-  color: #3f51b5;
+  background: var(--color-primary-hover);
 }
 
 /* ==========================================================================
-   MODO NOTURNO
-   Sobrescreve, de forma centralizada, as classes do design system usadas em
-   todas as telas (.painel, .stat-card, .card-form, etc.) — evita ter que
-   duplicar regras de tema em cada componente.
+   MODO NOTURNO — telas legadas que ainda usam cores fixas em seu .scss
    ========================================================================== */
-
-:root[data-theme='escuro'] {
-  color-scheme: dark;
-}
-
-html[data-theme='escuro'] body {
-  background: #14161a;
-}
-
-html[data-theme='escuro'] .painel,
-html[data-theme='escuro'] .stat-card,
 html[data-theme='escuro'] .card-form,
 html[data-theme='escuro'] .resumo-card,
 html[data-theme='escuro'] .auth-card,
@@ -215,14 +891,6 @@ html[data-theme='escuro'] .profile-card {
   border-color: #2b2f38 !important;
 }
 
-html[data-theme='escuro'] .pagina,
-html[data-theme='escuro'] .page-container {
-  color: #e5e7eb;
-}
-
-html[data-theme='escuro'] .topo h1,
-html[data-theme='escuro'] .painel h3,
-html[data-theme='escuro'] .stat-valor,
 html[data-theme='escuro'] .cabecalho-form h2,
 html[data-theme='escuro'] .info strong,
 html[data-theme='escuro'] .value,
@@ -230,30 +898,21 @@ html[data-theme='escuro'] h1,
 html[data-theme='escuro'] h2,
 html[data-theme='escuro'] h3,
 html[data-theme='escuro'] h4 {
-  color: #f3f4f6 !important;
+  color: #f3f4f6;
 }
 
-html[data-theme='escuro'] .topo p,
-html[data-theme='escuro'] .stat-label,
-html[data-theme='escuro'] .painel p,
 html[data-theme='escuro'] .label-title,
-html[data-theme='escuro'] .nome,
 html[data-theme='escuro'] .descricao {
   color: #9ca3af !important;
 }
 
-html[data-theme='escuro'] .linha,
 html[data-theme='escuro'] .item,
 html[data-theme='escuro'] .info-item {
   border-color: #2b2f38 !important;
 }
 
-html[data-theme='escuro'] .campo input,
-html[data-theme='escuro'] .campo select,
 html[data-theme='escuro'] .input-icone input,
 html[data-theme='escuro'] .input-busca,
-html[data-theme='escuro'] .barra-filtros select,
-html[data-theme='escuro'] input.input-edicao-discreto,
 html[data-theme='escuro'] .campo-senha input,
 html[data-theme='escuro'] .campo-texto input {
   background: #14161a !important;
@@ -261,29 +920,46 @@ html[data-theme='escuro'] .campo-texto input {
   color: #e5e7eb !important;
 }
 
-html[data-theme='escuro'] .tabela thead th {
-  color: #6b7280 !important;
-  border-bottom-color: #2b2f38 !important;
+.lista-ranking li.vazio {
+  justify-content: center;
 }
 
-html[data-theme='escuro'] .tabela tbody td {
-  border-bottom-color: #2b2f38 !important;
-  color: #d1d5db;
-}
+/* ------------------------------------------------------------ IMPRESSÃO -- */
+/* Relatórios imprimíveis: esconde a navegação e força o tema claro no papel. */
+@media print {
+  app-sidebar,
+  .topbar,
+  .no-print {
+    display: none !important;
+  }
 
-html[data-theme='escuro'] .tabela tbody tr:hover {
-  background: #23262d !important;
-}
+  :root,
+  :root[data-theme='escuro'] {
+    color-scheme: light;
+    --color-text: #111827;
+    --color-text-secondary: #374151;
+    --color-text-muted: #6b7280;
+    --color-text-subtle: #6b7280;
+    --color-bg-page: #ffffff;
+    --color-bg-surface: #ffffff;
+    --color-bg-muted: #ffffff;
+    --color-bg-hover: #f3f4f6;
+    --color-border: #d1d5db;
+    --color-border-soft: #e5e7eb;
+  }
 
-html[data-theme='escuro'] .celula-nome {
-  color: #f3f4f6 !important;
-}
+  body,
+  .layout {
+    background: #ffffff !important;
+  }
 
-html[data-theme='escuro'] .filtros button,
-html[data-theme='escuro'] .btn-cancelar,
-html[data-theme='escuro'] .btn-icone,
-html[data-theme='escuro'] .btn-voltar {
-  background: #1c1f26 !important;
-  border-color: #2b2f38 !important;
-  color: #9ca3af !important;
+  .pagina {
+    padding: 0 !important;
+  }
+
+  .painel,
+  .stat-card,
+  .tabela tr {
+    break-inside: avoid;
+  }
 }

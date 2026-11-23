@@ -29,5 +29,11 @@ export class PeriodoUtil {
     return { inicio: PeriodoUtil.paraIso(inicio), fim };
   };
 
-  static paraIso = (data: Date): string => data.toISOString().slice(0, 10);
+  /** Data local em yyyy-MM-dd (toISOString usaria UTC e trocaria o dia à noite). */
+  static paraIso = (data: Date): string => {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
 }

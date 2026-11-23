@@ -1,202 +1,145 @@
-<div class="page-container">
-
+<div class="pagina">
   <header class="topo">
-    <h1>Financeiro</h1>
-    <p>Vendas, despesas e catálogo de produtos</p>
+    <div>
+      <h1>Financeiro</h1>
+      <p>Faturamento por período, calculado a partir das vendas finalizadas (data de fechamento da conta)</p>
+    </div>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+    </div>
   </header>
 
-  @if (erro) {
-    <p class="vazio">{{ erro }}</p>
+  <app-filtro-periodo (periodoChange)="aplicarPeriodo($event)"></app-filtro-periodo>
+
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
   }
 
-  @if (carregando) {
-    <app-carregando texto="Carregando dados financeiros..."></app-carregando>
-  } @else {
-    <div class="filtros">
-      <button
-        [class.ativo]="filtroSelecionado === 'hoje'"
-        (click)="selecionarFiltro('hoje')">Hoje</button>
-      <button
-        [class.ativo]="filtroSelecionado === 'semana'"
-        (click)="selecionarFiltro('semana')">Últimos 7 dias</button>
-      <button
-        [class.ativo]="filtroSelecionado === 'periodo'"
-        (click)="selecionarFiltro('periodo')">Todo o período</button>
+  @if (carregando() && !resumo()) {
+    <app-carregando texto="Carregando faturamento..."></app-carregando>
+  } @else if (resumo(); as r) {
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-icon verde"><i class="bi bi-cash-stack"></i></div>
+        <div>
+          <div class="stat-valor">{{ r.totalFaturado | currency: 'BRL' }}</div>
+          <div class="stat-label">Faturamento</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon roxo"><i class="bi bi-graph-up-arrow"></i></div>
+        <div>
+          <div class="stat-valor">{{ r.ticketMedio | currency: 'BRL' }}</div>
+          <div class="stat-label">Ticket médio</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon azul"><i class="bi bi-receipt"></i></div>
+        <div>
+          <div class="stat-valor">{{ r.quantidadeVendas }}</div>
+          <div class="stat-label">Vendas finalizadas</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon vermelho"><i class="bi bi-x-circle"></i></div>
+        <div>
+          <div class="stat-valor">{{ r.quantidadeCanceladas }}</div>
+          <div class="stat-label">Vendas canceladas</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon laranja"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+          <div class="stat-valor">{{ emAberto() | currency: 'BRL' }}</div>
+          <div class="stat-label">Em aberto agora (contas não pagas)</div>
+        </div>
+      </div>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <div class="valor text-success">{{ vendasTotal | currency: 'BRL' }}</div>
-        <div class="paragrafo">Vendas</div>
-      </div>
-
-      <div class="summary-card">
-        <div class="valor text-error">{{ despesasTotal | currency: 'BRL' }}</div>
-        <div class="paragrafo">Despesas</div>
-      </div>
-
-      <div class="summary-card">
-        <div class="valor" [class.text-success]="lucro >= 0" [class.text-error]="lucro < 0">
-          {{ lucro | currency: 'BRL' }}
+    <div class="grid-duas-colunas">
+      <section class="painel">
+        <h3>Por forma de pagamento</h3>
+        <div class="tabela-wrap">
+          <table class="tabela">
+            <thead>
+              <tr><th>Forma</th><th class="num">Valor</th><th class="num">Participação</th></tr>
+            </thead>
+            <tbody>
+              @for (linha of r.porFormaPagamento; track linha.forma) {
+                <tr>
+                  <td>{{ formaLabel[linha.forma] }}</td>
+                  <td class="num"><strong>{{ linha.total | currency: 'BRL' }}</strong></td>
+                  <td class="num">{{ percentual(linha.total) | number: '1.0-1' }}%</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="3" class="vazio">Nenhum pagamento nesse período.</td></tr>
+              }
+            </tbody>
+          </table>
         </div>
-        <div class="paragrafo">Lucro</div>
-      </div>
+      </section>
+
+      <section class="painel">
+        <h3>Faturamento por dia</h3>
+        <div class="tabela-wrap">
+          <table class="tabela">
+            <thead>
+              <tr><th>Dia</th><th class="num">Vendas</th><th class="num">Valor</th></tr>
+            </thead>
+            <tbody>
+              @for (linha of r.porDia; track linha.dia) {
+                <tr>
+                  <td>{{ dataDoDia(linha.dia) | date: 'EEE, dd/MM/yyyy' }}</td>
+                  <td class="num">{{ linha.quantidade }}</td>
+                  <td class="num"><strong>{{ linha.total | currency: 'BRL' }}</strong></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="3" class="vazio">Nenhuma venda finalizada nesse período.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
 
-    <div class="tabs">
-      <span [class.ativo]="abaSelecionada === 'resumo'" (click)="selecionarAba('resumo')">Resumo</span>
-      <span [class.ativo]="abaSelecionada === 'vendas'" (click)="selecionarAba('vendas')">Vendas</span>
-      <span [class.ativo]="abaSelecionada === 'despesas'" (click)="selecionarAba('despesas')">Despesas</span>
-      <span [class.ativo]="abaSelecionada === 'produtos'" (click)="selecionarAba('produtos')">Produtos</span>
-    </div>
-
-    @if (abaSelecionada === 'resumo') {
-      <div class="card-form mb-25">
-        <div class="list-header">
-          <h3>Resumo do Período</h3>
-        </div>
-
-        <div class="list-container">
-          <div class="list-item">
-            <span class="item-name">Pedidos realizados</span>
-            <span class="item-info">{{ resumo.pedidos }}</span>
-          </div>
-
-          <div class="list-item">
-            <span class="item-name">Ticket médio</span>
-            <span class="item-info">{{ resumo.ticketMedio | currency: 'BRL' }}</span>
-          </div>
-
-          <div class="list-item">
-            <span class="item-name">Despesas registradas</span>
-            <span class="item-info">{{ resumo.despesasRegistradas }}</span>
-          </div>
-
-          <div class="list-item highlight-result">
-            <span class="item-name"><strong>Resultado</strong></span>
-            <span class="item-info">
-              <span class="status-badge" [class.success]="resumo.resultado >= 0" [class.error]="resumo.resultado < 0">
-                {{ resumo.resultado | currency: 'BRL' }}
-              </span>
-            </span>
-          </div>
-        </div>
+    <section class="painel">
+      <h3>Vendas finalizadas</h3>
+      <div class="tabela-wrap">
+        <table class="tabela">
+          <thead>
+            <tr><th>Venda</th><th>Atendimento</th><th>Fechada em</th><th>Por</th><th class="num">Valor</th><th class="acoes"></th></tr>
+          </thead>
+          <tbody>
+            @for (venda of pagina()?.itens ?? []; track venda.id) {
+              <tr>
+                <td><strong>#{{ venda.id }}</strong></td>
+                <td>{{ identificacao(venda) }}</td>
+                <td>{{ venda.dataFechamento ? (venda.dataFechamento | date: 'dd/MM HH:mm') : '—' }}</td>
+                <td>{{ venda.usuarioFechamento || '—' }}</td>
+                <td class="num">{{ venda.valorTotal | currency: 'BRL' }}</td>
+                <td class="acoes">
+                  <div>
+                    <a class="btn-icone" [routerLink]="['/conta', venda.id]" title="Ver conta" aria-label="Ver conta">
+                      <i class="bi bi-receipt"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="vazio">Nenhuma venda finalizada nesse período.</td></tr>
+            }
+          </tbody>
+        </table>
       </div>
-    }
-
-    @if (abaSelecionada === 'vendas') {
-      <div class="card-form">
-        <div class="list-header">
-          <h3>Vendas do Período</h3>
-        </div>
-
-        <div class="list-container">
-          @for (venda of vendasFiltradas; track venda.id) {
-            <div class="list-item">
-              <span class="item-name">
-                {{ venda.nomeCliente || (venda.mesa ? 'Mesa ' + venda.mesa.numero : 'Venda #' + venda.id) }}
-                <small>({{ venda.status }})</small>
-              </span>
-              <span class="item-info">{{ totalVenda(venda) | currency: 'BRL' }}</span>
-            </div>
-          } @empty {
-            <p class="vazio">Nenhuma venda no período selecionado.</p>
-          }
-        </div>
-      </div>
-    }
-
-    @if (abaSelecionada === 'despesas') {
-      <div class="card-form mb-25">
-        <div class="list-header">
-          <h3>Nova Despesa</h3>
-        </div>
-
-        @if (erroDespesa) {
-          <p class="vazio">{{ erroDespesa }}</p>
-        }
-
-        <div class="form-despesa">
-          <input type="text" placeholder="Descrição" [(ngModel)]="novaDespesa.descricao" class="input-busca" />
-          <input type="text" placeholder="Categoria (ex.: Insumos, Utilidades)" [(ngModel)]="novaDespesa.categoria" class="input-busca" />
-          <input type="number" placeholder="Valor" min="0" step="0.01" [(ngModel)]="novaDespesa.valor" class="input-busca" />
-          <input type="date" [(ngModel)]="novaDespesa.dtDespesa" class="input-busca" />
-          <button type="button" class="btn-registrar" [disabled]="enviandoDespesa" (click)="registrarDespesa()">
-            {{ enviandoDespesa ? 'Registrando...' : 'Registrar Despesa' }}
-          </button>
-        </div>
-      </div>
-
-      <div class="card-form">
-        <div class="list-header">
-          <h3>Despesas do Período</h3>
-        </div>
-
-        <div class="list-container">
-          @for (despesa of despesasFiltradas; track despesa.id) {
-            <div class="list-item">
-              <span class="item-name">
-                {{ despesa.descricao }}
-                <small>({{ despesa.categoria }} • {{ despesa.dtDespesa | date: 'dd/MM/yyyy' }})</small>
-              </span>
-              <span class="item-info">
-                {{ despesa.valor | currency: 'BRL' }}
-                <button type="button" class="btn-excluir" (click)="excluirDespesa(despesa)" title="Excluir">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </span>
-            </div>
-          } @empty {
-            <p class="vazio">Nenhuma despesa no período selecionado.</p>
-          }
-        </div>
-      </div>
-    }
-
-    @if (abaSelecionada === 'produtos') {
-      <div class="card-form">
-        <div class="list-header">
-          <h3>Catálogo de Produtos</h3>
-        </div>
-
-        <input
-          type="text"
-          placeholder="Buscar produto..."
-          [(ngModel)]="busca"
-          (input)="filtrarProdutos()"
-          class="input-busca"
-        />
-
-        <div class="grid">
-          @for (p of produtosFiltrados; track p.id) {
-            <div class="produto-card" [class.alerta]="isEstoqueBaixo(p)">
-
-              <div class="top">
-                <span class="icone-produto"><i class="bi" [ngClass]="iconeCategoria(p.categoria?.nome)"></i></span>
-              </div>
-
-              <h3>{{ p.nome }}</h3>
-              <small>{{ p.categoria?.nome || 'Sem categoria' }}</small>
-
-              <div class="preco">
-                {{ p.preco | currency: 'BRL' }}
-              </div>
-
-              <div class="estoque">
-                <span>Estoque: {{ estoqueDoProduto(p.id) }}</span>
-                @if (isEstoqueBaixo(p)) {
-                  <span class="status-badge error">Baixo</span>
-                } @else {
-                  <span class="status-badge success">Ok</span>
-                }
-              </div>
-            </div>
-          } @empty {
-            <p class="vazio" style="grid-column: 1 / -1;">Nenhum resultado encontrado</p>
-          }
-        </div>
-      </div>
-    }
+      @if (pagina(); as p) {
+        <app-paginacao [pagina]="p.pagina" [totalPaginas]="p.totalPaginas" [total]="p.total" (paginaChange)="irParaPagina($event)"></app-paginacao>
+      }
+    </section>
   }
-
 </div>

@@ -1,43 +1,40 @@
-import { Component, inject } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import { AuthService } from '../auth/auth.service';
+import { AuthService, PERFIL_LABEL } from '../auth/auth.service';
 
+/**
+ * Perfil do usuário logado. O backend não expõe endpoint para editar dados
+ * ou trocar a senha, então a tela é somente leitura (dados vêm do token JWT).
+ */
 @Component({
   selector: 'app-perfil-admin',
-  imports: [FormsModule],
+  standalone: true,
+  imports: [DatePipe],
   templateUrl: './perfilAdmin.html',
   styleUrl: './perfilAdmin.scss',
 })
 export class PerfilAdmin {
-  currentYear: number = new Date().getFullYear();
   private router = inject(Router);
   private authService = inject(AuthService);
 
-  usuario = {
-    nome: this.authService.usuario()?.nome ?? '',
-    email: this.authService.usuario()?.email ?? '',
-    telefone: '(00) 00000-0000',
-    cpf: '000.000.000-00',
-  };
-
-  modoEdicao = false;
-
-  toggleEdicao() {
-    this.modoEdicao = !this.modoEdicao;
-  }
-
-  salvarAlteracoes() {
-    this.modoEdicao = false;
-    console.log('Alterações salvas:', this.usuario);
-  }
+  usuario = this.authService.usuario;
+  perfil = computed(() => {
+    const role = this.usuario()?.role;
+    return role ? PERFIL_LABEL[role] : '';
+  });
+  roles = computed(() => (this.usuario()?.roles ?? []).map((r) => r.replace(/^ROLE_/, '')).join(', '));
+  iniciais = computed(() =>
+    (this.usuario()?.nome ?? '')
+      .split(/[\s._@-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((parte) => parte.charAt(0).toUpperCase())
+      .join(''),
+  );
 
   sair() {
     this.authService.logout();
     this.router.navigate(['/login']);
-  }
-
-  protected acessarRota(rota: string) {
-    this.router.navigate([rota]);
   }
 }

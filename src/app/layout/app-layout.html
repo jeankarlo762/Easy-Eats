@@ -15,7 +15,7 @@
         type="button"
         class="btn-hamburguer"
         (click)="alternarMenuMobile()"
-        title="Abrir menu"
+        title="Abrir menu" aria-label="Abrir menu"
       >
         <i class="bi bi-list"></i>
       </button>
@@ -37,6 +37,7 @@
           class="btn-icone-topo"
           (click)="alternarNotificacoes()"
           title="Notificações"
+          aria-label="Notificações"
         >
           <i class="bi bi-bell"></i>
           @if (naoLidas > 0) {
@@ -48,21 +49,27 @@
           <div class="painel-notificacoes">
             <div class="cabecalho-notificacoes">
               <strong>Notificações</strong>
-              <button type="button" (click)="marcarTodasComoLidas()">Marcar todas como lidas</button>
+              @if (notificacoes().length > 0) {
+                <button type="button" (click)="marcarTodasComoLidas()">Marcar todas como lidas</button>
+              }
             </div>
 
             <div class="lista-notificacoes">
-              @for (n of notificacoes; track n.id) {
-                <div class="notificacao" [class.nao-lida]="!n.lida" (click)="marcarComoLida(n)">
+              @for (n of notificacoes(); track n.chave) {
+                <button
+                  type="button"
+                  class="notificacao clicavel"
+                  [class.nao-lida]="!estaLida(n)"
+                  (click)="abrirNotificacao(n)"
+                >
                   <div class="notificacao-icone" [ngClass]="n.cor">
                     <i class="bi" [ngClass]="n.icone"></i>
                   </div>
                   <div class="notificacao-texto">
                     <strong>{{ n.titulo }}</strong>
                     <span>{{ n.descricao }}</span>
-                    <small>{{ tempoRelativo(n.dtCriacao) }}</small>
                   </div>
-                </div>
+                </button>
               } @empty {
                 <p class="notificacoes-vazio">Nenhuma notificação por aqui.</p>
               }
@@ -77,24 +84,15 @@
           <strong>{{ authService.usuario()?.nome }}</strong>
           <span
             class="badge-perfil"
-            [class.operador]="authService.usuario()?.role === 'OPERADOR'"
-            [class.superadmin]="authService.isSuperadmin()"
-            [class.garcom]="authService.isGarcom()"
+            [class.gerente]="authService.isGerente()"
+            [class.funcionario]="authService.isFuncionario()"
           >
-            @if (authService.isSuperadmin()) {
-              Superadmin
-            } @else if (authService.isAdministrador()) {
-              Administrador
-            } @else if (authService.isGarcom()) {
-              Garçom
-            } @else {
-              Operador
-            }
+            {{ labelPerfil }}
           </span>
         </span>
       </button>
 
-      <button type="button" class="btn-sair" (click)="sair()" title="Sair">
+      <button type="button" class="btn-sair" (click)="sair()" title="Sair" aria-label="Sair">
         <i class="bi bi-box-arrow-right"></i>
       </button>
     </header>

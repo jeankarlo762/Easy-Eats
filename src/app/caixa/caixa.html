@@ -1,130 +1,272 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Frente de Caixa</h1>
-    <p>Abertura, fechamento e movimentações do caixa</p>
+    <div>
+      <h1>Caixa</h1>
+      <p>Abra o caixa, registre suprimentos e sangrias e confira o valor no fechamento</p>
+    </div>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+      @if (caixa()) {
+        <button type="button" class="btn btn-secundario" (click)="abrirMovimento('SUPRIMENTO')">
+          <i class="bi bi-plus-circle"></i> Suprimento
+        </button>
+        @if (podeGerir) {
+          <button type="button" class="btn btn-secundario" (click)="abrirMovimento('SANGRIA')">
+            <i class="bi bi-box-arrow-up"></i> Sangria
+          </button>
+          <button type="button" class="btn btn-primario" (click)="abrirFechamento()">
+            <i class="bi bi-lock"></i> Fechar caixa
+          </button>
+        }
+      }
+    </div>
   </header>
 
-  @if (erro) {
-    <p class="vazio">{{ erro }}</p>
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
+  }
+  @if (sucesso()) {
+    <div class="alerta alerta-sucesso"><i class="bi bi-check-circle"></i><span class="alerta-texto">{{ sucesso() }}</span></div>
   }
 
-  @if (carregando) {
-    <p class="vazio">Carregando...</p>
-  } @else if (!caixa) {
-    <section class="painel">
-      <h3>Nenhum caixa aberto</h3>
-
-      @if (podeOperar) {
-        <div class="form-linha">
-          <label>Valor inicial</label>
-          <input type="number" step="0.01" [(ngModel)]="valorInicial" placeholder="0,00" />
-        </div>
-        <div class="form-linha">
-          <label>Observações</label>
-          <input type="text" [(ngModel)]="observacoesAbertura" placeholder="Opcional" />
-        </div>
-        <button type="button" class="btn-primario" [disabled]="processando" (click)="abrirCaixa()">
-          Abrir caixa
-        </button>
-      } @else {
-        <p class="vazio">Peça para um administrador ou operador abrir o caixa.</p>
-      }
-    </section>
-  } @else {
+  @if (carregando()) {
+    <app-carregando texto="Carregando caixa..."></app-carregando>
+  } @else if (caixa(); as c) {
     <div class="grid-stats">
       <div class="stat-card">
-        <div class="stat-label">Status</div>
-        <div class="stat-valor">
-          <span class="badge sucesso">Aberto</span>
+        <div class="stat-icon verde"><i class="bi bi-unlock"></i></div>
+        <div>
+          <div class="stat-valor">Aberto</div>
+          <div class="stat-label">Caixa #{{ c.id }}</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Valor Inicial</div>
-        <div class="stat-valor">{{ caixa.valorInicial | currency: 'BRL' }}</div>
+        <div class="stat-icon azul"><i class="bi bi-cash-stack"></i></div>
+        <div>
+          <div class="stat-valor">{{ c.fundoCaixa | currency: 'BRL' }}</div>
+          <div class="stat-label">Fundo de caixa</div>
+        </div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Aberto por</div>
-        <div class="stat-valor pequeno">{{ caixa.usuarioAbertura?.nome ?? '-' }}</div>
+        <div class="stat-icon roxo"><i class="bi bi-person"></i></div>
+        <div>
+          <div class="stat-valor">{{ c.usuarioAbertura }}</div>
+          <div class="stat-label">Aberto por</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon laranja"><i class="bi bi-clock"></i></div>
+        <div>
+          <div class="stat-valor">{{ c.dataAbertura | date: 'dd/MM HH:mm' }}</div>
+          <div class="stat-label">Aberto em</div>
+        </div>
       </div>
     </div>
 
-    @if (podeOperar) {
-      <section class="painel">
-        <h3>Sangria / Suprimento</h3>
-        <div class="form-linha">
-          <label>Valor</label>
-          <input type="number" step="0.01" [(ngModel)]="valorMovimentacao" placeholder="0,00" />
-        </div>
-        <div class="form-linha">
-          <label>Descrição</label>
-          <input type="text" [(ngModel)]="descricaoMovimentacao" placeholder="Opcional" />
-        </div>
-        <div class="acoes">
-          <button type="button" class="btn-secundario" [disabled]="processando" (click)="registrarMovimentacao('SANGRIA')">
-            Registrar Sangria
-          </button>
-          <button type="button" class="btn-secundario" [disabled]="processando" (click)="registrarMovimentacao('SUPRIMENTO')">
-            Registrar Suprimento
-          </button>
-        </div>
-      </section>
+    @if (c.observacaoAbertura) {
+      <div class="alerta alerta-info">
+        <i class="bi bi-info-circle"></i>
+        <span class="alerta-texto">Observação da abertura: {{ c.observacaoAbertura }}</span>
+      </div>
+    }
 
+    @if (podeGerir) {
       <section class="painel">
-        <h3>Fechar caixa</h3>
-        <div class="form-linha">
-          <label>Valor apurado</label>
-          <input type="number" step="0.01" [(ngModel)]="valorApuradoInformado" placeholder="0,00" />
+        <div class="painel-cabecalho">
+          <h3>Lançamentos do turno</h3>
+          <span class="texto-apoio">O valor esperado só é conferido no fechamento.</span>
         </div>
-        <div class="form-linha">
-          <label>Observações</label>
-          <input type="text" [(ngModel)]="observacoesFechamento" placeholder="Opcional" />
+        <div class="tabela-wrap">
+          <table class="tabela">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th>Usuário</th>
+                <th class="num">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of lancamentos(); track l.id) {
+                <tr>
+                  <td>{{ l.dataMovimentacao | date: 'HH:mm' }}</td>
+                  <td>
+                    <span class="badge" [class.erro]="ehSaida(l.tipo)" [class.sucesso]="l.tipo === 'SUPRIMENTO' || l.tipo === 'VENDA'" [class.info]="l.tipo === 'FUNDO_INICIAL'">
+                      {{ tipoLabel[l.tipo] }}
+                    </span>
+                  </td>
+                  <td>{{ l.descricao || '—' }}</td>
+                  <td>{{ l.usuario }}</td>
+                  <td class="num" [class.valor-saida]="ehSaida(l.tipo)" [class.valor-entrada]="!ehSaida(l.tipo)">
+                    {{ ehSaida(l.tipo) ? '−' : '+' }} {{ l.valor | currency: 'BRL' }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="vazio">Nenhum lançamento neste turno.</td></tr>
+              }
+            </tbody>
+          </table>
         </div>
-        <button type="button" class="btn-primario" [disabled]="processando" (click)="fecharCaixa()">
-          Fechar caixa
-        </button>
       </section>
     } @else {
+      <div class="alerta alerta-info">
+        <i class="bi bi-info-circle"></i>
+        <span class="alerta-texto">Sangria e fechamento do caixa são feitos por Administrador ou Gerente.</span>
+      </div>
+    }
+  } @else {
+    @if (fechado(); as f) {
       <section class="painel">
-        <p class="vazio">Somente administradores e operadores podem fechar o caixa ou lançar sangria/suprimento.</p>
+        <div class="painel-cabecalho">
+          <h3>Caixa #{{ f.id }} fechado</h3>
+          <button type="button" class="btn btn-secundario btn-sm" (click)="fechado.set(null)">Dispensar</button>
+        </div>
+        <div class="grid-stats">
+          <div class="stat-card">
+            <div class="stat-icon azul"><i class="bi bi-calculator"></i></div>
+            <div>
+              <div class="stat-valor">{{ f.valorEsperado | currency: 'BRL' }}</div>
+              <div class="stat-label">Valor esperado</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon verde"><i class="bi bi-cash-coin"></i></div>
+            <div>
+              <div class="stat-valor">{{ f.valorContado | currency: 'BRL' }}</div>
+              <div class="stat-label">Valor contado</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" [class.verde]="!f.diferenca" [class.amarelo]="(f.diferenca ?? 0) > 0" [class.vermelho]="(f.diferenca ?? 0) < 0">
+              <i class="bi bi-plus-slash-minus"></i>
+            </div>
+            <div>
+              <div class="stat-valor">{{ f.diferenca | currency: 'BRL' }}</div>
+              <div class="stat-label">{{ rotuloDiferenca(f.diferenca) }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="acoes-form">
+          <a class="btn btn-primario" [routerLink]="['/caixa-relatorio', f.id]">
+            <i class="bi bi-printer"></i> Ver relatório de fechamento
+          </a>
+        </div>
       </section>
     }
+
+    <section class="painel painel-abertura">
+      <h3>Abrir caixa</h3>
+      <p class="texto-apoio">Nenhum caixa aberto. Informe o fundo de caixa (troco inicial) para começar o turno.</p>
+      <form [formGroup]="formAbertura" (ngSubmit)="abrir()">
+        <div class="campo-linha">
+          <div class="campo">
+            <label for="caixa-fundo">Fundo de caixa (R$)</label>
+            <input id="caixa-fundo" type="number" min="0" step="0.01" placeholder="0,00" formControlName="fundoCaixa" />
+            @if (formAbertura.controls.fundoCaixa.touched && formAbertura.controls.fundoCaixa.invalid) {
+              <small class="erro-campo">Informe o fundo de caixa (pode ser zero).</small>
+            }
+          </div>
+          <div class="campo">
+            <label for="caixa-obs-abertura">Observação (opcional)</label>
+            <input id="caixa-obs-abertura" type="text" maxlength="255" formControlName="observacao" />
+          </div>
+        </div>
+        <div class="acoes-form">
+          <button type="submit" class="btn btn-primario" [disabled]="processando()">
+            {{ processando() ? 'Abrindo...' : 'Abrir caixa' }}
+          </button>
+        </div>
+      </form>
+    </section>
   }
+</div>
 
-  <section class="painel">
-    <div class="painel-header">
-      <h3>Histórico de fechamentos (últimos 30 dias)</h3>
-      <button type="button" class="btn-secundario" (click)="alternarHistorico()">
-        {{ mostrarHistorico ? 'Ocultar' : 'Ver histórico' }}
-      </button>
-    </div>
-
-    @if (mostrarHistorico) {
-      @if (carregandoHistorico) {
-        <p class="vazio">Carregando...</p>
-      } @else {
-        <div class="lista-historico">
-          @for (sessao of historico; track sessao.id) {
-            <div class="linha-historico">
-              <div class="info">
-                <strong>{{ sessao.dtFechamento | date: 'dd/MM/yyyy HH:mm' }}</strong>
-                <span>Aberto por {{ sessao.usuarioAbertura?.nome ?? '-' }}, fechado por {{ sessao.usuarioFechamento?.nome ?? '-' }}</span>
-              </div>
-              <div class="direita">
-                <span class="valor">Sistema: {{ sessao.valorApuradoSistema | currency: 'BRL' }}</span>
-                <span class="valor">Informado: {{ sessao.valorApuradoInformado | currency: 'BRL' }}</span>
-                <span
-                  class="valor"
-                  [ngClass]="(sessao.diferenca ?? 0) === 0 ? 'sucesso' : 'alerta'"
-                >
-                  Diferença: {{ sessao.diferenca | currency: 'BRL' }}
-                </span>
-              </div>
-            </div>
-          } @empty {
-            <p class="vazio">Nenhum fechamento nos últimos 30 dias.</p>
-          }
+@if (modalMovimento(); as tipo) {
+  <div class="modal-fundo" (click)="fecharModais()">
+    <div class="modal-caixa" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h3>{{ tipo === 'SANGRIA' ? 'Registrar sangria' : 'Registrar suprimento' }}</h3>
+      <p>
+        {{
+          tipo === 'SANGRIA'
+            ? 'Retirada de dinheiro do caixa. Informe o motivo; o valor não pode passar do saldo.'
+            : 'Entrada de dinheiro no caixa, por exemplo reforço de troco.'
+        }}
+      </p>
+      @if (erroModal()) {
+        <div class="alerta alerta-erro" role="alert">
+          <i class="bi bi-exclamation-circle"></i>
+          <span class="alerta-texto">{{ erroModal() }}</span>
         </div>
       }
-    }
-  </section>
-</div>
+      <form [formGroup]="formMovimento" (ngSubmit)="confirmarMovimento()">
+        <div class="campo">
+          <label for="mov-valor">Valor (R$)</label>
+          <input id="mov-valor" type="number" min="0.01" step="0.01" placeholder="0,00" formControlName="valor" autofocus />
+          @if (formMovimento.controls.valor.touched && formMovimento.controls.valor.invalid) {
+            <small class="erro-campo">Informe um valor maior que zero.</small>
+          }
+        </div>
+        <div class="campo">
+          <label for="mov-descricao">{{ tipo === 'SANGRIA' ? 'Motivo' : 'Descrição (opcional)' }}</label>
+          <input
+            id="mov-descricao"
+            type="text"
+            maxlength="255"
+            [placeholder]="tipo === 'SANGRIA' ? 'Ex: Pagamento de fornecedor' : 'Ex: Reforço de troco'"
+            formControlName="descricao"
+          />
+          @if (formMovimento.controls.descricao.touched && formMovimento.controls.descricao.invalid) {
+            <small class="erro-campo">Informe o motivo da sangria.</small>
+          }
+        </div>
+        <div class="acoes-form">
+          <button type="button" class="btn btn-secundario" (click)="fecharModais()">Cancelar</button>
+          <button type="submit" class="btn" [class.btn-primario]="tipo === 'SUPRIMENTO'" [class.btn-perigo]="tipo === 'SANGRIA'" [disabled]="processando()">
+            {{ processando() ? 'Salvando...' : 'Confirmar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (modalFechamento()) {
+  <div class="modal-fundo" (click)="fecharModais()">
+    <div class="modal-caixa" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h3>Fechar caixa</h3>
+      <p>Conte o dinheiro do caixa e informe o valor total. O sistema compara com o valor esperado e registra a diferença.</p>
+      @if (erroModal()) {
+        <div class="alerta alerta-erro" role="alert">
+          <i class="bi bi-exclamation-circle"></i>
+          <span class="alerta-texto">{{ erroModal() }}</span>
+        </div>
+      }
+      <form [formGroup]="formFechamento" (ngSubmit)="confirmarFechamento()">
+        <div class="campo">
+          <label for="fech-valor">Valor contado (R$)</label>
+          <input id="fech-valor" type="number" min="0" step="0.01" placeholder="0,00" formControlName="valorContado" autofocus />
+          @if (formFechamento.controls.valorContado.touched && formFechamento.controls.valorContado.invalid) {
+            <small class="erro-campo">Informe o valor contado.</small>
+          }
+        </div>
+        <div class="campo">
+          <label for="fech-obs">Justificativa da diferença</label>
+          <input id="fech-obs" type="text" maxlength="255" placeholder="Obrigatória se houver sobra ou falta" formControlName="observacao" />
+        </div>
+        <div class="acoes-form">
+          <button type="button" class="btn btn-secundario" (click)="fecharModais()">Cancelar</button>
+          <button type="submit" class="btn btn-primario" [disabled]="processando()">
+            {{ processando() ? 'Fechando...' : 'Fechar caixa' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

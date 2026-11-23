@@ -1,29 +1,57 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Olá, bem-vindo de volta</h1>
-    <p>O que você precisa fazer agora?</p>
+    <div>
+      <h1>Olá{{ nome ? ', ' + nome : '' }}!</h1>
+      <p>O que você precisa fazer agora?</p>
+    </div>
   </header>
 
   <div class="grid-acoes">
-    @for (acao of acoes; track acao.label) {
-      <button type="button" class="acao-card" (click)="acessarRota(acao.rota)">
-        <div class="acao-icon" [ngClass]="acao.cor">
-          <i class="bi" [ngClass]="acao.icon"></i>
+    @for (acao of acoes; track acao.rota) {
+      <a class="acao-card" [routerLink]="acao.rota">
+        <div class="acao-icon" [class]="acao.cor">
+          <i class="bi" [class]="acao.icon"></i>
         </div>
         <div class="acao-texto">
           <strong>{{ acao.label }}</strong>
           <span>{{ acao.descricao }}</span>
         </div>
         <i class="bi bi-arrow-right acao-seta"></i>
-      </button>
+      </a>
     }
   </div>
 
   <section class="painel">
-    <h3>Resumo rápido</h3>
-    <p class="texto-apoio">
-      Use o menu lateral para navegar entre Pedido, Cozinha, Estoque e Financeiro.
-      O <strong>Dashboard</strong> traz a visão completa da operação em tempo real.
-    </p>
+    <h3>Resumo do momento</h3>
+
+    @if (carregando()) {
+      <app-carregando texto="Carregando pedidos..."></app-carregando>
+    } @else if (erro()) {
+      <div class="alerta alerta-erro"><i class="bi bi-exclamation-circle"></i><span class="alerta-texto">{{ erro() }}</span></div>
+    } @else {
+      <div class="grid-stats">
+        <a class="stat-card stat-link" routerLink="/tela-cozinha">
+          <div class="stat-icon azul"><i class="bi bi-hourglass-split"></i></div>
+          <div>
+            <div class="stat-valor">{{ aguardando() }}</div>
+            <div class="stat-label">Aguardando preparo</div>
+          </div>
+        </a>
+        <a class="stat-card stat-link" routerLink="/tela-cozinha">
+          <div class="stat-icon laranja"><i class="bi bi-fire"></i></div>
+          <div>
+            <div class="stat-valor">{{ emPreparo() }}</div>
+            <div class="stat-label">Em preparo</div>
+          </div>
+        </a>
+        <a class="stat-card stat-link" routerLink="/historico-vendas">
+          <div class="stat-icon verde"><i class="bi bi-check-circle"></i></div>
+          <div>
+            <div class="stat-valor">{{ finalizadosHoje() }}</div>
+            <div class="stat-label">Finalizados hoje</div>
+          </div>
+        </a>
+      </div>
+    }
   </section>
 </div>

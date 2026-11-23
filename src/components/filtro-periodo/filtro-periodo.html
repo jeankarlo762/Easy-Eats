@@ -1,0 +1,23 @@
+<div class="filtro-periodo">
+  <div class="filtros">
+    @for (opcao of opcoes; track opcao.valor) {
+      <button type="button" [class.ativo]="filtro() === opcao.valor" (click)="selecionar(opcao.valor)">
+        {{ opcao.label }}
+      </button>
+    }
+  </div>
+
+  @if (filtro() === 'periodo') {
+    <div class="intervalo">
+      <label>
+        De
+        <input type="date" class="input-padrao" [(ngModel)]="inicio" [max]="fim" />
+      </label>
+      <label>
+        Até
+        <input type="date" class="input-padrao" [(ngModel)]="fim" [min]="inicio" />
+      </label>
+      <button type="button" class="btn btn-primario" (click)="aplicar()">Aplicar</button>
+    </div>
+  }
+</div>

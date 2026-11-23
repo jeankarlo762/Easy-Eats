@@ -5,7 +5,7 @@
   </header>
 
   @if (erro) {
-    <div class="alerta-erro">{{ erro }}</div>
+    <p class="vazio">{{ erro }}</p>
   }
 
   <div class="grid-duas-colunas">
@@ -41,17 +41,13 @@
         </div>
 
         <div class="campo">
-          <label>CPF (opcional)</label>
-          <input type="text" placeholder="000.000.000-00" formControlName="cpf" maxlength="14" />
+          <label>Endereço (opcional)</label>
+          <input type="text" placeholder="Rua, número, bairro" formControlName="endereco" />
         </div>
 
-        @if (sucesso) {
-          <div class="alerta-sucesso"><i class="bi bi-check-circle"></i> Cliente salvo com sucesso!</div>
-        }
-
         <div class="acoes-form">
-          <button type="submit" class="btn-salvar" [disabled]="enviando">
-            {{ enviando ? 'Salvando...' : editandoId !== null ? 'Salvar Alterações' : 'Adicionar Cliente' }}
+          <button type="submit" class="btn-salvar" [disabled]="salvando">
+            {{ editandoId !== null ? 'Salvar Alterações' : 'Adicionar Cliente' }}
           </button>
 
           @if (editandoId !== null) {
@@ -69,7 +65,7 @@
       </div>
 
       @if (carregando) {
-        <app-carregando texto="Carregando clientes..."></app-carregando>
+        <p class="vazio">Carregando clientes...</p>
       } @else {
         <div class="lista">
           @for (cliente of clientesFiltrados; track cliente.id) {
@@ -80,8 +76,8 @@
               </div>
 
               <div class="direita">
-                @if (cliente.cpf) {
-                  <span class="badge">{{ cliente.cpf }}</span>
+                @if (cliente.saldoCashback) {
+                  <span class="badge">{{ cliente.saldoCashback | currency: 'BRL' }} cashback</span>
                 }
                 <button type="button" class="btn-icone" (click)="editar(cliente)" title="Editar">
                   <i class="bi bi-pencil"></i>

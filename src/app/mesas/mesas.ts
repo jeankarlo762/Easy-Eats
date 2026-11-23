@@ -1,105 +1,128 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { ComandaService } from '../comandas/comanda.service';
-import { Mesa, MesaService } from './mesa.service';
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import { AuthService, PERFIS_GESTAO } from '../auth/auth.service';
 import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
+import { OcupacaoMesa, VendaResumo, VendaService } from '../vendas/venda.service';
+import { MesaService } from './mesa.service';
 
 @Component({
   selector: 'app-mesas',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, CarregandoComponent],
   templateUrl: './mesas.html',
   styleUrl: './mesas.scss',
 })
 export class Mesas implements OnInit {
   private mesaService = inject(MesaService);
-  private comandaService = inject(ComandaService);
+  private vendaService = inject(VendaService);
   private router = inject(Router);
 
-  mesas: Mesa[] = [];
-  carregando = true;
-  erro: string | null = null;
-  abrindoMesaId: number | null = null;
+  readonly podeGerenciar = inject(AuthService).temPerfil(PERFIS_GESTAO);
 
-  ngOnInit() {
+  carregando = signal(true);
+  salvando = signal(false);
+  erro = signal<string | null>(null);
+  sucesso = signal<string | null>(null);
+
+  /** Situação de cada mesa vinda do backend: ocupada enquanto houver venda aberta nela. */
+  mesas = signal<OcupacaoMesa[]>([]);
+  retiradas = signal<VendaResumo[]>([]);
+
+  numero: number | null = null;
+  editando = signal<OcupacaoMesa | null>(null);
+
+  totalOcupadas = computed(() => this.mesas().filter((m) => m.ocupada).length);
+  totalLivres = computed(() => this.mesas().length - this.totalOcupadas());
+
+  ngOnInit(): void {
     this.carregar();
   }
 
-  carregar() {
-    this.carregando = true;
-    this.mesaService.listar().subscribe({
-      next: (mesas) => {
-        this.mesas = mesas;
-        this.carregando = false;
-      },
-      error: () => {
-        this.erro = 'Não foi possível carregar as mesas.';
-        this.carregando = false;
-      },
-    });
-  }
-
-  get totalLivres(): number {
-    return this.mesas.filter((m) => m.status === 'LIVRE').length;
-  }
-
-  get totalOcupadas(): number {
-    return this.mesas.filter((m) => m.status === 'OCUPADA').length;
-  }
-
-  get totalReservadas(): number {
-    return this.mesas.filter((m) => m.status === 'RESERVADA').length;
-  }
-
-  badgeClasse(status: string): string {
-    switch (status) {
-      case 'LIVRE':
-        return 'sucesso';
-      case 'OCUPADA':
-        return 'alerta';
-      case 'RESERVADA':
-        return 'neutro';
-      default:
-        return 'neutro';
-    }
-  }
-
-  rotulo(status: string): string {
-    switch (status) {
-      case 'LIVRE':
-        return 'Livre';
-      case 'OCUPADA':
-        return 'Ocupada';
-      case 'RESERVADA':
-        return 'Reservada';
-      default:
-        return status;
-    }
-  }
-
-  /**
-   * Mesa livre: abre uma comanda nova e já leva para o pedido. Mesa ocupada:
-   * só leva para o pedido (a comanda aberta é resolvida lá, por mesa).
-   */
-  selecionarMesa(mesa: Mesa) {
-    if (this.abrindoMesaId) return;
-
-    if (mesa.status !== 'LIVRE') {
-      this.router.navigate(['/novo-pedido'], { queryParams: { mesa: mesa.id } });
-      return;
-    }
-
-    this.abrindoMesaId = mesa.id;
-    this.comandaService.abrir({ mesa: { id: mesa.id } }).subscribe({
-      next: () => {
-        this.abrindoMesaId = null;
-        this.router.navigate(['/novo-pedido'], { queryParams: { mesa: mesa.id } });
+  carregar(): void {
+    this.carregando.set(true);
+    forkJoin({
+      mesas: this.vendaService.ocupacaoMesas(),
+      abertas: this.vendaService.abertas(),
+    }).subscribe({
+      next: ({ mesas, abertas }) => {
+        this.mesas.set(mesas);
+        this.retiradas.set(abertas.filter((venda) => venda.tipo === 'RETIRADA'));
+        this.carregando.set(false);
       },
       error: (erro) => {
-        this.abrindoMesaId = null;
-        this.erro = MensagemErroApiUtil.extrair(erro, 'Não foi possível abrir a comanda dessa mesa.');
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar as mesas.'));
+        this.carregando.set(false);
       },
     });
+  }
+
+  novoPedido(mesa: OcupacaoMesa): void {
+    this.router.navigate(['/novo-pedido'], { queryParams: { mesa: mesa.mesaId } });
+  }
+
+  novaRetirada(): void {
+    this.router.navigate(['/novo-pedido'], { queryParams: { tipo: 'retirada' } });
+  }
+
+  salvar(): void {
+    const numero = Number(this.numero);
+    if (!Number.isInteger(numero) || numero <= 0) {
+      this.erro.set('Informe um número de mesa inteiro e maior que zero.');
+      return;
+    }
+    const editando = this.editando();
+    this.salvando.set(true);
+    this.erro.set(null);
+    const requisicao = editando
+      ? this.mesaService.atualizar(editando.mesaId, numero)
+      : this.mesaService.criar(numero);
+    requisicao.subscribe({
+      next: () => {
+        this.salvando.set(false);
+        this.mostrarSucesso(editando ? `Mesa ${numero} atualizada.` : `Mesa ${numero} cadastrada.`);
+        this.cancelarEdicao();
+        this.carregar();
+      },
+      error: (erro) => {
+        this.salvando.set(false);
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível salvar a mesa.'));
+      },
+    });
+  }
+
+  editar(mesa: OcupacaoMesa): void {
+    this.editando.set(mesa);
+    this.numero = mesa.numero;
+  }
+
+  cancelarEdicao(): void {
+    this.editando.set(null);
+    this.numero = null;
+  }
+
+  excluir(mesa: OcupacaoMesa): void {
+    if (mesa.ocupada) {
+      this.erro.set(`A mesa ${mesa.numero} tem uma conta aberta e não pode ser excluída agora.`);
+      return;
+    }
+    if (!confirm(`Excluir a mesa ${mesa.numero}?`)) {
+      return;
+    }
+    this.mesaService.excluir(mesa.mesaId).subscribe({
+      next: () => {
+        this.mostrarSucesso(`Mesa ${mesa.numero} excluída.`);
+        this.carregar();
+      },
+      error: (erro) => this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível excluir a mesa.')),
+    });
+  }
+
+  private mostrarSucesso(mensagem: string): void {
+    this.sucesso.set(mensagem);
+    setTimeout(() => this.sucesso.set(null), 4000);
   }
 }

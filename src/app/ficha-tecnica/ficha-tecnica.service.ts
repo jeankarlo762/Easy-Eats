@@ -1,43 +1,36 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface FichaTecnicaItem {
-  id: number;
-  produto: { id: number; nome: string };
-  insumo: { id: number; nome: string; preco: number; custo: number | null };
+export interface VinculoProdutoIngrediente {
+  produtoId: number;
+  ingredienteId: number;
   quantidade: number;
 }
 
-export interface FichaTecnicaItemPayload {
-  insumoId: number;
-  quantidade: number;
-}
+const API_URL = `${environment.apiUrl}/produto-ingrediente`;
 
-const API_URL = `${environment.apiUrl}/produtos`;
-
+/**
+ * Endpoints /produto-ingrediente do backend (ficha técnica).
+ * O POST recebe um lote { produtoId, ingredientes: [{ ingredienteId, quantidade }] }
+ * e falha se algum ingrediente já estiver vinculado ao produto.
+ */
 @Injectable({ providedIn: 'root' })
 export class FichaTecnicaService {
   constructor(private http: HttpClient) {}
 
-  listar(produtoId: number): Observable<FichaTecnicaItem[]> {
-    return this.http.get<FichaTecnicaItem[]>(`${API_URL}/${produtoId}/ficha-tecnica`);
+  listar(): Observable<VinculoProdutoIngrediente[]> {
+    return this.http
+      .get<VinculoProdutoIngrediente[] | null>(API_URL)
+      .pipe(map((lista) => (lista ?? []).map((v) => ({ ...v, quantidade: Number(v.quantidade) }))));
   }
 
-  custoTotal(produtoId: number): Observable<{ custoTotal: number }> {
-    return this.http.get<{ custoTotal: number }>(`${API_URL}/${produtoId}/ficha-tecnica/custo-total`);
+  adicionar(produtoId: number, ingredientes: { ingredienteId: number; quantidade: number }[]): Observable<unknown> {
+    return this.http.post(API_URL, { produtoId, ingredientes });
   }
 
-  adicionar(produtoId: number, payload: FichaTecnicaItemPayload): Observable<FichaTecnicaItem> {
-    return this.http.post<FichaTecnicaItem>(`${API_URL}/${produtoId}/ficha-tecnica`, payload);
-  }
-
-  atualizar(produtoId: number, id: number, payload: FichaTecnicaItemPayload): Observable<FichaTecnicaItem> {
-    return this.http.put<FichaTecnicaItem>(`${API_URL}/${produtoId}/ficha-tecnica/${id}`, payload);
-  }
-
-  remover(produtoId: number, id: number): Observable<void> {
-    return this.http.delete<void>(`${API_URL}/${produtoId}/ficha-tecnica/${id}`);
+  remover(produtoId: number, ingredienteId: number): Observable<void> {
+    return this.http.delete<void>(`${API_URL}/${produtoId}/${ingredienteId}`);
   }
 }

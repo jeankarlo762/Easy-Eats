@@ -1,68 +1,82 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Categorias</h1>
-    <p>Organize produtos e insumos por categoria</p>
+    <div>
+      <h1>Categorias</h1>
+      <p>Organize os produtos do cardápio por categoria</p>
+    </div>
   </header>
 
-  @if (erro) {
-    <div class="alerta-erro">{{ erro }}</div>
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
+  }
+  @if (sucesso()) {
+    <div class="alerta alerta-sucesso"><i class="bi bi-check-circle"></i><span class="alerta-texto">{{ sucesso() }}</span></div>
   }
 
-  <div class="grid-duas-colunas">
+  <div class="grid-form-lista">
     <section class="painel">
-      <h3>{{ editandoId !== null ? 'Editar Categoria' : 'Nova Categoria' }}</h3>
+      <h3>{{ editando() ? 'Editar categoria' : 'Nova categoria' }}</h3>
 
       <form [formGroup]="form" (ngSubmit)="salvar()">
         <div class="campo">
-          <label>Nome</label>
-          <input type="text" placeholder="Ex: Lanches" formControlName="nome" />
-          @if (form.get('nome')?.touched && form.get('nome')?.errors?.['required']) {
-            <small class="erro">Nome é obrigatório.</small>
+          <label for="cat-nome">Nome</label>
+          <input id="cat-nome" type="text" placeholder="Ex: Lanches" formControlName="nome" />
+          @if (form.controls.nome.touched && form.controls.nome.invalid) {
+            <small class="erro-campo">Nome é obrigatório.</small>
           }
         </div>
 
-        <div class="campo">
-          <label>Descrição</label>
-          <input type="text" placeholder="Opcional" formControlName="descricao" />
+        <div class="campo campo-checkbox">
+          <label>
+            <input type="checkbox" formControlName="ativa" />
+            Categoria ativa
+          </label>
         </div>
 
-        @if (sucesso) {
-          <div class="alerta-sucesso"><i class="bi bi-check-circle"></i> Categoria salva com sucesso!</div>
-        }
-
         <div class="acoes-form">
-          <button type="submit" class="btn-salvar" [disabled]="enviando">
-            {{ enviando ? 'Salvando...' : editandoId !== null ? 'Salvar Alterações' : 'Adicionar Categoria' }}
+          <button type="submit" class="btn btn-primario" [disabled]="salvando()">
+            {{ salvando() ? 'Salvando...' : editando() ? 'Salvar alterações' : 'Adicionar categoria' }}
           </button>
-
-          @if (editandoId !== null) {
-            <button type="button" class="btn-cancelar" (click)="cancelarEdicao()">Cancelar</button>
+          @if (editando()) {
+            <button type="button" class="btn btn-secundario" (click)="cancelarEdicao()">Cancelar</button>
           }
         </div>
       </form>
     </section>
 
     <section class="painel">
-      <h3>Categorias Cadastradas</h3>
+      <h3>Categorias cadastradas</h3>
 
-      @if (carregando) {
+      @if (carregando()) {
         <app-carregando texto="Carregando categorias..."></app-carregando>
       } @else {
         <div class="lista">
-          @for (categoria of categorias; track categoria.id) {
+          @for (categoria of categorias(); track categoria.id) {
             <div class="linha">
-              <div class="info">
+              <div class="linha-info">
                 <strong>{{ categoria.nome }}</strong>
-                <span>{{ categoria.descricao || 'Sem descrição' }}</span>
               </div>
 
-              <div class="direita">
-                <span class="badge">{{ produtosVinculados(categoria) }} produtos</span>
-                <button type="button" class="btn-icone" (click)="editar(categoria)" title="Editar">
+              <div class="linha-acoes">
+                <span class="badge" [class.sucesso]="categoria.ativa" [class.neutro]="!categoria.ativa">
+                  {{ categoria.ativa ? 'Ativa' : 'Inativa' }}
+                </span>
+                <button type="button" class="btn-icone" (click)="editar(categoria)" title="Editar" aria-label="Editar">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button type="button" class="btn-icone" (click)="excluir(categoria)" title="Excluir">
-                  <i class="bi bi-trash"></i>
+                <button
+                  type="button"
+                  class="btn-icone"
+                  [class.perigo]="categoria.ativa"
+                  (click)="alternarAtiva(categoria)"
+                  [title]="categoria.ativa ? 'Inativar' : 'Reativar'"
+                  [attr.aria-label]="categoria.ativa ? 'Inativar' : 'Reativar'"
+                >
+                  <i class="bi" [class.bi-slash-circle]="categoria.ativa" [class.bi-arrow-counterclockwise]="!categoria.ativa"></i>
                 </button>
               </div>
             </div>

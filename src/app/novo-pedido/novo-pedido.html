@@ -2,80 +2,47 @@
   <header class="topo">
     <div>
       <h1>Novo Pedido</h1>
-      <p>Monte o pedido do cliente selecionando os produtos abaixo</p>
+      <p>Escolha os produtos e finalize o pedido para mesa, retirada ou delivery. O preço vem do preço ativo de cada produto.</p>
     </div>
-    <button class="botao-qrcode" (click)="abrirQrCode()">
-      <i class="bi bi-qr-code"></i> QR Code do pedido
-    </button>
   </header>
 
-  @if (qrCodeAberto) {
-    <div class="qr-overlay" (click)="fecharQrCode()">
-      <div class="qr-modal" (click)="$event.stopPropagation()">
-        <button class="qr-fechar" (click)="fecharQrCode()" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
-        <h3>Pedido pelo QR Code</h3>
-        <p class="qr-descricao">
-          {{ mesaDoQrCode ? 'O cliente escaneia e o pedido cai na Mesa ' + mesaDoQrCode.numero + '.' : 'O cliente escaneia, monta o pedido e ele vai direto para a cozinha.' }}
-        </p>
-
-        @if (qrCodeErro) {
-          <div class="alerta-erro">{{ qrCodeErro }}</div>
-        } @else if (!qrCodeImagem) {
-          <app-carregando texto="Gerando QR Code..."></app-carregando>
-        } @else {
-          <img class="qr-imagem" [src]="qrCodeImagem" alt="QR Code do link de pedido" />
-          <a class="qr-link" [href]="linkPedido" target="_blank" rel="noopener">{{ linkPedido }}</a>
-
-          <div class="qr-acoes">
-            <button (click)="abrirPaginaPedido()"><i class="bi bi-box-arrow-up-right"></i> Abrir página</button>
-            <button (click)="copiarLink()"><i class="bi" [ngClass]="linkCopiado ? 'bi-check2' : 'bi-clipboard'"></i> {{ linkCopiado ? 'Copiado!' : 'Copiar link' }}</button>
-            <a [href]="qrCodeImagem" [download]="'qrcode-pedido.png'"><i class="bi bi-download"></i> Baixar</a>
-          </div>
+  @if (confirmacao(); as c) {
+    <div class="alerta" [class.alerta-sucesso]="!c.aviso" [class.alerta-aviso]="c.aviso" role="status">
+      <i class="bi" [class.bi-check-circle]="!c.aviso" [class.bi-exclamation-triangle]="c.aviso"></i>
+      <span class="alerta-texto">
+        {{ c.mensagem }}
+        <a routerLink="/tela-cozinha">Ver na cozinha</a>
+        @if (c.vendaId) {
+          · <a [routerLink]="['/conta', c.vendaId]">Ver conta</a>
         }
-      </div>
+      </span>
+    </div>
+  }  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
     </div>
   }
 
-  @if (sucesso) {
-    <div class="alerta-sucesso">
-      <i class="bi bi-check-circle"></i> Pedido enviado para a cozinha!
-    </div>
-  }
-
-  @if (erro) {
-    <div class="alerta-erro">{{ erro }}</div>
-  }
-
-  @if (avisoPosPedido) {
-    <div class="alerta-aviso">{{ avisoPosPedido }}</div>
-  }
-
-  @if (carregando) {
-    <app-carregando texto="Carregando produtos..."></app-carregando>
+  @if (carregando()) {
+    <app-carregando texto="Carregando produtos e mesas..."></app-carregando>
   } @else {
     <div class="wrapper">
       <div class="conteudo">
-        <div class="dados-pedido">
-          @if (usaMesa) {
-            <select class="input-busca" [(ngModel)]="mesaSelecionada">
-              <option [ngValue]="null">Selecione a mesa...</option>
-              @for (mesa of mesas; track mesa.id) {
-                <option [ngValue]="mesa.id">Mesa {{ mesa.numero }}</option>
-              }
-            </select>
-          }
-
+        <div class="barra-produtos">
           <input
-            type="text"
-            [placeholder]="usaMesa ? 'Ou nome do cliente (balcão/retirada)' : 'Nome do cliente'"
-            [(ngModel)]="cliente"
-            class="input-busca"
+            type="search"
+            class="input-padrao"
+            placeholder="Buscar produto..."
+            [ngModel]="busca()"
+            (ngModelChange)="busca.set($event)"
           />
         </div>
 
         <div class="filtros">
-          @for (cat of categorias; track cat) {
-            <button [class.ativo]="categoriaSelecionada === cat" (click)="selecionarCategoria(cat)">
+          @for (cat of categorias(); track cat) {
+            <button type="button" [class.ativo]="categoriaSelecionada() === cat" (click)="categoriaSelecionada.set(cat)">
               {{ cat }}
             </button>
           }
@@ -83,120 +50,218 @@
 
         <div class="produtos">
           @for (produto of produtosFiltrados(); track produto.id) {
-            <div class="card produto-card" (click)="adicionarAoCarrinho(produto)">
-              <div class="icone-produto"><i class="bi" [ngClass]="iconeCategoria(produto.categoria?.nome)"></i></div>
-
-              <div class="info">
-                <h4>{{ produto.nome }}</h4>
-                <span class="preco-destaque">R$ {{ produto.preco.toFixed(2) }}</span>
-              </div>
-              <button
-                class="info-btn"
-                (click)="abrirDetalhes(produto); $event.stopPropagation()"
-                aria-label="Detalhes do produto"
-              >
-                <i class="bi bi-info-lg"></i>
-              </button>
-            </div>
+            <button
+              type="button"
+              class="produto-card"
+              [class.selecionado]="quantidadeNoCarrinho(produto) > 0"
+              [disabled]="semPreco(produto)"
+              (click)="adicionarAoCarrinho(produto)"
+              [title]="semPreco(produto) ? 'Produto sem preço ativo' : 'Adicionar ao pedido'"
+            >
+              <span class="icone-produto">
+                <i class="bi" [class]="iconeCategoria(produto.categoria?.nome)"></i>
+              </span>
+              <span class="produto-info">
+                <strong>{{ produto.nome }}</strong>
+                @if (semPreco(produto)) {
+                  <span class="produto-sem-preco">Sem preço</span>
+                } @else {
+                  <span class="preco-destaque">{{ produto.preco | currency: 'BRL' }}</span>
+                }
+              </span>
+              @if (quantidadeNoCarrinho(produto) > 0) {
+                <span class="produto-qtd">{{ quantidadeNoCarrinho(produto) }}</span>
+              } @else {
+                <span class="produto-add"><i class="bi bi-plus-lg"></i></span>
+              }
+            </button>
           } @empty {
-            <p class="vazio">Nenhum produto cadastrado ainda.</p>
+            <p class="vazio">
+              {{ produtos().length === 0 ? 'Nenhum produto cadastrado ainda.' : 'Nenhum produto encontrado com esse filtro.' }}
+            </p>
           }
         </div>
       </div>
 
-      @if (carrinho.length > 0) {
-        <div class="carrinho">
-          <h3><i class="bi bi-cart3"></i> Carrinho ({{ carrinho.length }})</h3>
-
-          @for (item of carrinho; track item.id; let i = $index) {
-            <div class="item">
-              <div class="left">
-                <span class="icone-produto icone-produto--sm"><i class="bi" [ngClass]="iconeCategoria(item.produto.categoria?.nome)"></i></span>
-                <div class="item-info">
-                  <span class="nome">{{ item.produto.nome }}</span>
-                  @if (item.customizacao.composicaoRemovidaIds.length > 0) {
-                    <span class="customizacao-tag">sem alguns itens</span>
-                  }
-                  @for (sel of item.customizacao.adicionaisSelecionados; track sel.adicional.id) {
-                    <span class="customizacao-tag">+ {{ sel.adicional.nome }}</span>
-                  }
-                  @if (item.customizacao.observacao) {
-                    <span class="customizacao-obs">"{{ item.customizacao.observacao }}"</span>
-                  }
-                </div>
-              </div>
-
-              <div class="right">
-                <div class="qtd">
-                  <button (click)="diminuirQtd(i)">−</button>
-                  <span>{{ item.qtd }}</span>
-                  <button (click)="aumentarQtd(i)">+</button>
-                </div>
-
-                <span class="preco"> R$ {{ (precoUnitario(item) * item.qtd).toFixed(2) }} </span>
-              </div>
-            </div>
+      <aside class="carrinho painel">
+        <div class="painel-cabecalho">
+          <h3><i class="bi bi-cart3"></i> Carrinho ({{ quantidadeItens() }})</h3>
+          @if (carrinho().length > 0) {
+            <button type="button" class="btn btn-secundario btn-sm" (click)="limparCarrinho()">Limpar</button>
           }
-
-          @if (!vaiPorComanda) {
-            <div class="extras-pedido">
-              <div class="form-linha">
-                <label>Cliente cadastrado (opcional)</label>
-                <select [(ngModel)]="clienteSelecionadoId">
-                  <option [ngValue]="null">Sem cadastro</option>
-                  @for (c of clientes; track c.id) {
-                    <option [ngValue]="c.id">{{ c.nome }}</option>
-                  }
-                </select>
-              </div>
-
-              <div class="form-linha">
-                <label>Cupom</label>
-                <input type="text" [(ngModel)]="codigoCupom" placeholder="Código do cupom" />
-              </div>
-
-              @if (clienteSelecionado && (clienteSelecionado.saldoCashback ?? 0) > 0) {
-                <div class="form-linha">
-                  <label>Usar cashback (saldo: R$ {{ clienteSelecionado.saldoCashback!.toFixed(2) }})</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    [max]="clienteSelecionado.saldoCashback!"
-                    [(ngModel)]="valorCashbackResgate"
-                    placeholder="0,00"
-                  />
-                </div>
-              }
-            </div>
-          }
-
-          <hr />
-
-          <div class="total">
-            <span>Total</span>
-            <strong>R$ {{ total().toFixed(2) }}</strong>
-          </div>
-
-          @if (carrinho.length > 0 && !podeFinalizar()) {
-            <small class="aviso-finalizar">
-              {{ usaMesa ? 'Selecione a mesa ou informe o nome do cliente.' : 'Informe o nome do cliente.' }}
-            </small>
-          }
-
-          <button class="finalizar" [disabled]="!podeFinalizar() || enviando" (click)="confirmarPedido()">
-            {{ enviando ? 'Enviando...' : 'Finalizar Pedido' }}
-          </button>
         </div>
-      }
 
-      @if (produtoSelecionado) {
-        <app-modal-produto
-          [produto]="produtoSelecionado"
-          (fechar)="fecharModal()"
-          (adicionar)="aoAdicionarDoModal($event)"
-        >
-        </app-modal-produto>
-      }
+        <div class="itens-carrinho">
+          @for (item of carrinho(); track item.produto.id) {
+            <div class="item-carrinho">
+              <div class="item-carrinho__info">
+                <strong>{{ item.produto.nome }}</strong>
+                <span>{{ item.produto.preco | currency: 'BRL' }} cada</span>
+              </div>
+
+              <div class="qtd">
+                <button type="button" (click)="alterarQtd(item, -1)" aria-label="Diminuir quantidade">−</button>
+                <span>{{ item.qtd }}</span>
+                <button type="button" (click)="alterarQtd(item, 1)" aria-label="Aumentar quantidade">+</button>
+              </div>
+
+              <span class="item-carrinho__total">{{ item.produto.preco * item.qtd | currency: 'BRL' }}</span>
+
+              <button type="button" class="btn-icone perigo" (click)="remover(item)" title="Remover" aria-label="Remover item">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          } @empty {
+            <p class="vazio">Toque em um produto para adicioná-lo.</p>
+          }
+        </div>
+
+        <div class="total">
+          <span>Total</span>
+          <strong>{{ total() | currency: 'BRL' }}</strong>
+        </div>
+
+        <button type="button" class="btn btn-primario btn-bloco" [disabled]="carrinho().length === 0" (click)="abrirModal()">
+          Finalizar pedido
+        </button>
+      </aside>
     </div>
   }
 </div>
+
+@if (modalAberto()) {
+  <div class="modal-fundo" (click)="fecharModal()">
+    <div class="modal-caixa modal-pedido" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h3>Finalizar pedido</h3>
+      <p>{{ quantidadeItens() }} item(ns) · <strong>{{ total() | currency: 'BRL' }}</strong></p>
+
+      <div class="campo">
+        <label>Atendimento</label>
+        <div class="filtros tipos-atendimento">
+          <button
+            type="button"
+            [class.ativo]="tipoAtendimento() === 'MESA'"
+            [disabled]="vendaDaRetirada() !== null"
+            (click)="selecionarAtendimento('MESA')"
+          >
+            <i class="bi bi-grid-3x3-gap"></i> Mesa
+          </button>
+          <button type="button" [class.ativo]="tipoAtendimento() === 'RETIRADA'" (click)="selecionarAtendimento('RETIRADA')">
+            <i class="bi bi-bag-check"></i> Retirada
+          </button>
+          <button type="button" disabled title="O delivery estará disponível em breve">
+            <i class="bi bi-bicycle"></i> Delivery <span class="badge neutro">Em breve</span>
+          </button>
+        </div>
+      </div>
+
+      @if (tipoAtendimento() === 'MESA') {
+        <div class="campo">
+          <label for="modal-mesa">Mesa *</label>
+          <select id="modal-mesa" [ngModel]="mesaSelecionada()" (ngModelChange)="mesaSelecionada.set($event)">
+            <option [ngValue]="null">Selecione a mesa...</option>
+            @for (mesa of mesas(); track mesa.id) {
+              <option [ngValue]="mesa.id">Mesa {{ mesa.numero }}</option>
+            }
+          </select>
+          @if (mesas().length === 0) {
+            <small class="erro-campo">Nenhuma mesa cadastrada. Cadastre em <a routerLink="/mesas">Mesas</a>.</small>
+          }
+        </div>
+      }
+
+      <div class="campo">
+        <label for="modal-cliente">{{ tipoAtendimento() === 'RETIRADA' ? 'Nome do cliente *' : 'Cliente (opcional)' }}</label>
+        <input
+          id="modal-cliente"
+          type="text"
+          maxlength="255"
+          [placeholder]="tipoAtendimento() === 'RETIRADA' ? 'Nome para chamar quando ficar pronto' : 'Nome do cliente'"
+          [readonly]="vendaDaRetirada() !== null"
+          [ngModel]="cliente()"
+          (ngModelChange)="cliente.set($event)"
+        />
+      </div>
+
+      <div class="campo">
+        <label for="modal-observacao">Observações</label>
+        <textarea
+          id="modal-observacao"
+          rows="2"
+          maxlength="255"
+          placeholder="Ex: sem cebola, molho à parte"
+          [ngModel]="observacao()"
+          (ngModelChange)="observacao.set($event)"
+        ></textarea>
+      </div>
+
+      @if (vendaDaRetirada() === null) {
+        <div class="campo">
+          <label for="modal-forma">Forma de pagamento</label>
+          <select id="modal-forma" [ngModel]="formaPagamento()" (ngModelChange)="selecionarForma($event)">
+            <option [ngValue]="null">{{ tipoAtendimento() === 'RETIRADA' ? 'Pagar na retirada' : 'Pagar depois (na conta da mesa)' }}</option>
+            @for (forma of formasPagamento; track forma) {
+              <option [ngValue]="forma">{{ formaLabel[forma] }}</option>
+            }
+          </select>
+          <small class="ajuda-campo">
+            @if (formaPagamento() === null) {
+              {{
+                tipoAtendimento() === 'RETIRADA'
+                  ? 'A retirada fica em aberto até o pagamento (veja em Mesas, Retiradas em aberto).'
+                  : 'O pagamento é feito na conta da mesa, ao final.'
+              }}
+            } @else {
+              {{
+                tipoAtendimento() === 'RETIRADA'
+                  ? 'O pagamento é registrado e a retirada é finalizada agora.'
+                  : 'O valor deste pedido fica pago na conta. A mesa só libera quando a conta for finalizada.'
+              }}
+            }
+          </small>
+        </div>
+
+        @if (formaPagamento() === 'DINHEIRO') {
+          <div class="campo-linha">
+            <div class="campo">
+              <label for="modal-recebido">Valor recebido (R$)</label>
+              <input
+                id="modal-recebido"
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="Opcional"
+                [ngModel]="valorRecebido()"
+                (ngModelChange)="valorRecebido.set($event)"
+              />
+            </div>
+            <div class="campo">
+              <label>Troco</label>
+              <div class="troco">{{ troco() | currency: 'BRL' }}</div>
+            </div>
+          </div>
+        }
+
+        @if (caixaFechado()) {
+          <div class="alerta alerta-aviso" role="alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span class="alerta-texto">O caixa está fechado. <a routerLink="/caixa">Abrir o caixa</a> ou escolha pagar na retirada.</span>
+          </div>
+        }
+      } @else {
+        <small class="ajuda-campo">Este pedido entra na retirada já aberta. O pagamento é feito na conta.</small>
+      }
+
+      @if (pendenciaDoModal(); as pendencia) {
+        <small class="erro-campo">{{ pendencia }}</small>
+      }
+
+      <div class="acoes-form">
+        <button type="button" class="btn btn-secundario" (click)="fecharModal()" [disabled]="enviando()">Voltar</button>
+        <button type="button" class="btn btn-primario" [disabled]="!podeConfirmar()" (click)="confirmarPedido()">
+          {{ enviando() ? 'Enviando...' : 'Confirmar pedido' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

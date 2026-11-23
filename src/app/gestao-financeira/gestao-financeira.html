@@ -1,66 +1,129 @@
 <div class="pagina">
   <header class="topo">
-    <h1>Gestão Financeira</h1>
-    <p>Acompanhe todos os lançamentos financeiros do negócio</p>
+    <div>
+      <h1>Lançamentos do Caixa</h1>
+      <p>Entradas e saídas registradas nos caixas, com filtro por período, tipo, usuário e caixa</p>
+    </div>
+    <div class="topo-acoes">
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="carregando()">
+        <i class="bi bi-arrow-clockwise"></i> Atualizar
+      </button>
+    </div>
   </header>
 
-  @if (erro) {
-    <p class="vazio">{{ erro }}</p>
+  <app-filtro-periodo (periodoChange)="aplicarPeriodo($event)"></app-filtro-periodo>
+
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+      <button type="button" class="alerta-fechar" (click)="erro.set(null)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </div>
   }
 
-  @if (carregando) {
-    <app-carregando texto="Carregando lançamentos..."></app-carregando>
-  } @else {
-    <div class="grid-stats">
-      <div class="stat-card">
-        <div class="stat-label">Total de Ganhos</div>
-        <div class="stat-valor sucesso">R$ {{ totalGanhos | number: '1.2-2' }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total de Gastos</div>
-        <div class="stat-valor alerta">R$ {{ totalGastos | number: '1.2-2' }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Saldo</div>
-        <div class="stat-valor" [ngClass]="saldo >= 0 ? 'sucesso' : 'alerta'">
-          R$ {{ saldo | number: '1.2-2' }}
-        </div>
+  <div class="grid-stats">
+    <div class="stat-card">
+      <div class="stat-icon verde"><i class="bi bi-arrow-down-circle"></i></div>
+      <div>
+        <div class="stat-valor">{{ (resumo()?.totalEntradas ?? 0) | currency: 'BRL' }}</div>
+        <div class="stat-label">Entradas</div>
       </div>
     </div>
-
-    <section class="painel">
-      <h3>Lançamentos</h3>
-
-      <div class="filtros">
-        <button type="button" [class.ativo]="filtroAtivo === 'Todos'" (click)="selecionarFiltro('Todos')">
-          Todos
-        </button>
-        <button type="button" [class.ativo]="filtroAtivo === 'Ganhos'" (click)="selecionarFiltro('Ganhos')">
-          Ganhos
-        </button>
-        <button type="button" [class.ativo]="filtroAtivo === 'Gastos'" (click)="selecionarFiltro('Gastos')">
-          Gastos
-        </button>
+    <div class="stat-card">
+      <div class="stat-icon vermelho"><i class="bi bi-arrow-up-circle"></i></div>
+      <div>
+        <div class="stat-valor">{{ (resumo()?.totalSaidas ?? 0) | currency: 'BRL' }}</div>
+        <div class="stat-label">Saídas (sangrias)</div>
       </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon azul"><i class="bi bi-wallet2"></i></div>
+      <div>
+        <div class="stat-valor" [class.critico]="(resumo()?.saldo ?? 0) < 0">{{ (resumo()?.saldo ?? 0) | currency: 'BRL' }}</div>
+        <div class="stat-label">Saldo do período</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon roxo"><i class="bi bi-list-ul"></i></div>
+      <div>
+        <div class="stat-valor">{{ pagina()?.total ?? 0 }}</div>
+        <div class="stat-label">Lançamentos</div>
+      </div>
+    </div>
+  </div>
 
-      <div class="lista">
-        @for (lancamento of lancamentosFiltrados; track lancamento.id) {
-          <div class="linha">
-            <div class="info">
-              <strong>{{ lancamento.descricao }}</strong>
-              <span>{{ lancamento.categoria }} · {{ lancamento.data | date: 'dd/MM/yyyy' }}</span>
-            </div>
-
-            <div class="direita">
-              <span class="valor" [ngClass]="lancamento.tipo === 'Ganho' ? 'sucesso' : 'alerta'">
-                {{ lancamento.tipo === 'Ganho' ? '+' : '-' }} R$ {{ lancamento.valor | number: '1.2-2' }}
-              </span>
-            </div>
-          </div>
-        } @empty {
-          <p class="vazio">Nenhum lançamento encontrado.</p>
+  <section class="painel">
+    <div class="barra-filtros">
+      <div class="filtros">
+        @for (filtro of filtrosTipo; track filtro.valor) {
+          <button type="button" [class.ativo]="tipo() === filtro.valor" (click)="selecionarTipo(filtro.valor)">
+            {{ filtro.label }}
+          </button>
         }
       </div>
-    </section>
-  }
+      <form class="busca-lancamentos" (ngSubmit)="carregar()">
+        <input
+          type="search"
+          name="usuario"
+          class="input-padrao"
+          placeholder="Usuário"
+          [ngModel]="usuario()"
+          (ngModelChange)="usuario.set($event)"
+        />
+        <input
+          type="number"
+          name="caixaId"
+          min="1"
+          step="1"
+          class="input-padrao campo-caixa"
+          placeholder="Caixa nº"
+          [ngModel]="caixaId()"
+          (ngModelChange)="caixaId.set($event || null)"
+        />
+        <button type="submit" class="btn btn-secundario">Filtrar</button>
+      </form>
+    </div>
+
+    @if (carregando()) {
+      <app-carregando texto="Carregando lançamentos..."></app-carregando>
+    } @else {
+      <div class="tabela-wrap">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Data/hora</th>
+              <th>Caixa</th>
+              <th>Tipo</th>
+              <th>Descrição</th>
+              <th>Usuário</th>
+              <th class="num">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of pagina()?.itens ?? []; track m.id) {
+              <tr>
+                <td>{{ m.dataMovimentacao | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>#{{ m.caixaId }}</td>
+                <td>
+                  <span class="badge" [class.erro]="ehSaida(m.tipo)" [class.sucesso]="m.tipo === 'SUPRIMENTO' || m.tipo === 'VENDA'" [class.info]="m.tipo === 'FUNDO_INICIAL'">
+                    {{ tipoLabel[m.tipo] }}
+                  </span>
+                </td>
+                <td>{{ m.descricao || '—' }}</td>
+                <td>{{ m.usuario }}</td>
+                <td class="num" [class.valor-saida]="ehSaida(m.tipo)" [class.valor-entrada]="!ehSaida(m.tipo)">
+                  {{ ehSaida(m.tipo) ? '−' : '+' }} {{ m.valor | currency: 'BRL' }}
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="vazio">Nenhum lançamento encontrado com esses filtros.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (pagina(); as p) {
+        <app-paginacao [pagina]="p.pagina" [totalPaginas]="p.totalPaginas" [total]="p.total" (paginaChange)="irParaPagina($event)"></app-paginacao>
+      }
+    }
+  </section>
 </div>

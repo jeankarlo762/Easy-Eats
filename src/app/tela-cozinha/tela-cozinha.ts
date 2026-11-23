@@ -1,125 +1,94 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { Subscription, interval } from 'rxjs';
-import { ItemVendaResumo, STATUS_PEDIDO, Venda, VendaService } from '../novo-pedido/venda.service';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval } from 'rxjs';
+import { CarregandoComponent } from '../../components/carregando/carregando';
+import {
+  PROXIMO_STATUS,
+  Comanda,
+  ComandaService,
+  identificacaoPedido,
+} from '../comandas/comanda.service';
+import { MensagemErroApiUtil } from '../utils/mensagemErroApiUtil';
 
 const INTERVALO_ATUALIZACAO_MS = 10000;
-
-export interface ItemCozinha {
-  texto: string;
-  removidos: string[];
-  adicionais: string[];
-  observacao: string | null;
-}
 
 @Component({
   selector: 'app-tela-cozinha',
   standalone: true,
-  imports: [CommonModule],
+  imports: [DatePipe, NgTemplateOutlet, CarregandoComponent],
   templateUrl: './tela-cozinha.html',
   styleUrl: './tela-cozinha.scss',
 })
-export class TelaCozinha implements OnInit, OnDestroy {
-  private vendaService = inject(VendaService);
-  private atualizacaoAutomatica?: Subscription;
+export class TelaCozinha implements OnInit {
+  private comandaService = inject(ComandaService);
+  private destroyRef = inject(DestroyRef);
 
-  vendas: Venda[] = [];
-  carregando = true;
-  erro: string | null = null;
+  readonly identificacao = identificacaoPedido;
+
+  comandas = signal<Comanda[]>([]);
+  carregando = signal(true);
+  erro = signal<string | null>(null);
+  processandoId = signal<number | null>(null);
+
+  aguardando = computed(() => this.ordenar(this.comandas().filter((v) => v.status === 'ABERTO')));
+  preparando = computed(() => this.ordenar(this.comandas().filter((v) => v.status === 'EM_PREPARO')));
 
   ngOnInit() {
     this.carregar();
-    this.atualizacaoAutomatica = interval(INTERVALO_ATUALIZACAO_MS).subscribe(() => this.carregar(false));
-  }
-
-  ngOnDestroy() {
-    this.atualizacaoAutomatica?.unsubscribe();
+    interval(INTERVALO_ATUALIZACAO_MS)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.carregar(false));
   }
 
   carregar(mostrarCarregando = true) {
     if (mostrarCarregando) {
-      this.carregando = true;
+      this.carregando.set(true);
     }
 
-    this.vendaService.listar().subscribe({
-      next: (vendas) => {
-        this.vendas = vendas.filter((v) => v.status !== STATUS_PEDIDO.ENTREGUE);
-        this.carregando = false;
-        this.erro = null;
+    this.comandaService.listar().subscribe({
+      next: (comandas) => {
+        this.comandas.set(comandas.filter((v) => v.status === 'ABERTO' || v.status === 'EM_PREPARO'));
+        this.carregando.set(false);
       },
-      error: () => {
-        this.erro = 'Não foi possível carregar os pedidos.';
-        this.carregando = false;
+      error: (erro) => {
+        this.erro.set(MensagemErroApiUtil.extrair(erro, 'Não foi possível carregar os pedidos.'));
+        this.carregando.set(false);
       },
     });
   }
 
-  get aguardando(): Venda[] {
-    return this.vendas.filter((v) => v.status === STATUS_PEDIDO.AGUARDANDO);
-  }
-
-  get preparando(): Venda[] {
-    return this.vendas.filter((v) => v.status === STATUS_PEDIDO.PREPARANDO);
-  }
-
-  get prontos(): Venda[] {
-    return this.vendas.filter((v) => v.status === STATUS_PEDIDO.PRONTO);
-  }
-
-  identificacao(venda: Venda): string {
-    if (venda.mesa) {
-      return `Mesa ${venda.mesa.numero}`;
-    }
-    return venda.nomeCliente || 'Balcão';
-  }
-
-  itensResumo(venda: Venda): ItemCozinha[] {
-    return (venda.itens ?? []).map((item) => this.detalhesItem(item));
-  }
-
-  private detalhesItem(item: ItemVendaResumo): ItemCozinha {
-    return {
-      texto: `${item.produto?.nome ?? 'Item'} x${item.quantidade}`,
-      removidos: (item.composicaoRemovida ?? []).map((r) => r.composicaoItem.nome),
-      adicionais: (item.adicionais ?? []).map((a) =>
-        a.quantidade > 1 ? `${a.nome} x${a.quantidade}` : a.nome,
-      ),
-      observacao: item.observacao || null,
-    };
-  }
-
-  avancar(venda: Venda) {
-    const proximoStatus = this.proximoStatus(venda.status);
-    if (!proximoStatus || !venda.usuario) {
+  avancar(comanda: Comanda): void {
+    const proximoStatus = PROXIMO_STATUS[comanda.status];
+    if (!proximoStatus || this.processandoId() !== null) {
       return;
     }
 
-    this.vendaService.atualizarStatus(venda.id, proximoStatus, venda.tipo, venda.usuario.id).subscribe({
-      next: () => this.carregar(false),
-      error: () => {
-        this.erro = 'Não foi possível atualizar o status do pedido.';
+    this.processandoId.set(comanda.id);
+    this.erro.set(null);
+
+    this.comandaService.atualizarStatus(comanda.id, proximoStatus).subscribe({
+      next: () => {
+        this.processandoId.set(null);
+        this.carregar(false);
+      },
+      error: (erro) => {
+        this.processandoId.set(null);
+        this.erro.set(
+          MensagemErroApiUtil.extrair(
+            erro,
+            `Não foi possível atualizar o pedido #${comanda.id}. Verifique o estoque dos ingredientes.`,
+          ),
+        );
       },
     });
   }
 
-  private proximoStatus(atual: string): string | null {
-    switch (atual) {
-      case STATUS_PEDIDO.AGUARDANDO:
-        return STATUS_PEDIDO.PREPARANDO;
-      case STATUS_PEDIDO.PREPARANDO:
-        return STATUS_PEDIDO.PRONTO;
-      case STATUS_PEDIDO.PRONTO:
-        return STATUS_PEDIDO.ENTREGUE;
-      default:
-        return null;
-    }
+  abrirNovaJanela() {
+    window.open(`${window.location.origin}/tela-cozinha`, '_blank', 'width=1400,height=900,noopener,noreferrer');
   }
 
-  abrirNovaJanela() {
-    window.open(
-      window.location.origin + '/tela-cozinha',
-      '_blank',
-      'width=1400,height=900,noopener,noreferrer',
-    );
+  private ordenar(lista: Comanda[]): Comanda[] {
+    return [...lista].sort((a, b) => (a.dataCriacao ?? '').localeCompare(b.dataCriacao ?? ''));
   }
 }
