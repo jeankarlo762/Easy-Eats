@@ -117,6 +117,9 @@ export function identificacaoPedido(pedido: Comanda): string {
   if (pedido.mesa) {
     return pedido.mesa.numero != null ? `Mesa ${pedido.mesa.numero}` : `Mesa #${pedido.mesa.id}`;
   }
+  if (pedido.tipoVenda === 'DELIVERY') {
+    return `Delivery · ${pedido.nomeCliente || 'sem nome'}`;
+  }
   return pedido.nomeCliente || 'Sem mesa';
 }
 

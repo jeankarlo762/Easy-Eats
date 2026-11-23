@@ -7,6 +7,7 @@ import { Pagina } from '../caixa/caixa.service';
 import type { StatusPedido } from '../comandas/comanda.service';
 
 export type TipoVenda = 'MESA' | 'RETIRADA' | 'DELIVERY';
+export type OrigemVenda = 'SISTEMA' | 'CARDAPIO_DIGITAL';
 export type StatusVenda = 'ABERTA' | 'FINALIZADA' | 'CANCELADA';
 export type FormaPagamento = 'DINHEIRO' | 'PIX' | 'CREDITO' | 'DEBITO' | 'OUTROS';
 
@@ -69,6 +70,12 @@ export interface Venda {
   status: StatusVenda;
   nomeCliente: string | null;
   observacao: string | null;
+  /** Cardápio digital: telefone, endereço e pagamento escolhidos pelo cliente. */
+  telefoneCliente?: string | null;
+  enderecoEntrega?: string | null;
+  formaPagamentoPrevista?: FormaPagamento | null;
+  trocoPara?: number | null;
+  origem?: OrigemVenda;
   usuarioAbertura: string;
   dataAbertura: string;
   usuarioFechamento: string | null;
@@ -90,6 +97,12 @@ export interface VendaResumo {
   numeroMesa: number | null;
   status: StatusVenda;
   nomeCliente: string | null;
+  /** Cardápio digital: telefone, endereço e pagamento escolhidos pelo cliente. */
+  telefoneCliente?: string | null;
+  enderecoEntrega?: string | null;
+  formaPagamentoPrevista?: FormaPagamento | null;
+  trocoPara?: number | null;
+  origem?: OrigemVenda;
   usuarioAbertura: string;
   dataAbertura: string;
   usuarioFechamento: string | null;

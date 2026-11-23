@@ -4,7 +4,35 @@
       <h1>Novo Pedido</h1>
       <p>Escolha os produtos e finalize o pedido para mesa, retirada ou delivery. O preço vem do preço ativo de cada produto.</p>
     </div>
+    <button type="button" class="btn btn-secundario botao-qrcode" (click)="abrirQrCode()">
+      <i class="bi bi-qr-code"></i> QR Code do cardápio
+    </button>
   </header>
+
+  @if (qrCodeAberto()) {
+    <div class="qr-overlay" (click)="qrCodeAberto.set(false)">
+      <div class="qr-modal" role="dialog" aria-label="QR Code do cardápio digital" (click)="$event.stopPropagation()">
+        <button type="button" class="qr-fechar" (click)="qrCodeAberto.set(false)" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+        <h3>Cardápio digital</h3>
+        <p class="qr-descricao">O cliente escaneia, escolhe os produtos, informa nome, WhatsApp e endereço e faz o pedido. Ele cai na cozinha e em Mesas (delivery e retiradas).</p>
+        @if (qrCodeErro()) {
+          <div class="alerta alerta-erro">{{ qrCodeErro() }}</div>
+        } @else if (!qrCodeImagem()) {
+          <app-carregando texto="Gerando QR Code..."></app-carregando>
+        } @else {
+          <img class="qr-imagem" [src]="qrCodeImagem()" alt="QR Code do cardápio digital" />
+          <a class="qr-link" [href]="linkCardapio" target="_blank" rel="noopener">{{ linkCardapio }}</a>
+          <div class="qr-acoes">
+            <a class="btn btn-secundario btn-sm" [href]="linkCardapio" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Abrir</a>
+            <button type="button" class="btn btn-secundario btn-sm" (click)="copiarLink()">
+              <i class="bi" [class.bi-check2]="linkCopiado()" [class.bi-clipboard]="!linkCopiado()"></i> {{ linkCopiado() ? 'Copiado!' : 'Copiar link' }}
+            </button>
+            <a class="btn btn-primario btn-sm" [href]="qrCodeImagem()" download="qrcode-cardapio.png"><i class="bi bi-download"></i> Baixar</a>
+          </div>
+        }
+      </div>
+    </div>
+  }
 
   @if (confirmacao(); as c) {
     <div class="alerta" [class.alerta-sucesso]="!c.aviso" [class.alerta-aviso]="c.aviso" role="status">

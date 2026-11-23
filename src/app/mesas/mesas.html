@@ -126,13 +126,30 @@
 
   @if (retiradas().length > 0) {
     <section class="painel painel-retiradas">
-      <h3>Retiradas em aberto</h3>
+      <h3>Retiradas e delivery em aberto</h3>
       <div class="lista">
         @for (retirada of retiradas(); track retirada.id) {
           <div class="linha">
             <div class="linha-info">
-              <strong><i class="bi bi-bag-check"></i> {{ retirada.nomeCliente }}</strong>
-              <span>Aberta às {{ retirada.dataAbertura | date: 'HH:mm' }} · {{ retirada.valorTotal | currency: 'BRL' }}</span>
+              <strong>
+                <i class="bi" [class.bi-bag-check]="retirada.tipo === 'RETIRADA'" [class.bi-scooter]="retirada.tipo === 'DELIVERY'"></i>
+                {{ retirada.nomeCliente }}
+                <span class="selo-tipo">{{ retirada.tipo === 'DELIVERY' ? 'Delivery' : 'Retirada' }}</span>
+                @if (retirada.origem === 'CARDAPIO_DIGITAL') {
+                  <span class="selo-tipo selo-qr"><i class="bi bi-qr-code"></i> Cardápio digital</span>
+                }
+              </strong>
+              <span>Aberta às {{ retirada.dataAbertura | date: 'HH:mm' }} · {{ retirada.valorTotal | currency: 'BRL' }}
+                @if (retirada.formaPagamentoPrevista) {
+                  · Paga com {{ formaLabel[retirada.formaPagamentoPrevista] }}@if (retirada.trocoPara) { (troco p/ {{ retirada.trocoPara | currency: 'BRL' }})}
+                }
+              </span>
+              @if (retirada.telefoneCliente || retirada.enderecoEntrega) {
+                <span>
+                  @if (retirada.telefoneCliente) {<i class="bi bi-whatsapp"></i> {{ retirada.telefoneCliente }}}
+                  @if (retirada.enderecoEntrega) { · <i class="bi bi-geo-alt"></i> {{ retirada.enderecoEntrega }}}
+                </span>
+              }
             </div>
             <div class="linha-acoes">
               <a class="btn btn-secundario btn-sm" [routerLink]="['/conta', retirada.id]">
