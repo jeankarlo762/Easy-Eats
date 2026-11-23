@@ -1,0 +1,92 @@
+<div class="pagina">
+  <header class="topo">
+    <div>
+      <h1>WhatsApp</h1>
+      <p>Conecte o número da loja. É ele que envia a confirmação para o cliente que pede pelo cardápio digital.</p>
+    </div>
+  </header>
+
+  @if (erro()) {
+    <div class="alerta alerta-erro" role="alert">
+      <i class="bi bi-exclamation-circle"></i>
+      <span class="alerta-texto">{{ erro() }}</span>
+    </div>
+  }
+
+  @if (carregando()) {
+    <app-carregando texto="Consultando o WhatsApp..."></app-carregando>
+  } @else if (conexao(); as c) {
+    <section class="painel conexao">
+      @switch (c.status) {
+        @case ('conectado') {
+          <div class="estado estado-ok">
+            <i class="bi bi-check-circle-fill"></i>
+            <div>
+              <strong>Conectado</strong>
+              <span>Número {{ formatarNumero(c.numero) }} enviando as notificações.</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secundario" [disabled]="processando()" (click)="desconectar()">
+            <i class="bi bi-box-arrow-right"></i> Desconectar número
+          </button>
+        }
+        @case ('desabilitado') {
+          <div class="estado estado-aviso">
+            <i class="bi bi-toggle-off"></i>
+            <div>
+              <strong>Integração desligada</strong>
+              <span>Ligue com a variável WHATSAPP_HABILITADO=true na API.</span>
+            </div>
+          </div>
+        }
+        @case ('indisponivel') {
+          <div class="estado estado-erro">
+            <i class="bi bi-plug"></i>
+            <div>
+              <strong>Gateway do WhatsApp fora do ar</strong>
+              <span>{{ c.erro }}</span>
+            </div>
+          </div>
+        }
+        @default {
+          @if (qrImagem()) {
+            <div class="qr">
+              <img [src]="qrImagem()" alt="QR Code para conectar o WhatsApp" />
+              <ol>
+                <li>Abra o WhatsApp no celular da loja.</li>
+                <li>Toque em <strong>Mais opções</strong> ou <strong>Configurações</strong> e depois em <strong>Dispositivos conectados</strong>.</li>
+                <li>Toque em <strong>Conectar um dispositivo</strong> e aponte a câmera para este QR Code.</li>
+              </ol>
+            </div>
+            <small class="nota">O QR Code muda a cada poucos segundos; esta tela atualiza sozinha.</small>
+          } @else {
+            <app-carregando texto="Aguardando o QR Code..."></app-carregando>
+          }
+        }
+      }
+    </section>
+
+    @if (c.status === 'conectado') {
+      <section class="painel">
+        <h3>Enviar mensagem de teste</h3>
+        <div class="linha-teste">
+          <input
+            type="tel"
+            class="input-padrao"
+            placeholder="(11) 99999-8888"
+            [ngModel]="telefoneTeste"
+            (ngModelChange)="formatarTelefone($event)"
+          />
+          <button type="button" class="btn btn-primario" [disabled]="processando()" (click)="testar()">
+            <i class="bi bi-send"></i> Enviar teste
+          </button>
+        </div>
+        @if (resultadoTeste(); as r) {
+          <div class="alerta" [class.alerta-sucesso]="r.ok" [class.alerta-erro]="!r.ok">
+            <span class="alerta-texto">{{ r.mensagem }}</span>
+          </div>
+        }
+      </section>
+    }
+  }
+</div>

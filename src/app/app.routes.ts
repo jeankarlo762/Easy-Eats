@@ -145,6 +145,13 @@ export const routes: Routes = [
         canActivate: [perfilGuard(PERFIS_GESTAO)],
         loadComponent: () => import('./gestao-financeira/gestao-financeira').then((m) => m.GestaoFinanceira),
       },
+      {
+        path: 'integracao-whatsapp',
+        title: 'WhatsApp',
+        canActivate: [perfilGuard(PERFIS_GESTAO)],
+        loadComponent: () =>
+          import('./integracao-whatsapp/integracao-whatsapp').then((m) => m.IntegracaoWhatsapp),
+      },
       // Somente Administrador
       {
         path: 'usuarios',
