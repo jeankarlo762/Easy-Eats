@@ -71,10 +71,10 @@
               <button
                 type="button"
                 class="btn btn-primario btn-sm"
-                [disabled]="processandoId() === pedido.id"
+                [disabled]="estaProcessando(pedido.id)"
                 (click)="avancar(pedido)"
               >
-                {{ processandoId() === pedido.id ? 'Atualizando...' : rotuloAcao(pedido) }}
+                {{ estaProcessando(pedido.id) ? 'Atualizando...' : rotuloAcao(pedido) }}
               </button>
             </div>
           </div>

@@ -29,7 +29,7 @@ export class TelaCozinha implements OnInit {
   comandas = signal<Comanda[]>([]);
   carregando = signal(true);
   erro = signal<string | null>(null);
-  processandoId = signal<number | null>(null);
+  processandoIds = signal<ReadonlySet<number>>(new Set());
 
   aguardando = computed(() => this.ordenar(this.comandas().filter((v) => v.status === 'ABERTO')));
   preparando = computed(() => this.ordenar(this.comandas().filter((v) => v.status === 'EM_PREPARO')));
@@ -60,20 +60,20 @@ export class TelaCozinha implements OnInit {
 
   avancar(comanda: Comanda): void {
     const proximoStatus = PROXIMO_STATUS[comanda.status];
-    if (!proximoStatus || this.processandoId() !== null) {
+    if (!proximoStatus || this.estaProcessando(comanda.id)) {
       return;
     }
 
-    this.processandoId.set(comanda.id);
+    this.marcarProcessando(comanda.id, true);
     this.erro.set(null);
 
     this.comandaService.atualizarStatus(comanda.id, proximoStatus).subscribe({
       next: () => {
-        this.processandoId.set(null);
+        this.marcarProcessando(comanda.id, false);
         this.carregar(false);
       },
       error: (erro) => {
-        this.processandoId.set(null);
+        this.marcarProcessando(comanda.id, false);
         this.erro.set(
           MensagemErroApiUtil.extrair(
             erro,
@@ -81,6 +81,19 @@ export class TelaCozinha implements OnInit {
           ),
         );
       },
+    });
+  }
+
+  estaProcessando(id: number): boolean {
+    return this.processandoIds().has(id);
+  }
+
+  private marcarProcessando(id: number, ativo: boolean): void {
+    this.processandoIds.update((atual) => {
+      const novo = new Set(atual);
+      if (ativo) novo.add(id);
+      else novo.delete(id);
+      return novo;
     });
   }
 

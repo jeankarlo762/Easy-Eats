@@ -69,11 +69,11 @@
     <button
       type="button"
       class="btn btn-primario btn-bloco"
-      [disabled]="processandoId() !== null"
+      [disabled]="estaProcessando(comanda.id)"
       (click)="avancar(comanda)"
     >
       <i class="bi" [class]="icone"></i>
-      {{ processandoId() === comanda.id ? 'Atualizando...' : acao }}
+      {{ estaProcessando(comanda.id) ? 'Atualizando...' : acao }}
     </button>
   </article>
 </ng-template>

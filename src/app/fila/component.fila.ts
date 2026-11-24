@@ -33,7 +33,7 @@ export class ComponentFila implements OnInit {
 
   carregando = signal(true);
   erro = signal<string | null>(null);
-  processandoId = signal<number | null>(null);
+  processandoIds = signal<ReadonlySet<number>>(new Set());
   agora = signal(Date.now());
 
   emAndamento = signal<Comanda[]>([]);
@@ -90,20 +90,33 @@ export class ComponentFila implements OnInit {
 
   avancar(pedido: Comanda): void {
     const proximo = PROXIMO_STATUS[pedido.status];
-    if (!proximo) return;
+    if (!proximo || this.estaProcessando(pedido.id)) return;
 
-    this.processandoId.set(pedido.id);
+    this.marcarProcessando(pedido.id, true);
     this.erro.set(null);
 
     this.comandaService.atualizarStatus(pedido.id, proximo).subscribe({
       next: () => {
-        this.processandoId.set(null);
+        this.marcarProcessando(pedido.id, false);
         this.carregar(false);
       },
       error: (erro) => {
-        this.processandoId.set(null);
+        this.marcarProcessando(pedido.id, false);
         this.erro.set(MensagemErroApiUtil.extrair(erro, `Não foi possível atualizar o pedido #${pedido.id}.`));
       },
+    });
+  }
+
+  estaProcessando(id: number): boolean {
+    return this.processandoIds().has(id);
+  }
+
+  private marcarProcessando(id: number, ativo: boolean): void {
+    this.processandoIds.update((atual) => {
+      const novo = new Set(atual);
+      if (ativo) novo.add(id);
+      else novo.delete(id);
+      return novo;
     });
   }
 }
